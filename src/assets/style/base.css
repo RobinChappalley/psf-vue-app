@@ -1,0 +1,47 @@
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  color: var(--c-text);
+  background: var(--c-bg);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-title);
+  margin: 0;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-title);
+}
+h2 {
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-regular);
+}
+h3 {
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-regular);
+}
+
+p {
+  margin: 0;
+}
+
+.caption {
+  font-size: var(--fs-caption);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
