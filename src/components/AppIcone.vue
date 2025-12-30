@@ -82,6 +82,32 @@ defineProps({
       stroke-linecap="round"
     />
   </svg>
+  <!-- LOGIN -->
+  <svg v-else-if="name === 'login'" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+    <path
+      d="M10 17l5-5-5-5"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path d="M15 12H3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    <path
+      d="M15 3h6v18h-6"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linejoin="round"
+    />
+  </svg>
+
+  <!-- USER CIRCLE (icône header) -->
+  <svg v-else-if="name === 'userCircle'" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+    <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" />
+    <circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" />
+    <path d="M7.5 18a6 6 0 0 1 9 0" fill="none" stroke="currentColor" stroke-linecap="round" />
+  </svg>
 
   <!-- fallback -->
   <span v-else class="missing" aria-hidden="true"></span>
