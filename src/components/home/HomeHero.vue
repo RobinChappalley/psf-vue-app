@@ -14,7 +14,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 
         <p class="subtitle">des camps de marche pour les jeunes, depuis 1998</p>
 
-        <BaseButton class="cta" as="link" :to="{ name: 'public.subscription' }">
+        <BaseButton class="cta" as="link" :to="{ name: 'public.history' }">
           Découvrez les camps <br />des précédentes années
         </BaseButton>
       </div>
