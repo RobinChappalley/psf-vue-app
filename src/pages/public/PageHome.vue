@@ -9,14 +9,14 @@ const people = ['Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin']
 const openEvents = [
   //vide = aucun évènement
   //décommente pour tester l’état B :
-  {
-    id: '1',
-    name: 'Camp 2025',
-    subscriptionDeadlineLabel: '20 avril 2025',
-    dateStart: '12 juillet',
-    dateEnd: '31 juillet',
-    age: 'Entre 8 et 16 ans',
-  },
+  //{
+  //  id: '1',
+  //  name: 'Camp 2025',
+  //  subscriptionDeadlineLabel: '20 avril 2025',
+  //  dateStart: '12 juillet',
+  //  dateEnd: '31 juillet',
+  //  age: 'Entre 8 et 16 ans',
+  //},
 ]
 </script>
 
