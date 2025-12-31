@@ -4,7 +4,6 @@ body {
 }
 
 body {
-  margin: 0;
   font-family: var(--font-body);
   font-size: var(--fs-body);
   color: var(--c-text);
@@ -16,6 +15,7 @@ h2,
 h3 {
   font-family: var(--font-title);
   margin: 0;
+  padding-bottom: 1rem;
 }
 
 h1 {
@@ -44,4 +44,9 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+.section {
+  padding-inline: 1rem;
+  margin-block: 3rem;
 }
