@@ -109,6 +109,34 @@ defineProps({
     <path d="M7.5 18a6 6 0 0 1 9 0" fill="none" stroke="currentColor" stroke-linecap="round" />
   </svg>
 
+  <!-- CAMP (marcheur + bâton) -->
+  <svg v-else-if="name === 'camp'" viewBox="0 0 24 24" class="icon" aria-hidden="true">
+    <!-- bâton -->
+    <path d="M6 4v16" />
+
+    <!-- tête -->
+    <circle cx="14.5" cy="5.5" r="1.6" />
+
+    <!-- sac à dos (petit rectangle arrondi) -->
+    <path d="M11 8.2c0-1 .8-1.8 1.8-1.8h.4c.6 0 1.1.3 1.5.7" />
+    <path d="M11 8.2v3.1c0 .8.6 1.4 1.4 1.4h.3" />
+
+    <!-- corps -->
+    <path d="M13.8 7.4l-1.7 5" />
+
+    <!-- bras vers le bâton -->
+    <path d="M12.9 9.2l-3.1 1.3" />
+
+    <!-- jambe avant -->
+    <path d="M12.1 12.4l-2.6 3.2" />
+
+    <!-- jambe arrière -->
+    <path d="M12.6 12.2l2.1 4.0" />
+
+    <!-- petit pied -->
+    <path d="M14.7 16.2h2.6" />
+  </svg>
+
   <!-- fallback -->
   <span v-else class="missing" aria-hidden="true"></span>
 </template>
