@@ -3,7 +3,7 @@ import HomeHero from '@/components/home/HomeHero.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import PeopleBubble from '@/components/home/PeopleBubble.vue'
 import BaseCard from '@/components/home/BaseCard.vue'
-import OpenEventCard from '@/components/home/OpenEventCard.vue'
+import OpenEventCard from '@/components/events/OpenEventCard.vue'
 import { useEventsFeed } from '@/composables/useEventsFeed'
 
 const people = ['Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin']

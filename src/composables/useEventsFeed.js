@@ -1,51 +1,34 @@
-// src/composables/useEventsFeed.js
 import { computed, ref } from 'vue'
 
-/**
- * Types d'event qu'on gère côté UI.
- * - camp -> redirige vers page Camp
- * - info_evening -> soirée d'info
- * - ag -> assemblée générale
- * - training / fundraising -> auto-inscrit (quand inscrit au camp)
- */
 export function useEventsFeed(options = {}) {
-  // plus tard: remplacer par appel API
   const events = ref(options.initialEvents || [])
 
-  // helpers
-  const isOpenForSubscription = (e) => e?.status === 'open' // convention UI (mock)
-  const isUserRegistered = (e) => e?.userStatus === 'registered' // convention UI (mock)
+  // --- Helpers ---
+  //MODIFIER ICI pour accéder aux évènements auxquels les personnes sont inscrites
+  const isRegistered = (e) => e?.userStatus === 'registered'
 
+  const isOpenForSubscription = (e) => {
+    const deadline = e?.['subscription-deadline-date-time']
+    if (!deadline) return false
+    return new Date(deadline) > new Date()
+  }
+
+  // --- Sections ---
+  // 1) "Vos prochains évènements" => seulement inscrits
+  const upcomingRegistered = computed(() => events.value.filter(isRegistered))
+
+  // 2) "Ouverts à l'inscription" => pas inscrit + inscription ouverte
   const openToSubscribe = computed(() =>
-    events.value.filter((e) => isOpenForSubscription(e) && !isUserRegistered(e)),
+    events.value.filter((e) => !isRegistered(e) && isOpenForSubscription(e)),
   )
 
-  const upcomingRegistered = computed(() => events.value.filter((e) => isUserRegistered(e)))
-
-  // Pour la home publique: souvent on met en avant surtout le prochain camp ouvert
+  // (optionnel) prochain camp ouvert
   const nextOpenCamp = computed(() => openToSubscribe.value.find((e) => e.type === 'camp') || null)
-
-  /**
-   * Route cible selon type (front routes)
-   * - camp -> app.camp (connecté) ou public.subscription (public) selon usage
-   */
-  function getEventRoute(e, context = 'app') {
-    if (!e) return { name: context === 'public' ? 'public.home' : 'app.home' }
-
-    if (e.type === 'camp') {
-      // si connecté: page camp, sinon: page inscription
-      return context === 'app' ? { name: 'app.camp' } : { name: 'public.subscription' }
-    }
-
-    // pour l'instant, on renvoie vers subscription (ou plus tard pages dédiées)
-    return context === 'app' ? { name: 'app.home' } : { name: 'public.subscription' }
-  }
 
   return {
     events,
-    openToSubscribe,
     upcomingRegistered,
+    openToSubscribe,
     nextOpenCamp,
-    getEventRoute,
   }
 }
