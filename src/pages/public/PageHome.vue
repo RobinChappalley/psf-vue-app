@@ -3,8 +3,8 @@ import HomeHero from '@/components/home/HomeHero.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import PeopleBubble from '@/components/home/PeopleBubble.vue'
 import BaseCard from '@/components/home/BaseCard.vue'
-import OpenEventCard from '@/components/events/OpenEventCard.vue'
 import { useEventsFeed } from '@/composables/useEventsFeed'
+import CampHighlight from '@/components/events/CampHighlight.vue'
 
 const people = ['Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin']
 const { nextOpenCamp } = useEventsFeed({
@@ -14,11 +14,10 @@ const { nextOpenCamp } = useEventsFeed({
       id: 'c1',
       type: 'camp',
       name: 'Camp 2026',
-      status: 'open',
       userStatus: 'none',
-      dateStart: '12 juillet',
-      dateEnd: '31 juillet',
-      age: '8–16',
+      'start-date': '2026-07-12',
+      'end-date': '2026-07-31',
+      'subscription-deadline-date-time': '2026-06-15T23:59:00',
     },
   ],
 })
@@ -47,8 +46,8 @@ const { nextOpenCamp } = useEventsFeed({
       <PeopleBubble v-for="(name, index) in people" :key="index" :name="name" />
     </div>
   </section>
-  <section v-if="nextOpenCamp" class="open-events">
-    <OpenEventCard :camp="nextOpenCamp" />
+  <section v-if="nextOpenCamp">
+    <CampHighlight :event="nextOpenCamp" />
   </section>
 
   <section class="section whythisapp">
