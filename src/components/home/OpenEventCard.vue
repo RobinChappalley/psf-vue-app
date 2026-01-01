@@ -34,8 +34,6 @@ defineProps({
       </p>
     </div>
 
-    <p class="text">Inscriptions ouvertes jusqu’au {{ camp.subscriptionDeadlineLabel }}</p>
-
     <BaseButton class="cta" as="link" :to="{ name: 'public.subscription' }">
       Obtenir davantage d'information
     </BaseButton>

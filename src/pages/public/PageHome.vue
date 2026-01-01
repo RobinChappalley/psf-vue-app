@@ -4,20 +4,24 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import PeopleBubble from '@/components/home/PeopleBubble.vue'
 import BaseCard from '@/components/home/BaseCard.vue'
 import OpenEventCard from '@/components/home/OpenEventCard.vue'
+import { useEventsFeed } from '@/composables/useEventsFeed'
 
 const people = ['Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin']
-const openEvents = [
-  //vide = aucun évènement
-  //décommente pour tester l’état B :
-  //{
-  //  id: '1',
-  //  name: 'Camp 2025',
-  //  subscriptionDeadlineLabel: '20 avril 2025',
-  //  dateStart: '12 juillet',
-  //  dateEnd: '31 juillet',
-  //  age: 'Entre 8 et 16 ans',
-  //},
-]
+const { nextOpenCamp } = useEventsFeed({
+  initialEvents: [
+    // pour tester
+    {
+      id: 'c1',
+      type: 'camp',
+      name: 'Camp 2026',
+      status: 'open',
+      userStatus: 'none',
+      dateStart: '12 juillet',
+      dateEnd: '31 juillet',
+      age: '8–16',
+    },
+  ],
+})
 </script>
 
 <template>
@@ -43,8 +47,8 @@ const openEvents = [
       <PeopleBubble v-for="(name, index) in people" :key="index" :name="name" />
     </div>
   </section>
-  <section v-if="openEvents.length" class="open-events">
-    <OpenEventCard :camp="openEvents[0]" />
+  <section v-if="nextOpenCamp" class="open-events">
+    <OpenEventCard :camp="nextOpenCamp" />
   </section>
 
   <section class="section whythisapp">
