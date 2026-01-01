@@ -107,6 +107,10 @@ router.beforeEach((to) => {
   if (to.name === 'public.login' && authStore.isAuthenticated.value) {
     return { name: 'app.home' }
   }
+  // Si déjà connecté et va sur la home publique -> renvoi app.home
+  if (to.name === 'public.home' && authStore.isAuthenticated.value) {
+    return { name: 'app.home' }
+  }
 
   // Auth guard
   if (!isPublic && requiresAuth && !authStore.isAuthenticated.value) {

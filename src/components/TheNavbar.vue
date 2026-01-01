@@ -45,7 +45,7 @@ const { items } = useNavigation()
   text-align: center;
   text-decoration: none;
 
-  color: var(--c-muted);
+  color: var(--nav-inactive);
   font-size: 0.875rem;
 
   display: flex;
