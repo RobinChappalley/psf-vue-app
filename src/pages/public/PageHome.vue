@@ -110,5 +110,6 @@ li {
 .cta {
   margin: 2rem auto 0;
   display: block;
+  max-width: 20rem;
 }
 </style>
