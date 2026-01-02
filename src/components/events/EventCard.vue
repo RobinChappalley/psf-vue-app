@@ -16,12 +16,14 @@ const isRegistered = computed(() => props.event.userStatus === 'registered')
 
 const goToEvent = () => {
   if (isRegistered.value) return
+  //Cas camp : redirection vers la page camp
+  if (props.event.type === 'camp') {
+    router.push({ name: 'app.camp' }) // <-- adapte si ton nom de route est différent
+    return
+  }
 
-  // À adapter selon ta vraie route
-  router.push({
-    name: 'event.subscription',
-    params: { id: props.event.id },
-  })
+  // 🔜 Plus tard: popup / modal selon type
+  console.log('Popup info à faire plus tard pour:', props.event.type, props.event)
 }
 </script>
 
