@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import { authStore } from '@/stores/auth'
 
 // Mock DB : mets null pour simuler "pas de camp"
 // const camp = ref(null)
@@ -35,6 +36,7 @@ const step = ref('camp') // 'camp' | 'signup' | 'confirm'
 // section pour afficher le camp
 const hasCamp = computed(() => !!camp.value)
 
+// --- helpers dates ---
 const fmtDate = (iso) => {
   if (!iso) return ''
   const d = new Date(iso)
@@ -80,21 +82,45 @@ const infoEveningLabel = computed(() => {
   return loc ? `${d} – ${loc}` : d
 })
 
-// section enfant
-const selectedChildren = computed(() => children.value.filter((c) => c.selected))
+// --- user + roles ---
+const currentUser = computed(() => authStore.user.value)
 
-const selectedNames = computed(() => selectedChildren.value.map((c) => c.firstname))
-
-const selectedNamesText = computed(() => {
-  const names = selectedNames.value
-  if (names.length === 0) return ''
-  if (names.length === 1) return names[0]
-  if (names.length === 2) return `${names[0]} et ${names[1]}`
-  // 3+ : "A, B et C"
-  return `${names.slice(0, -1).join(', ')} et ${names[names.length - 1]}`
+const isStaff = computed(() => {
+  const roles = currentUser.value?.role || []
+  return roles.includes('admin') || roles.includes('accompagnant')
 })
 
+// --- signup list (enfants + éventuellement user staff) ---
+const signupPeople = ref([])
+
+const buildSignupPeople = () => {
+  const list = (children.value || []).map((c) => ({
+    key: `child-${c.id}`,
+    id: c.id,
+    firstname: c.firstname,
+    selected: !!c.selected,
+    kind: 'child',
+  }))
+
+  //si admin/accompagnant => se rajoute dans la liste
+  if (isStaff.value && currentUser.value) {
+    list.unshift({
+      key: `user-${currentUser.value.id}`,
+      id: currentUser.value.id,
+      firstname: currentUser.value.firstname || 'Moi',
+      selected: false, // mets true si tu veux le pré-sélectionner
+      kind: 'user',
+    })
+  }
+
+  return list
+}
+
+const selectedPeople = computed(() => signupPeople.value.filter((p) => p.selected))
+
+// --- navigation actions ---
 const openSignup = () => {
+  signupPeople.value = buildSignupPeople()
   step.value = 'signup'
 }
 
@@ -106,25 +132,23 @@ const addChild = () => {
   console.log('Ajouter un enfant')
 }
 
-const editChild = (child) => {
-  console.log('Modifier', child)
+const editPerson = (person) => {
+  console.log('Modifier', person)
 }
 
 const continueSignup = () => {
-  if (selectedChildren.value.length === 0) return
-  console.log('Continuer avec', selectedChildren.value)
+  if (selectedPeople.value.length === 0) return
+  console.log('Continuer avec', selectedPeople.value)
   step.value = 'confirm'
 }
 
-// actions confirmation
+// confirmation actions
 const goHome = () => {
-  // plus tard: router.push({ name: 'app.home' }) ou 'public.home'
   console.log('Retour accueil')
   step.value = 'camp'
 }
 
 const updateData = () => {
-  // plus tard: aller sur page profil/enfants
   console.log('Mettre à jour les données')
 }
 </script>
@@ -203,16 +227,19 @@ const updateData = () => {
 
         <div class="block">
           <div class="list">
-            <article v-for="child in children" :key="child.id" class="child-card">
+            <article v-for="person in signupPeople" :key="person.key" class="child-card">
               <div class="child-main">
-                <p class="child-name">{{ child.firstname }}</p>
-                <button class="edit" type="button" @click="editChild(child)">
+                <p class="child-name">
+                  {{ person.firstname }}
+                  <span v-if="person.kind === 'user'" class="tag">(vous)</span>
+                </p>
+                <button class="edit" type="button" @click="editPerson(person)">
                   Modifier les données
                 </button>
               </div>
 
               <label class="toggle">
-                <input v-model="child.selected" type="checkbox" />
+                <input v-model="person.selected" type="checkbox" />
                 <span class="track" />
               </label>
             </article>
@@ -228,10 +255,10 @@ const updateData = () => {
           <div class="selection">
             <h3>VOTRE SÉLECTION</h3>
             <p>
-              {{ selectedChildren.length }} enfant{{
-                selectedChildren.length > 1 ? 's' : ''
+              {{ selectedPeople.length }} personne{{
+                selectedPeople.length > 1 ? 's' : ''
               }}
-              sélectionné{{ selectedChildren.length > 1 ? 's' : '' }} pour le camp 2026
+              sélectionnée{{ selectedPeople.length > 1 ? 's' : '' }} pour le camp 2026
             </p>
           </div>
         </div>
@@ -239,10 +266,10 @@ const updateData = () => {
         <BaseButton
           class="cta"
           type="button"
-          :disabled="selectedChildren.length === 0"
+          :disabled="selectedPeople.length === 0"
           @click="continueSignup"
         >
-          Confirmer l'inscription
+          Continuer
         </BaseButton>
       </section>
     </template>
@@ -320,6 +347,12 @@ p + p {
   color: var(--c-text);
   opacity: 0.9;
   cursor: pointer;
+}
+
+.tag {
+  font-size: var(--fs-caption);
+  opacity: 0.75;
+  margin-left: 0.25rem;
 }
 
 .list {
