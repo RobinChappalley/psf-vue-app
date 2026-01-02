@@ -66,7 +66,7 @@ const { nextOpenCamp } = useEventsFeed({
         <li>Un espace parent sécurisé pour suivre les étapes de la préparation au camp</li>
       </ul>
     </div>
-    <BaseButton class="cta" as="link" :to="{ name: 'public.login' }">
+    <BaseButton class="cta" as="link" :to="{ name: 'public.signup' }">
       Créer un compte parent
     </BaseButton>
   </section>
@@ -86,7 +86,7 @@ const { nextOpenCamp } = useEventsFeed({
     <div>
       <p>Prêt à faire découvrir à vos enfants l'aventure qu'est Pieds Sans Frontières ?</p>
     </div>
-    <BaseButton class="cta" as="link" :to="{ name: 'public.login' }">
+    <BaseButton class="cta" as="link" :to="{ name: 'public.signup' }">
       Créer un compte parent
     </BaseButton>
   </section>
