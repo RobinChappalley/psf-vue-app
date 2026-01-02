@@ -121,7 +121,7 @@ const infoEveningLabel = computed(() => {
         </p>
       </div>
 
-      <BaseButton class="cta" as="link" :to="{ name: 'public.login' }">
+      <BaseButton class="cta" as="link" :to="{ name: 'public.signup' }">
         Créer un compte parent
       </BaseButton>
     </section>
@@ -138,7 +138,7 @@ const infoEveningLabel = computed(() => {
         </p>
         <p>Créez un compte parent pour rester informé et suivre l’ouverture des inscriptions.</p>
 
-        <BaseButton class="cta" as="link" :to="{ name: 'public.login' }">
+        <BaseButton class="cta" as="link" :to="{ name: 'public.signup' }">
           Créer un compte
         </BaseButton>
       </section>
