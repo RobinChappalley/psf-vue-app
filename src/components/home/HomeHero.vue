@@ -66,5 +66,6 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 .cta {
   margin: 2rem auto 0;
   display: block;
+  max-width: 20rem;
 }
 </style>
