@@ -64,6 +64,7 @@ const goToEvent = () => {
   align-items: center;
 
   box-shadow: var(--shadow-sm);
+  margin-bottom: 1rem;
 }
 
 /* mini calendrier */
