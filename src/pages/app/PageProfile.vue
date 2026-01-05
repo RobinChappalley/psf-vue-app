@@ -1,7 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
+import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
+import AppIcone from '@/components/AppIcone.vue'
 
 const router = useRouter()
 
@@ -12,6 +14,7 @@ const router = useRouter()
  *  address, role[], parent, children[], camps[], participationInfo...
  * }
  */
+//En-dessous, appelle les données stockées dans auth.js
 const me = computed(() => authStore.user.value)
 
 const displayName = computed(() => {
@@ -39,47 +42,75 @@ function onLogout() {
   authStore.logout()
   router.replace({ name: 'login' })
 }
+// sections internes “comme une nouvelle page”
+const step = ref('profile') // "profile" | "personal" | "children"
+
+function openPersonalData() {
+  step.value = 'personal'
+}
+
+function openChildren() {
+  step.value = 'children'
+}
+
+function backToProfile() {
+  step.value = 'profile'
+}
 </script>
+
 <template>
   <div class="page">
-    <header class="top">
-      <h1 class="title">PROFIL</h1>
-    </header>
+    <!-- ÉCRAN 1 : profil -->
+    <template v-if="step === 'profile'">
+      <header class="top">
+        <h1 class="title">PROFIL</h1>
+      </header>
+      <!-- Carte utilisateur -->
+      <section class="user-card" v-if="me">
+        <div class="avatar" aria-hidden="true">
+          <AppIcone name="profile" />
+        </div>
+        <div class="user-meta">
+          <span class="user-name">{{ displayName }}</span>
+          <span class="user-email">{{ displayEmail }}</span>
+        </div>
+      </section>
 
-    <!-- Carte utilisateur -->
-    <section class="user-card" v-if="me">
-      <div class="avatar" aria-hidden="true">
-        <svg viewBox="0 0 24 24" width="22" height="22">
-          <path
-            d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2-8 4.5V20h16v-1.5C20 16 16.42 14 12 14Z"
-            fill="currentColor"
-          />
-        </svg>
-      </div>
+      <nav class="menu">
+        <ProfileMenuItem @click="openPersonalData"> Données personnelles </ProfileMenuItem>
 
-      <div class="user-meta">
-        <span class="user-name">{{ displayName }}</span>
-        <span class="user-email">{{ displayEmail }}</span>
-      </div>
-    </section>
+        <ProfileMenuItem @click="openChildren"> Enfants </ProfileMenuItem>
+      </nav>
 
-    <!-- Menu -->
-    <nav class="menu">
-      <button class="menu-item" type="button" @click="goToPersonalData">
-        <span>Données personnelles</span>
-        <span class="chevron" aria-hidden="true">›</span>
-      </button>
+      <div class="spacer"></div>
 
-      <button class="menu-item" type="button" @click="goToChildren">
-        <span>Enfants</span>
-        <span class="chevron" aria-hidden="true">›</span>
-      </button>
-    </nav>
+      <button class="logout" type="button" @click="authStore.logout()">Déconnexion</button>
+    </template>
 
-    <div class="spacer"></div>
+    <!-- ÉCRAN 2 : données personnelles -->
+    <template v-else-if="step === 'personal'">
+      <button class="back" type="button" @click="backToProfile">← Retour</button>
+      <h1 class="title">Données personnelles</h1>
 
-    <!-- Déconnexion -->
-    <button class="logout" type="button" @click="onLogout">Déconnexion</button>
+      <!-- Ici ta section "comme une page" -->
+      <section class="section">
+        <p><b>Email :</b> {{ me?.email || '—' }}</p>
+        <p><b>Téléphone :</b> {{ me?.phoneNumber || '—' }}</p>
+      </section>
+    </template>
+
+    <!-- ÉCRAN 3 : enfants -->
+    <template v-else>
+      <button class="back" type="button" @click="backToProfile">← Retour</button>
+      <h1 class="title">Enfants</h1>
+
+      <section class="section">
+        <p v-if="!me?.children?.length">Aucun enfant.</p>
+        <ul v-else>
+          <li v-for="id in me.children" :key="id">{{ id }}</li>
+        </ul>
+      </section>
+    </template>
   </div>
 </template>
 
