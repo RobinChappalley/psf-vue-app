@@ -196,38 +196,73 @@ function finish() {
             <!-- Contenu par défaut minimal (pour éviter une page vide) -->
             <div class="field">
               <label>E-mail</label>
-              <input v-model.trim="form.email" type="email" autocomplete="email" />
+              <input
+                v-model.trim="form.email"
+                type="email"
+                autocomplete="email"
+                placeholder="votre.adresse@example.com"
+              />
             </div>
 
             <div class="field">
               <label>Prénom</label>
-              <input v-model.trim="form.firstname" type="text" autocomplete="given-name" />
+              <input
+                v-model.trim="form.firstname"
+                type="text"
+                autocomplete="given-name"
+                placeholder="Jon"
+              />
             </div>
 
             <div class="field">
               <label>Nom</label>
-              <input v-model.trim="form.lastname" type="text" autocomplete="family-name" />
+              <input
+                v-model.trim="form.lastname"
+                type="text"
+                autocomplete="family-name"
+                placeholder="Doe"
+              />
             </div>
 
             <div class="field">
               <label>Adresse (Rue et numéro)</label>
-              <input v-model.trim="form.address.street" type="text" autocomplete="street-address" />
+              <input
+                v-model.trim="form.address.street"
+                type="text"
+                autocomplete="street-address"
+                placeholder="Rue de l'Exemple 1"
+              />
             </div>
 
             <div class="grid-2">
               <div class="field">
                 <label>Code postal</label>
-                <input v-model="form.address.postalCode" type="text" inputmode="numeric" />
+                <input
+                  v-model="form.address.postalCode"
+                  type="text"
+                  inputmode="numeric"
+                  placeholder="1000"
+                />
               </div>
               <div class="field">
                 <label>Localité</label>
-                <input v-model.trim="form.address.city" type="text" autocomplete="address-level2" />
+                <input
+                  v-model.trim="form.address.city"
+                  type="text"
+                  autocomplete="address-level2"
+                  placeholder="Lausanne"
+                />
               </div>
             </div>
 
             <div class="field">
               <label>Pays</label>
-              <input v-model.trim="form.address.country" type="text" autocomplete="country-name" />
+              <input
+                v-model.trim="form.address.country"
+                type="text"
+                autocomplete="country-name"
+                placeholder="Suisse"
+              />
             </div>
           </slot>
 
@@ -295,12 +330,20 @@ function finish() {
           <slot name="other" :form="form">
             <div class="field">
               <label>Numéro d’assurance</label>
-              <input v-model.trim="form.participationInfo.insuranceNumber" type="text" />
+              <input
+                v-model.trim="form.participationInfo.insuranceNumber"
+                type="text"
+                placeholder="756.1234.1234.56.78"
+              />
             </div>
 
             <div class="field">
               <label>Nom de l’assurance</label>
-              <input v-model.trim="form.participationInfo.insuranceName" type="text" />
+              <input
+                v-model.trim="form.participationInfo.insuranceName"
+                type="text"
+                placeholder="Assurance"
+              />
             </div>
 
             <div class="field">

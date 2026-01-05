@@ -6,6 +6,7 @@ import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import AppIcone from '@/components/AppIcone.vue'
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
+
 const router = useRouter()
 
 /**
