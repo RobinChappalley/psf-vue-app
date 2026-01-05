@@ -5,7 +5,7 @@ import { authStore } from '@/stores/auth'
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import AppIcone from '@/components/AppIcone.vue'
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
-
+import FullDataForm from '@/components/profile/FullDataForm.vue'
 const router = useRouter()
 
 /**
@@ -96,17 +96,22 @@ function onSubmitPersonalData(payload) {
     <template v-else-if="step === 'personal'">
       <header class="page-header">
         <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
-
-        <h2 class="section-title">INFORMATIONS GÉNÉRALES</h2>
       </header>
 
-      <!-- Parent : formulaire -->
+      <!-- Parent -->
       <ProfilePersonalDataForm v-if="isParent && me" :user="me" @submit="onSubmitPersonalData" />
 
-      <!-- Pas parent -->
+      <!-- Autre rôle -->
+      <FullDataForm
+        v-else-if="me"
+        :user="me"
+        @submit="onSubmitPersonalData"
+        @close="backToProfile"
+      />
+
+      <!-- si pas d'utilisateur -->
       <section v-else class="alt">
-        <h2 class="section-title">INFORMATIONS</h2>
-        <p>Cette section est disponible uniquement pour les comptes parent.</p>
+        <p>Impossible de charger l’utilisateur.</p>
       </section>
     </template>
 
