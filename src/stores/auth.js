@@ -5,34 +5,53 @@ const token = ref(null)
 const user = ref(null)
 
 // --- MOCK USERS (temporaire) ---
+// Alignés sur ton vrai modèle (lastname, phoneNumber, etc.)
 const MOCK_USERS = {
   parent: {
     id: '2',
     role: ['parent'],
-    parentId: null,
-    children: [1],
-    name: 'Doe',
+    parent: null,
+    children: ['1'],
+    lastname: 'Doe',
     firstname: 'Jane',
-    'phone-number': '+41812345678',
-    email: 'pauldoe@example.com',
+    phoneNumber: '+41812345678',
+    email: 'jane.doe@example.com',
+    address: {
+      street: 'Rue Exemple 1',
+      city: 'Lausanne',
+      postalCode: 1000,
+      country: 'CH',
+    },
+    camps: [],
+    participationInfo: null,
   },
+
   accompagnant: {
     id: '3',
     role: ['accompagnant'],
-    parentId: null,
+    parent: null,
     children: [],
-    name: 'Doe',
+    lastname: 'Doe',
     firstname: 'Paul',
-    email: 'aosdfj@gmail.com',
+    phoneNumber: '+41876543210',
+    email: 'paul.doe@example.com',
+    address: null,
+    camps: [],
+    participationInfo: null,
   },
+
   admin: {
     id: '4',
     role: ['admin'],
-    parentId: null,
-    children: [1, 5],
-    name: 'Chappalley',
+    parent: null,
+    children: ['1', '5'],
+    lastname: 'Chappalley',
     firstname: 'Robin',
-    email: null,
+    phoneNumber: null,
+    email: 'robin@chapi.ch',
+    address: null,
+    camps: [],
+    participationInfo: null,
   },
 }
 
