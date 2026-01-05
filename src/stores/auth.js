@@ -19,7 +19,7 @@ const MOCK_USERS = {
     address: {
       street: 'Rue Exemple 1',
       city: 'Lausanne',
-      postalCode: 1000,
+      postalCode: 1000000,
       country: 'CH',
     },
     camps: [],

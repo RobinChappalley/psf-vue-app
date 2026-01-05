@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import AppIcone from '@/components/AppIcone.vue'
+import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 
 const router = useRouter()
 
@@ -16,6 +17,7 @@ const router = useRouter()
  */
 //En-dessous, appelle les données stockées dans auth.js
 const me = computed(() => authStore.user.value)
+const isParent = computed(() => authStore.hasAnyRole(['parent']))
 
 const displayName = computed(() => {
   if (!me.value) return ''
@@ -29,14 +31,6 @@ const displayEmail = computed(() => {
   if (!me.value) return ''
   return me.value.email || '—'
 })
-
-function goToPersonalData() {
-  router.push({ name: 'personal-data' })
-}
-
-function goToChildren() {
-  router.push({ name: 'children' })
-}
 
 function onLogout() {
   authStore.logout()
@@ -55,6 +49,17 @@ function openChildren() {
 
 function backToProfile() {
   step.value = 'profile'
+}
+
+//partie pour envoyer des données modifiées au backend (ici parent)
+function onSubmitPersonalData(payload) {
+  // TEMP (sans backend) : tu peux soit log, soit mettre à jour le user mock
+  // Exemple: update local store
+  authStore.user.value = {
+    ...authStore.user.value,
+    ...payload,
+    address: payload.address,
+  }
 }
 </script>
 
@@ -89,13 +94,15 @@ function backToProfile() {
 
     <!-- ÉCRAN 2 : données personnelles -->
     <template v-else-if="step === 'personal'">
-      <button class="back" type="button" @click="backToProfile">← Retour</button>
-      <h1 class="title">Données personnelles</h1>
+      <button class="back" type="button" @click="backToProfile">← Données personnelles</button>
 
-      <!-- Ici ta section "comme une page" -->
-      <section class="section">
-        <p><b>Email :</b> {{ me?.email || '—' }}</p>
-        <p><b>Téléphone :</b> {{ me?.phoneNumber || '—' }}</p>
+      <!--Parent : formulaire -->
+      <ProfilePersonalDataForm v-if="isParent && me" :user="me" @submit="onSubmitPersonalData" />
+
+      <!--Pas parent : autre chose -->
+      <section v-else class="alt">
+        <h2 class="section-title">INFORMATIONS</h2>
+        <p>Cette section est disponible uniquement pour les comptes parent.</p>
       </section>
     </template>
 
@@ -232,5 +239,29 @@ function backToProfile() {
 
 .logout:active {
   opacity: 0.85;
+}
+.back {
+  background: none;
+  border: none;
+  padding: var(--sp-2) 0;
+  color: var(--c-text);
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+.back:active {
+  opacity: 0.7;
+}
+
+.alt {
+  background: var(--c-surface);
+  border-radius: var(--r-card);
+  padding: var(--sp-2);
+  box-shadow: var(--shadow-sm);
+}
+.section-title {
+  margin: 0 0 var(--sp-1);
+  font-family: var(--font-title);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-title);
 }
 </style>
