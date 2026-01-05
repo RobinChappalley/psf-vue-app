@@ -60,8 +60,6 @@ function onSubmit() {
 </script>
 <template>
   <section class="wrap">
-    <h2 class="section-title">Informations générales</h2>
-
     <form class="card" @submit.prevent="onSubmit">
       <div class="field">
         <label for="email">E-mail</label>

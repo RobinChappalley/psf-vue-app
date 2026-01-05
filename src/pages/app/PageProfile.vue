@@ -94,12 +94,16 @@ function onSubmitPersonalData(payload) {
 
     <!-- ÉCRAN 2 : données personnelles -->
     <template v-else-if="step === 'personal'">
-      <button class="back" type="button" @click="backToProfile">← Données personnelles</button>
+      <header class="page-header">
+        <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
 
-      <!--Parent : formulaire -->
+        <h2 class="section-title">INFORMATIONS GÉNÉRALES</h2>
+      </header>
+
+      <!-- Parent : formulaire -->
       <ProfilePersonalDataForm v-if="isParent && me" :user="me" @submit="onSubmitPersonalData" />
 
-      <!--Pas parent : autre chose -->
+      <!-- Pas parent -->
       <section v-else class="alt">
         <h2 class="section-title">INFORMATIONS</h2>
         <p>Cette section est disponible uniquement pour les comptes parent.</p>
