@@ -4,7 +4,7 @@ import AppIcone from '@/components/AppIcone.vue'
 defineProps({
   icon: { type: String, required: true },
   title: { type: String, required: true },
-  description: { type: String, required: true },
+  description: { type: String, default: '' },
   clickable: { type: Boolean, default: true }, // si tu veux pouvoir désactiver
 })
 
