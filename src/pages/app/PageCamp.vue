@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import { authStore } from '@/stores/auth'
+import { useChildrenEditor } from '@/composables/useChildrenEditor'
+import FullDataForm from '@/components/profile/FullDataForm.vue' // si utilisé dans le template "child-create"
 
 // Mock DB : mets null pour simuler "pas de camp"
 // const camp = ref(null)
@@ -23,15 +25,8 @@ const camp = ref({
   },
 })
 
-// Mock enfants (plus tard: viendra de la DB via parent.children)
-const children = ref([
-  { id: '1', firstname: 'Lucas', selected: true },
-  { id: '2', firstname: 'Jane', selected: true },
-  { id: '3', firstname: 'Zoé', selected: false },
-])
-
-// navigation interne (comme création de compte)
-const step = ref('camp') // 'camp' | 'signup' | 'confirm'
+// --- navigation interne ---
+const step = ref('camp') // 'camp' | 'signup' | 'child-create' | 'confirm'
 
 // section pour afficher le camp
 const hasCamp = computed(() => !!camp.value)
@@ -90,6 +85,28 @@ const isStaff = computed(() => {
   return roles.includes('admin') || roles.includes('accompagnant')
 })
 
+// --- composable enfants (création) ---
+const { children, selectedChild, openCreateChild, submitChild, closeChildEdit } =
+  useChildrenEditor()
+
+function openCreateChildFlow() {
+  openCreateChild(currentUser.value?.id)
+  step.value = 'child-create'
+}
+
+function onSubmitChildData(payload) {
+  submitChild(payload)
+  // ✅ ne pas changer de step ici : FullDataForm doit afficher la confirmation
+}
+
+function closeChildCreate() {
+  closeChildEdit()
+  // ✅ on revient à la page signup
+  step.value = 'signup'
+  // ✅ et on reconstruit la liste pour inclure le nouvel enfant
+  signupPeople.value = buildSignupPeople()
+}
+
 // --- signup list (enfants + éventuellement user staff) ---
 const signupPeople = ref([])
 
@@ -98,17 +115,17 @@ const buildSignupPeople = () => {
     key: `child-${c.id}`,
     id: c.id,
     firstname: c.firstname,
-    selected: !!c.selected,
+    selected: false, // mets ta logique si tu veux préselection
     kind: 'child',
   }))
 
-  //si admin/accompagnant => se rajoute dans la liste
+  // si admin/accompagnant => se rajoute dans la liste
   if (isStaff.value && currentUser.value) {
     list.unshift({
       key: `user-${currentUser.value.id}`,
       id: currentUser.value.id,
       firstname: currentUser.value.firstname || 'Moi',
-      selected: false, // mets true si tu veux le pré-sélectionner
+      selected: false,
       kind: 'user',
     })
   }
@@ -128,8 +145,9 @@ const goBackToCamp = () => {
   step.value = 'camp'
 }
 
+// ✅ fonction appelée par ton bouton "Ajouter un enfant"
 const addChild = () => {
-  console.log('Ajouter un enfant')
+  openCreateChildFlow()
 }
 
 const editPerson = (person) => {
@@ -233,9 +251,6 @@ const updateData = () => {
                   {{ person.firstname }}
                   <span v-if="person.kind === 'user'" class="tag">(vous)</span>
                 </p>
-                <button class="edit" type="button" @click="editPerson(person)">
-                  Modifier les données
-                </button>
               </div>
 
               <label class="toggle">
@@ -245,6 +260,7 @@ const updateData = () => {
             </article>
           </div>
 
+          <!-- ✅ ton bouton appelle maintenant addChild() -->
           <BaseButton class="cta btn--secondary" type="button" @click="addChild">
             Ajouter un enfant
           </BaseButton>
@@ -271,6 +287,22 @@ const updateData = () => {
         >
           Continuer
         </BaseButton>
+      </section>
+    </template>
+
+    <!-- ✅ NOUVEL ÉCRAN : création enfant -->
+    <template v-else-if="step === 'child-create'">
+      <section class="section signup">
+        <button class="back" type="button" @click="closeChildCreate">← Retour</button>
+
+        <h1>AJOUTER UN ENFANT</h1>
+
+        <FullDataForm
+          v-if="selectedChild"
+          :user="selectedChild"
+          @submit="onSubmitChildData"
+          @close="closeChildCreate"
+        />
       </section>
     </template>
 

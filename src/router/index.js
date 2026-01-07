@@ -97,29 +97,31 @@ const router = createRouter({
 export default router
 
 router.beforeEach((to) => {
-  const isPublic = to.matched.some((r) => r.meta.public)
-  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth)
+  const isLoggedIn = authStore.isAuthenticated.value
+
+  const isPublic = to.matched.some((r) => r.meta.public === true)
+  const requiresAuth = to.matched.some((r) => r.meta.requiresAuth === true)
 
   // récupère la première meta.roles rencontrée (si une route en a une)
   const rolesMeta = to.matched.map((r) => r.meta.roles).find((x) => Array.isArray(x) && x.length)
 
-  // Si déjà connecté et va sur login -> renvoi app.home
-  if (to.name === 'public.login' && authStore.isAuthenticated.value) {
-    return { name: 'app.home' }
-  }
-  // Si déjà connecté et va sur la home publique -> renvoi app.home
-  if (to.name === 'public.home' && authStore.isAuthenticated.value) {
+  // 1) Si l'utilisateur est connecté et tente d'aller sur une page publique (login, signup, etc.)
+  // -> on renvoie vers l'app
+  if (isPublic && isLoggedIn) {
+    // tu peux autoriser certaines pages publiques même connecté si tu veux
+    if (to.name === 'public.contact' || to.name === 'public.history') return true
     return { name: 'app.home' }
   }
 
-  // Auth guard
-  if (!isPublic && requiresAuth && !authStore.isAuthenticated.value) {
+  // 2) Si route protégée et pas connecté -> login
+  if (requiresAuth && !isLoggedIn) {
     return { name: 'public.login' }
   }
 
-  // Role guard
-  if (rolesMeta && rolesMeta.length) {
-    if (!authStore.isAuthenticated.value) return { name: 'public.login' }
+  // 3) Role guard (si la route demande des rôles)
+  if (rolesMeta?.length) {
+    // à ce stade, requiresAuth a déjà checké, mais on garde une sécurité
+    if (!isLoggedIn) return { name: 'public.login' }
     if (!authStore.hasAnyRole(rolesMeta)) return { name: 'app.home' }
   }
 
