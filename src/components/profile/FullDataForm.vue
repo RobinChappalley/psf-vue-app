@@ -405,6 +405,8 @@ function finish() {
   padding: var(--sp-3);
   margin: 0 auto;
   max-width: clamp(22rem, 92vw, 34rem);
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .page-header {
@@ -435,11 +437,6 @@ function finish() {
   font-size: var(--fs-h3);
   letter-spacing: 0.02em;
   color: var(--c-text);
-}
-
-/* --- Stepper bubbles --- */
-.stepper {
-  margin: var(--sp-2) 0 var(--sp-3);
 }
 
 /* --- Card (form container) --- */

@@ -151,7 +151,7 @@ function onSubmit() {
 /* --- Layout page --- */
 .wrap {
   padding: var(--sp-3);
-  max-width: 520px;
+  width: 100%;
 }
 
 .section-title {
@@ -165,8 +165,6 @@ function onSubmit() {
 /* --- Card (le form) --- */
 .card {
   background: var(--c-surface);
-  border-radius: var(--r-card);
-  box-shadow: var(--shadow-sm);
   padding: var(--sp-3);
 }
 
