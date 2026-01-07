@@ -7,6 +7,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import AppIcone from '@/components/AppIcone.vue'
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
+import ChildrenList from '@/components/profile/ChildrenList.vue'
 
 const router = useRouter()
 
@@ -61,6 +62,26 @@ function onSubmitPersonalData(payload) {
     ...payload,
     address: payload.address,
   }
+}
+
+//PARTIE ENFANT
+const childrenMock = computed(() => {
+  // si plus tard me.children = vrais objets, tu adapteras
+  const ids = me.value?.children || []
+  return ids.map((id, idx) => ({
+    id: String(id),
+    firstname: `Enfant ${idx + 1}`,
+  }))
+})
+
+function onEditChild(child) {
+  console.log('Modifier enfant', child)
+  // plus tard: step interne vers un form enfant
+}
+
+function onAddChild() {
+  console.log('Ajouter un enfant')
+  // plus tard: step interne vers création enfant
 }
 </script>
 
@@ -122,15 +143,13 @@ function onSubmitPersonalData(payload) {
 
     <!-- ÉCRAN 3 : enfants -->
     <template v-else>
-      <button class="back" type="button" @click="backToProfile">← Retour</button>
-      <h1 class="title">Enfants</h1>
+      <header class="page-header">
+        <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
+      </header>
 
-      <section class="section">
-        <p v-if="!me?.children?.length">Aucun enfant.</p>
-        <ul v-else>
-          <li v-for="id in me.children" :key="id">{{ id }}</li>
-        </ul>
-      </section>
+      <h2>Enfants</h2>
+
+      <ChildrenList :children="childrenMock" @edit="onEditChild" @add="onAddChild" />
     </template>
   </div>
 </template>
@@ -144,19 +163,12 @@ function onSubmitPersonalData(payload) {
   flex-direction: column;
   font-family: var(--font-body);
   color: var(--c-text);
+  box-sizing: border-box;
 }
 
 /* ---------- HEADER ---------- */
 .top {
   margin-bottom: var(--sp-3);
-}
-
-.title {
-  margin: 0;
-  font-family: var(--font-title);
-  font-size: var(--fs-h1);
-  font-weight: var(--fw-title);
-  color: var(--c-text);
 }
 
 /* ---------- USER CARD ---------- */
