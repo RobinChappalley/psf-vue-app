@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import BackButton from '@/components/ui/BackButton.vue'
 import { authStore } from '@/stores/auth'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 import FullDataForm from '@/components/profile/FullDataForm.vue' // si utilisé dans le template "child-create"
@@ -236,7 +237,7 @@ const updateData = () => {
     <!-- ÉCRAN 2 : inscription enfants -->
     <template v-else-if="step === 'signup'">
       <section class="section signup">
-        <button class="back" type="button" @click="goBackToCamp">← {{ camp.name }}</button>
+        <BackButton @click="goBackToCamp" />
 
         <h1>INSCRIPTION AU {{ camp.name.toUpperCase() }}</h1>
 

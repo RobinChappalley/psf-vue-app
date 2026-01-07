@@ -195,7 +195,7 @@ const isChild = computed(() => (props.user?.role || []).includes('child'))
   <section class="wrap">
     <!-- Header : flèche + titre -->
     <header class="page-header">
-      <h2 class="section-title">{{ currentTitle }}</h2>
+      <h2 class="">{{ currentTitle }}</h2>
     </header>
 
     <!-- Stepper -->
@@ -448,14 +448,6 @@ const isChild = computed(() => (props.user?.role || []).includes('child'))
 }
 .back:active {
   opacity: 0.7;
-}
-
-.section-title {
-  margin: 0;
-  font-family: var(--font-title);
-  font-size: var(--fs-h3);
-  letter-spacing: 0.02em;
-  color: var(--c-text);
 }
 
 /* --- Card (form container) --- */

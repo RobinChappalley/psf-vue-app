@@ -160,13 +160,6 @@ function onOpenCamp(camp) {
   gap: var(--sp-2);
 }
 
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: var(--sp-2);
-  margin-bottom: var(--sp-3);
-}
-
 /* ====== EVENTS (match screenshots) ====== */
 .events-panel {
   background: var(--c-surface);
