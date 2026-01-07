@@ -232,7 +232,7 @@ function onSubmitPersonalData(payload) {
 
 /* ---------- FOOTER ---------- */
 .spacer {
-  flex: 1;
+  margin-top: 20rem;
 }
 
 .logout {
