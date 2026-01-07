@@ -102,7 +102,7 @@ function closeChildEdit() {
 </script>
 
 <template>
-  <div class="page">
+  <div class="section">
     <!-- ========================= -->
     <!-- ÉCRAN 1 : PROFIL -->
     <!-- ========================= -->
@@ -196,17 +196,6 @@ function closeChildEdit() {
 </template>
 
 <style scoped>
-.page {
-  min-height: 100vh;
-  background: var(--c-bg);
-  padding: var(--sp-3) var(--sp-2);
-  display: flex;
-  flex-direction: column;
-  font-family: var(--font-body);
-  color: var(--c-text);
-  box-sizing: border-box;
-}
-
 /* ---------- HEADER ---------- */
 .top {
   margin-bottom: var(--sp-3);
@@ -289,7 +278,7 @@ function closeChildEdit() {
 
 /* ---------- FOOTER ---------- */
 .spacer {
-  margin-top: 20rem;
+  margin-top: 4rem;
 }
 
 .cta {
