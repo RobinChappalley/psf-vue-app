@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
+import CampForm from '@/components/admin/CampForm.vue'
 
 const step = ref('home')
 
@@ -16,7 +17,6 @@ function goHome() {
  */
 const camps = ref([])
 
-/*
 camps.value = [
   {
     id: 'string',
@@ -38,13 +38,13 @@ camps.value = [
     stages: [],
   },
 ]
-*/
 
 const hasCamps = computed(() => (camps.value?.length ?? 0) > 0)
 
-function onCreateCamp() {
-  // TODO plus tard: ouvrir form / step "create-camp"
-  console.log('Créer un nouveau camp')
+function onCreateCamp(payload) {
+  console.log('payload camp', payload)
+  // TODO: envoyer au backend
+  step.value = 'events'
 }
 
 function onOpenCamp(camp) {
@@ -62,10 +62,11 @@ function onOpenCamp(camp) {
       <header class="top">
         <h1>DASHBOARD</h1>
       </header>
+
       <div class="admin">
         <section class="cards">
           <DashboardCard
-            icon="clipboard"
+            icon="calendarPlus"
             title="Gérer les évènements"
             description="Créer, modifier ou archiver les camps, entraînements, AG, soirées d'information"
             asButton
@@ -99,9 +100,8 @@ function onOpenCamp(camp) {
         <BackButton @click="goHome" />
       </header>
 
-      <!-- Bloc gris comme sur tes screens -->
       <section class="events-panel">
-        <h3 class="panel-title">ÉVÈNEMENTS EXISTANTS</h3>
+        <h2>ÉVÈNEMENTS EXISTANTS</h2>
 
         <!-- État vide -->
         <p v-if="!hasCamps" class="empty">Aucun évènement pour le moment</p>
@@ -118,7 +118,23 @@ function onOpenCamp(camp) {
           />
         </div>
 
-        <button class="cta" type="button" @click="onCreateCamp">Créer un nouveau camp</button>
+        <!-- Important : ici, tu dois ouvrir la section camp-create -->
+        <button class="cta" type="button" @click="step = 'camp-create'">
+          Créer un nouveau camp
+        </button>
+      </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN 2bis : CRÉER UN CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-create'">
+      <header class="page-header">
+        <BackButton @click="step = 'events'" />
+      </header>
+
+      <section class="section">
+        <CampForm @submit="onCreateCamp" />
       </section>
     </template>
 
@@ -165,15 +181,6 @@ function onOpenCamp(camp) {
   background: var(--c-surface);
   border-radius: var(--r-card);
   padding: var(--sp-3);
-}
-
-.panel-title {
-  margin: 0 0 var(--sp-2);
-  font-family: var(--font-title);
-  font-size: var(--fs-body);
-  font-weight: var(--fw-title);
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
 }
 
 .empty {
