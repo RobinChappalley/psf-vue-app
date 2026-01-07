@@ -294,7 +294,7 @@ const updateData = () => {
     <!-- ✅ NOUVEL ÉCRAN : création enfant -->
     <template v-else-if="step === 'child-create'">
       <section class="section signup">
-        <button class="back" type="button" @click="closeChildCreate">← Retour</button>
+        <BackButton @click="closeChildCreate" />
 
         <h1>AJOUTER UN ENFANT</h1>
 
