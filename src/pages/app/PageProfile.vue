@@ -65,34 +65,52 @@ function onSubmitPersonalData(payload) {
 }
 
 //PARTIE ENFANT
-const childrenMock = computed(() => {
-  // si plus tard me.children = vrais objets, tu adapteras
-  const ids = me.value?.children || []
-  return ids.map((id, idx) => ({
-    id: String(id),
-    firstname: `Enfant ${idx + 1}`,
-  }))
-})
+const children = computed(() => authStore.childrenObjects.value)
+const selectedChild = ref(null)
+const isCreatingChild = ref(false)
 
 function onEditChild(child) {
-  console.log('Modifier enfant', child)
-  // plus tard: step interne vers un form enfant
+  isCreatingChild.value = false
+  selectedChild.value = child
+  step.value = 'child-edit'
 }
 
 function onAddChild() {
-  console.log('Ajouter un enfant')
-  // plus tard: step interne vers création enfant
+  isCreatingChild.value = true
+  selectedChild.value = authStore.createEmptyChild(me.value?.id)
+  step.value = 'child-edit'
+}
+function onSubmitChildData(payload) {
+  if (isCreatingChild.value) {
+    const created = authStore.createChild(payload)
+    // Important : donner au form l’objet créé (avec son id)
+    // Comme ça si tu resoumets, ça devient un update.
+    selectedChild.value = created
+    isCreatingChild.value = false
+    return
+  }
+
+  const updated = authStore.updateChild(payload)
+  if (updated) selectedChild.value = updated
+}
+
+function closeChildEdit() {
+  selectedChild.value = null
+  isCreatingChild.value = false
+  step.value = 'children'
 }
 </script>
 
 <template>
   <div class="page">
-    <!-- ÉCRAN 1 : profil -->
+    <!-- ========================= -->
+    <!-- ÉCRAN 1 : PROFIL -->
+    <!-- ========================= -->
     <template v-if="step === 'profile'">
       <header class="top">
         <h1 class="title">PROFIL</h1>
       </header>
-      <!-- Carte utilisateur -->
+
       <section class="user-card" v-if="me">
         <div class="avatar" aria-hidden="true">
           <AppIcone name="profile" />
@@ -118,7 +136,9 @@ function onAddChild() {
       </section>
     </template>
 
-    <!-- ÉCRAN 2 : données personnelles -->
+    <!-- ========================= -->
+    <!-- ÉCRAN 2 : DONNÉES PERSO -->
+    <!-- ========================= -->
     <template v-else-if="step === 'personal'">
       <header class="page-header">
         <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
@@ -127,7 +147,7 @@ function onAddChild() {
       <!-- Parent -->
       <ProfilePersonalDataForm v-if="isParent && me" :user="me" @submit="onSubmitPersonalData" />
 
-      <!-- Autre rôle -->
+      <!-- Autres rôles -->
       <FullDataForm
         v-else-if="me"
         :user="me"
@@ -135,21 +155,42 @@ function onAddChild() {
         @close="backToProfile"
       />
 
-      <!-- si pas d'utilisateur -->
       <section v-else class="alt">
         <p>Impossible de charger l’utilisateur.</p>
       </section>
     </template>
 
-    <!-- ÉCRAN 3 : enfants -->
-    <template v-else>
+    <!-- ========================= -->
+    <!-- ÉCRAN 3 : LISTE ENFANTS -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'children'">
       <header class="page-header">
         <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
       </header>
 
       <h2>Enfants</h2>
 
-      <ChildrenList :children="childrenMock" @edit="onEditChild" @add="onAddChild" />
+      <ChildrenList :children="children" @edit="onEditChild" @add="onAddChild" />
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN 4 : ÉDITION ENFANT -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'child-edit'">
+      <header class="page-header">
+        <button class="back" type="button" aria-label="Retour" @click="step = 'children'">←</button>
+      </header>
+
+      <FullDataForm
+        v-if="selectedChild"
+        :user="selectedChild"
+        @submit="onSubmitChildData"
+        @close="closeChildEdit"
+      />
+
+      <section v-else class="alt">
+        <p>Impossible de charger l’enfant.</p>
+      </section>
     </template>
   </div>
 </template>

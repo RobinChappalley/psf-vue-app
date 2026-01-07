@@ -55,6 +55,48 @@ const MOCK_USERS = {
   },
 }
 
+const MOCK_CHILDREN = {
+  1: {
+    id: '1',
+    role: ['child'],
+    parent: '2',
+    children: [],
+    lastname: 'Doe',
+    firstname: 'Jimmy',
+    email: null,
+    phoneNumber: null,
+    address: null,
+    camps: [],
+    participationInfo: {
+      birthDate: '2014-05-02',
+      tshirtInfo: { size: 'm', gender: 'm' },
+      allergies: [],
+      medication: [],
+      insuranceNumber: '',
+      insuranceName: '',
+      idExpireDate: '',
+      publicTransportPass: '',
+      isCASMember: false,
+      isHelicopterInsured: false,
+      hasPhotoConsent: false,
+      hasPaid: false,
+    },
+  },
+  5: {
+    id: '5',
+    role: ['child'],
+    parent: '4',
+    children: [],
+    lastname: 'Chappalley',
+    firstname: 'Léa',
+    email: null,
+    phoneNumber: null,
+    address: null,
+    camps: [],
+    participationInfo: null,
+  },
+}
+
 const isAuthenticated = computed(() => !!token.value && !!user.value)
 
 function hasAnyRole(roles) {
@@ -79,6 +121,65 @@ function logout() {
   localStorage.removeItem('user')
 }
 
+//ENFANTS
+// ✅ liste d’objets enfants correspondant à user.children (ids)
+const childrenObjects = computed(() => {
+  const ids = user.value?.children || []
+  return ids.map((id) => MOCK_CHILDREN[String(id)]).filter(Boolean)
+})
+
+function createEmptyChild(parentId) {
+  return {
+    id: '', // sera rempli à la création
+    role: ['child'], // ✅ role enfant
+    parent: parentId ?? null,
+    children: [],
+    lastname: '',
+    firstname: '',
+    email: null, // ton FullDataForm masque le champ si role child
+    phoneNumber: null,
+    address: null, // si tu veux que l’enfant ait une adresse, mets un objet ici
+    camps: [],
+    participationInfo: null,
+  }
+}
+
+function createChild(childPayload) {
+  if (!user.value) throw new Error('Not authenticated')
+
+  const id = String(Date.now()) // mock id
+  const parentId = user.value.id
+
+  const child = {
+    ...createEmptyChild(parentId),
+    ...childPayload,
+    id,
+    role: ['child'], // ✅ force
+    parent: parentId, // ✅ force
+  }
+
+  MOCK_CHILDREN[id] = child
+
+  // rattacher au user courant
+  if (!Array.isArray(user.value.children)) user.value.children = []
+  user.value.children = [...user.value.children, id]
+
+  return child
+}
+
+function updateChild(childPayload) {
+  const id = String(childPayload?.id ?? '')
+  if (!id || !MOCK_CHILDREN[id]) return null
+
+  MOCK_CHILDREN[id] = {
+    ...MOCK_CHILDREN[id],
+    ...childPayload,
+    role: ['child'], // ✅ force
+  }
+
+  return MOCK_CHILDREN[id]
+}
+
 export const authStore = {
   token,
   user,
@@ -86,4 +187,8 @@ export const authStore = {
   hasAnyRole,
   mockLogin,
   logout,
+  childrenObjects,
+  createEmptyChild,
+  createChild,
+  updateChild,
 }

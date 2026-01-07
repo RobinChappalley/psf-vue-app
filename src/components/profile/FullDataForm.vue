@@ -61,6 +61,25 @@ const currentTitle = computed(() => {
   }
 })
 
+// ✅ Validation state
+const errors = reactive({
+  firstname: '',
+  lastname: '',
+})
+
+function validateGeneralStep() {
+  errors.firstname = ''
+  errors.lastname = ''
+
+  const fn = String(form.firstname ?? '').trim()
+  const ln = String(form.lastname ?? '').trim()
+
+  if (!fn) errors.firstname = 'Le prénom est obligatoire.'
+  if (!ln) errors.lastname = 'Le nom est obligatoire.'
+
+  return !errors.firstname && !errors.lastname
+}
+
 // Helpers (tags)
 const allergyDraft = ref('')
 const medDraft = ref('')
@@ -147,17 +166,13 @@ function goToStep(i) {
   stepIndex.value = Math.max(0, Math.min(i, steps.length - 1))
 }
 
-function back() {
-  if (stepIndex.value > 0) {
-    stepIndex.value -= 1
-    return
-  }
-  // optionnel : dire au parent "ferme-moi"
-  emit('close')
-}
-
 // Quand on valide une étape
 function onNext() {
+  // Validation à la sortie de l'étape "general"
+  if (step.value === 'general') {
+    if (!validateGeneralStep()) return
+  }
+
   // Si on est sur "other" → submit + confirmation
   if (step.value === 'other') {
     emit('submit', cloneUser(form))
@@ -172,6 +187,8 @@ function finish() {
   // Retourner au début du wizard ou fermer
   emit('close')
 }
+//Si c'est un enfant, on ne veut pas afficher le champ d'email
+const isChild = computed(() => (props.user?.role || []).includes('child'))
 </script>
 
 <template>
@@ -194,7 +211,7 @@ function finish() {
           <!-- Slots optionnels : si tu les fournis, ça remplace -->
           <slot name="general" :form="form">
             <!-- Contenu par défaut minimal (pour éviter une page vide) -->
-            <div class="field">
+            <div class="field" v-if="!isChild">
               <label>E-mail</label>
               <input
                 v-model.trim="form.email"
@@ -212,6 +229,7 @@ function finish() {
                 autocomplete="given-name"
                 placeholder="Jon"
               />
+              <p v-if="errors.firstname" class="error">{{ errors.firstname }}</p>
             </div>
 
             <div class="field">
@@ -222,6 +240,7 @@ function finish() {
                 autocomplete="family-name"
                 placeholder="Doe"
               />
+              <p v-if="errors.lastname" class="error">{{ errors.lastname }}</p>
             </div>
 
             <div class="field">
@@ -635,5 +654,11 @@ input:focus {
 .slide-leave-to {
   transform: translateX(-10px);
   opacity: 0;
+}
+
+.error {
+  margin: 0.25rem 0 0;
+  font-size: var(--fs-caption);
+  color: #b00020;
 }
 </style>
