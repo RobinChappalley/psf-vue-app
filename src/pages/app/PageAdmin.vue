@@ -95,7 +95,7 @@ function onOpenCamp(camp) {
     <!-- ÉCRAN 2 : ÉVÈNEMENTS -->
     <!-- ========================= -->
     <template v-else-if="step === 'events'">
-      <header class="page-header">
+      <header>
         <BackButton @click="goHome" />
       </header>
 
@@ -126,7 +126,7 @@ function onOpenCamp(camp) {
     <!-- ÉCRAN 3 : MEMBRES -->
     <!-- ========================= -->
     <template v-else-if="step === 'members'">
-      <header class="page-header">
+      <header>
         <BackButton @click="goHome" />
       </header>
 
@@ -140,7 +140,7 @@ function onOpenCamp(camp) {
     <!-- ÉCRAN 4 : ARCHIVES -->
     <!-- ========================= -->
     <template v-else-if="step === 'archives'">
-      <header class="page-header">
+      <header>
         <BackButton @click="goHome" />
       </header>
 

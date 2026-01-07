@@ -151,24 +151,10 @@ const addChild = () => {
   openCreateChildFlow()
 }
 
-const editPerson = (person) => {
-  console.log('Modifier', person)
-}
-
 const continueSignup = () => {
   if (selectedPeople.value.length === 0) return
   console.log('Continuer avec', selectedPeople.value)
   step.value = 'confirm'
-}
-
-// confirmation actions
-const goHome = () => {
-  console.log('Retour accueil')
-  step.value = 'camp'
-}
-
-const updateData = () => {
-  console.log('Mettre à jour les données')
 }
 </script>
 
