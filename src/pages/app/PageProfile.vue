@@ -8,6 +8,7 @@ import AppIcone from '@/components/AppIcone.vue'
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
 import ChildrenList from '@/components/profile/ChildrenList.vue'
+import { useChildrenEditor } from '@/composables/useChildrenEditor'
 
 const router = useRouter()
 
@@ -65,38 +66,25 @@ function onSubmitPersonalData(payload) {
 }
 
 //PARTIE ENFANT
-const children = computed(() => authStore.childrenObjects.value)
-const selectedChild = ref(null)
-const isCreatingChild = ref(false)
+const { children, selectedChild, openEditChild, openCreateChild, submitChild, closeChildEdit } =
+  useChildrenEditor()
 
 function onEditChild(child) {
-  isCreatingChild.value = false
-  selectedChild.value = child
+  openEditChild(child)
   step.value = 'child-edit'
 }
 
 function onAddChild() {
-  isCreatingChild.value = true
-  selectedChild.value = authStore.createEmptyChild(me.value?.id)
+  openCreateChild(me.value?.id) // parentId
   step.value = 'child-edit'
 }
-function onSubmitChildData(payload) {
-  if (isCreatingChild.value) {
-    const created = authStore.createChild(payload)
-    // Important : donner au form l’objet créé (avec son id)
-    // Comme ça si tu resoumets, ça devient un update.
-    selectedChild.value = created
-    isCreatingChild.value = false
-    return
-  }
 
-  const updated = authStore.updateChild(payload)
-  if (updated) selectedChild.value = updated
+function onSubmitChildData(payload) {
+  submitChild(payload)
 }
 
-function closeChildEdit() {
-  selectedChild.value = null
-  isCreatingChild.value = false
+function closeChildEditAndBack() {
+  closeChildEdit()
   step.value = 'children'
 }
 </script>
@@ -185,7 +173,7 @@ function closeChildEdit() {
         v-if="selectedChild"
         :user="selectedChild"
         @submit="onSubmitChildData"
-        @close="closeChildEdit"
+        @close="closeChildEditAndBack"
       />
 
       <section v-else class="alt">

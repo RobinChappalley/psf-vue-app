@@ -233,9 +233,6 @@ const updateData = () => {
                   {{ person.firstname }}
                   <span v-if="person.kind === 'user'" class="tag">(vous)</span>
                 </p>
-                <button class="edit" type="button" @click="editPerson(person)">
-                  Modifier les données
-                </button>
               </div>
 
               <label class="toggle">
