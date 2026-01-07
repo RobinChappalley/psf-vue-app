@@ -1,16 +1,23 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import BackButton from '@/components/ui/BackButton.vue'
 import AppIcone from '@/components/AppIcone.vue'
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
 import ChildrenList from '@/components/profile/ChildrenList.vue'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 
-const router = useRouter()
+//Navigation retour
+function goBack() {
+  if (step.value === 'personal') return backToProfile()
+  if (step.value === 'children') return backToProfile()
+  if (step.value === 'child-edit') return closeChildEditAndBack()
+  // fallback
+  step.value = 'profile'
+}
 
 /**
  * Ton vrai modèle User (résumé)
@@ -128,8 +135,8 @@ function closeChildEditAndBack() {
     <!-- ÉCRAN 2 : DONNÉES PERSO -->
     <!-- ========================= -->
     <template v-else-if="step === 'personal'">
-      <header class="page-header">
-        <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
+      <header>
+        <BackButton @click="goBack" />
       </header>
 
       <!-- Parent -->
@@ -152,8 +159,8 @@ function closeChildEditAndBack() {
     <!-- ÉCRAN 3 : LISTE ENFANTS -->
     <!-- ========================= -->
     <template v-else-if="step === 'children'">
-      <header class="page-header">
-        <button class="back" type="button" aria-label="Retour" @click="backToProfile">←</button>
+      <header>
+        <BackButton @click="goBack" />
       </header>
 
       <h2>Enfants</h2>
@@ -165,8 +172,8 @@ function closeChildEditAndBack() {
     <!-- ÉCRAN 4 : ÉDITION ENFANT -->
     <!-- ========================= -->
     <template v-else-if="step === 'child-edit'">
-      <header class="page-header">
-        <button class="back" type="button" aria-label="Retour" @click="step = 'children'">←</button>
+      <header>
+        <BackButton @click="goBack" />
       </header>
 
       <FullDataForm
