@@ -75,6 +75,8 @@ function mockLogin(role = 'parent') {
 function logout() {
   user.value = null
   token.value = null
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
 }
 
 export const authStore = {

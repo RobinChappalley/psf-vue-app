@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 import AppIcone from '@/components/AppIcone.vue'
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
@@ -33,10 +34,9 @@ const displayEmail = computed(() => {
   return me.value.email || '—'
 })
 
-function onLogout() {
-  authStore.logout()
-  router.replace({ name: 'login' })
-}
+//le logout se gère dans AppLayout, pour s'assurer qu'à chaque fois que l'utilisateur est sur
+//la partie privée, il est bien connecté, sinon ça le redirige sur la page de login
+
 // sections internes “comme une nouvelle page”
 const step = ref('profile') // "profile" | "personal" | "children"
 
@@ -90,7 +90,11 @@ function onSubmitPersonalData(payload) {
 
       <div class="spacer"></div>
 
-      <button class="logout" type="button" @click="authStore.logout()">Déconnexion</button>
+      <section class="section">
+        <BaseButton class="logout cta" type="button" @click="authStore.logout()">
+          Déconnexion
+        </BaseButton>
+      </section>
     </template>
 
     <!-- ÉCRAN 2 : données personnelles -->
@@ -235,21 +239,12 @@ function onSubmitPersonalData(payload) {
   margin-top: 20rem;
 }
 
-.logout {
-  width: 100%;
-  padding: var(--sp-2);
-  border-radius: var(--r-button);
-  border: none;
-  background: var(--c-primary);
-  color: var(--c-bg);
-  font-weight: var(--fw-semibold);
-  font-size: var(--fs-button);
-  cursor: pointer;
+.cta {
+  margin: var(--sp-4) auto 0;
+  display: block;
+  max-width: 20rem;
 }
 
-.logout:active {
-  opacity: 0.85;
-}
 .back {
   background: none;
   border: none;
