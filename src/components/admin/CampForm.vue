@@ -124,6 +124,7 @@ function onSubmit() {
   background: var(--c-surface);
   padding: var(--sp-3);
   box-sizing: border-box;
+  border-radius: var(--r-input);
 }
 
 /* --- Fields --- */
@@ -137,7 +138,7 @@ label {
   font-size: var(--fs-caption);
   line-height: 1.2;
   margin-bottom: 0.35rem;
-  color: rgba(38, 38, 24, 0.75);
+  color: var(--c-text);
 }
 
 input {
@@ -153,7 +154,13 @@ input {
   outline: none;
 }
 
-/* date with icon */
+input::placeholder {
+  color: var(--c-border);
+}
+
+input[type='date'] {
+  color: var(--c-border);
+}
 
 .input-wrap input[type='date'] {
   padding-right: 0.5rem;
