@@ -42,14 +42,27 @@ camps.value = [
 const hasCamps = computed(() => (camps.value?.length ?? 0) > 0)
 
 function onCreateCamp(payload) {
+  if (hasCamps.value) {
+    console.warn('Un camp existe déjà, création bloquée.')
+    step.value = 'events'
+    return
+  }
+
   console.log('payload camp', payload)
   // TODO: envoyer au backend
   step.value = 'events'
 }
 
+function openCampCreate() {
+  if (hasCamps.value) return
+  step.value = 'camp-create'
+}
+
+const selectedCamp = ref(null)
+
 function onOpenCamp(camp) {
-  // TODO plus tard: step "camp-details"
-  console.log('Ouvrir camp', camp)
+  selectedCamp.value = camp
+  step.value = 'camp-edit' // ou 'camp-details'
 }
 </script>
 
@@ -119,9 +132,14 @@ function onOpenCamp(camp) {
         </div>
 
         <!-- Important : ici, tu dois ouvrir la section camp-create -->
-        <button class="cta" type="button" @click="step = 'camp-create'">
+        <button class="cta" type="button" :disabled="hasCamps" @click="openCampCreate">
           Créer un nouveau camp
         </button>
+
+        <p v-if="hasCamps" class="hint">
+          Un camp est déjà actif. Archivez ou supprimez le camp existant avant d’en créer un
+          nouveau.
+        </p>
       </section>
     </template>
 
@@ -135,6 +153,18 @@ function onOpenCamp(camp) {
 
       <section class="section">
         <CampForm @submit="onCreateCamp" />
+      </section>
+    </template>
+    <!-- ========================= -->
+    <!-- ÉCRAN 2ter : MODIFIER UN CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-edit'">
+      <header class="page-header">
+        <BackButton @click="step = 'events'" />
+      </header>
+
+      <section class="section">
+        <CampForm :initialValue="selectedCamp" @submit="onEditCamp" />
       </section>
     </template>
 
@@ -208,5 +238,16 @@ function onOpenCamp(camp) {
 }
 .cta:active {
   opacity: 0.85;
+}
+
+.cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0.75rem 0 0;
+  font-size: var(--fs-caption);
+  color: rgba(38, 38, 24, 0.65);
 }
 </style>
