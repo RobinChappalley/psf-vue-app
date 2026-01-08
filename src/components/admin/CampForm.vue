@@ -1,65 +1,38 @@
 <script setup>
-import { reactive, computed, ref } from 'vue'
-import BaseButton from '@/components/ui/BaseButton.vue'
-
-const props = defineProps({
-  /**
-   * Optionnel: si un jour tu réutilises le form pour "éditer"
-   * tu peux passer un camp initial.
-   */
-  initialValue: { type: Object, default: null },
-  submitting: { type: Boolean, default: false },
-})
+import { computed, reactive, ref } from 'vue'
 
 const emit = defineEmits(['submit'])
 
 const form = reactive({
-  title: props.initialValue?.title ?? '',
-  startDate: props.initialValue?.startDate ?? '', // YYYY-MM-DD
-  endDate: props.initialValue?.endDate ?? '', // YYYY-MM-DD
-  subStartDate: props.initialValue?.subStartDatetime?.slice(0, 10) ?? '', // YYYY-MM-DD
-  subEndDate: props.initialValue?.subEndDatetime?.slice(0, 10) ?? '', // YYYY-MM-DD
+  name: '',
+  startDate: '', // YYYY-MM-DD
+  endDate: '',
+  subscriptionStartDate: '',
+  subscriptionDeadline: '',
 })
 
 const gpxFile = ref(null)
 
 function onPickGpx(e) {
-  const file = e.target.files?.[0] ?? null
-  gpxFile.value = file
+  gpxFile.value = e.target.files?.[0] ?? null
 }
 
-const canSubmit = computed(() => {
-  if (!form.title.trim()) return false
-  // tu peux renforcer plus tard (start<=end, subStart<=subEnd, etc.)
-  return true
-})
+const canSubmit = computed(() => form.name.trim().length > 0)
 
-function toUtcISODateStart(dateStr) {
-  // "YYYY-MM-DD" -> "YYYY-MM-DDT00:00:00Z"
-  if (!dateStr) return null
-  return `${dateStr}T00:00:00Z`
-}
-
-function toUtcISODateEnd(dateStr) {
-  // "YYYY-MM-DD" -> "YYYY-MM-DDT23:59:59Z"
-  if (!dateStr) return null
-  return `${dateStr}T23:59:59Z`
-}
-
-function submit() {
+function onSubmit() {
   if (!canSubmit.value) return
 
+  // Payload conforme à ton modèle (clé-kebab-case)
   const payload = {
-    title: form.title.trim(),
-    startDate: form.startDate || null,
-    endDate: form.endDate || null,
+    name: form.name.trim(),
+    'start-date': form.startDate || null,
+    'end-date': form.endDate || null,
+    'subscription-start-date': form.subscriptionStartDate || null,
+    'subscription-deadline': form.subscriptionDeadline || null,
 
-    // selon ton modèle API: subStartDatetime / subEndDatetime
-    subStartDatetime: form.subStartDate ? toUtcISODateStart(form.subStartDate) : null,
-    subEndDatetime: form.subEndDate ? toUtcISODateEnd(form.subEndDate) : null,
-
-    // fichier GPX (à parser côté backend plus tard)
-    gpxFile: gpxFile.value,
+    // Mock : on met le fichier dans l'objet.
+    // Plus tard: envoyer le fichier séparément (FormData) et stocker un lien ou un id.
+    'GPS-track': gpxFile.value ? { file: gpxFile.value } : {},
   }
 
   emit('submit', payload)
@@ -67,142 +40,123 @@ function submit() {
 </script>
 
 <template>
-  <form class="camp-form" @submit.prevent="submit">
-    <h1 class="title">CRÉATION D'UN CAMP</h1>
+  <section class="wrap">
+    <h2>Création d'un nouveau camp</h2>
 
-    <!-- Titre -->
-    <div class="field">
-      <label class="label">Titre *</label>
-      <input
-        v-model="form.title"
-        class="input"
-        type="text"
-        placeholder="Titre du camp"
-        autocomplete="off"
-        required
-      />
-    </div>
-
-    <!-- Date début -->
-    <div class="field">
-      <label class="label">Date de début</label>
-      <div class="input-wrap">
-        <input v-model="form.startDate" class="input input--date" type="date" />
-        <span class="date-icon" aria-hidden="true">12</span>
+    <form class="card" @submit.prevent="onSubmit">
+      <!-- Titre -->
+      <div class="field">
+        <label for="name">Titre *</label>
+        <input
+          id="name"
+          v-model.trim="form.name"
+          type="text"
+          placeholder="Titre du camp"
+          required
+        />
       </div>
-    </div>
 
-    <!-- Date fin -->
-    <div class="field">
-      <label class="label">Date de fin</label>
-      <div class="input-wrap">
-        <input v-model="form.endDate" class="input input--date" type="date" />
-        <span class="date-icon" aria-hidden="true">12</span>
+      <!-- Date de début -->
+      <div class="field">
+        <label for="startDate">Date de début</label>
+        <div class="input-wrap">
+          <input id="startDate" v-model="form.startDate" type="date" />
+        </div>
       </div>
-    </div>
 
-    <!-- Début inscription -->
-    <div class="field">
-      <label class="label">Date de début d’inscription</label>
-      <div class="input-wrap">
-        <input v-model="form.subStartDate" class="input input--date" type="date" />
-        <span class="date-icon" aria-hidden="true">12</span>
+      <!-- Date de fin -->
+      <div class="field">
+        <label for="endDate">Date de fin</label>
+        <div class="input-wrap">
+          <input id="endDate" v-model="form.endDate" type="date" />
+        </div>
       </div>
-    </div>
 
-    <!-- Deadline inscription -->
-    <div class="field">
-      <label class="label">Date limite d’inscription</label>
-      <div class="input-wrap">
-        <input v-model="form.subEndDate" class="input input--date" type="date" />
-        <span class="date-icon" aria-hidden="true">12</span>
+      <!-- Début inscription -->
+      <div class="field">
+        <label for="subStart">Date de début d’inscription</label>
+        <div class="input-wrap">
+          <input id="subStart" v-model="form.subscriptionStartDate" type="date" />
+        </div>
       </div>
-    </div>
 
-    <!-- GPX -->
-    <div class="field">
-      <label class="label">GPX du tracé</label>
+      <!-- Deadline inscription -->
+      <div class="field">
+        <label for="subEnd">Date limite d’inscription</label>
+        <div class="input-wrap">
+          <input id="subEnd" v-model="form.subscriptionDeadline" type="date" />
+        </div>
+      </div>
 
-      <label class="upload">
-        <input class="upload-input" type="file" accept=".gpx" @change="onPickGpx" />
-        <span class="upload-btn" aria-hidden="true">＋</span>
-        <span class="upload-text">Ajouter un fichier</span>
-      </label>
+      <!-- GPX -->
+      <div class="field">
+        <label>GPX du tracé</label>
 
-      <p v-if="gpxFile" class="file-name">{{ gpxFile.name }}</p>
-    </div>
+        <label class="upload">
+          <input class="upload-input" type="file" accept=".gpx" @change="onPickGpx" />
+          <span class="upload-btn" aria-hidden="true">＋</span>
+          <span class="upload-text">Ajouter un fichier</span>
+        </label>
 
-    <!-- Matériel -->
-    <div class="field">
-      <label class="label">Matériel pour le camp</label>
-      <p class="placeholder">??????????????????</p>
-    </div>
+        <p v-if="gpxFile" class="file-name">{{ gpxFile.name }}</p>
+      </div>
 
-    <BaseButton class="cta" type="submit" :disabled="!canSubmit || submitting">
-      Valider
-    </BaseButton>
-  </form>
+      <!-- Matériel (placeholder comme ton screen) -->
+      <div class="field">
+        <label>Matériel pour le camp</label>
+        <p class="placeholder">??????????????????</p>
+      </div>
+
+      <button class="cta" type="submit" :disabled="!canSubmit">Valider</button>
+    </form>
+  </section>
 </template>
 
 <style scoped>
-.camp-form {
-  display: grid;
-  gap: var(--sp-3);
-}
-
-/* titre */
-.title {
-  margin: 0 0 var(--sp-2);
-  font-family: var(--font-title);
-  font-size: var(--fs-h2);
-  font-weight: var(--fw-title);
-  text-transform: uppercase;
-}
-
-/* fields */
-.field {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.label {
-  font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.85);
-}
-
-/* inputs */
-.input {
+/* --- Layout page --- */
+.wrap {
   width: 100%;
-  padding: 0.9rem 0.9rem;
-  border: 1px solid var(--c-border);
-  border-radius: 8px;
-  background: var(--c-bg);
+  box-sizing: border-box;
+}
+
+/* --- Card (le form) --- */
+.card {
+  background: var(--c-surface);
+  padding: var(--sp-3);
+  box-sizing: border-box;
+}
+
+/* --- Fields --- */
+.field {
+  margin-bottom: var(--sp-2);
+}
+
+label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--fs-caption);
+  line-height: 1.2;
+  margin-bottom: 0.35rem;
+  color: rgba(38, 38, 24, 0.75);
+}
+
+input {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-body);
   font-size: var(--fs-body);
-}
-
-.input-wrap {
-  position: relative;
-}
-
-.input--date {
-  padding-right: 3rem;
-}
-
-/* mini "icon" à droite (placeholder style) */
-.date-icon {
-  position: absolute;
-  right: 0.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  padding: 0.65rem 0.75rem;
+  border-radius: var(--r-input);
   border: 1px solid var(--c-border);
-  display: grid;
-  place-items: center;
-  font-size: 0.85rem;
-  color: rgba(38, 38, 24, 0.8);
   background: var(--c-bg);
+  color: var(--c-text);
+  outline: none;
+}
+
+/* date with icon */
+
+.input-wrap input[type='date'] {
+  padding-right: 0.5rem;
 }
 
 /* upload */
@@ -232,20 +186,34 @@ function submit() {
 }
 
 .file-name {
-  margin: 0;
+  margin: 0.5rem 0 0;
   font-size: var(--fs-caption);
   color: rgba(38, 38, 24, 0.65);
 }
 
-/* placeholder matériel */
 .placeholder {
   margin: 0;
   font-size: var(--fs-caption);
   color: rgba(38, 38, 24, 0.55);
 }
 
-/* CTA */
+/* CTA button */
 .cta {
-  margin-top: var(--sp-2);
+  width: 100%;
+  border: 0;
+  cursor: pointer;
+  font-family: var(--font-body);
+  font-size: var(--fs-button);
+  font-weight: var(--fw-semibold);
+  padding: 0.9rem 1rem;
+  border-radius: var(--r-button);
+  background: var(--c-primary);
+  color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
+.cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
