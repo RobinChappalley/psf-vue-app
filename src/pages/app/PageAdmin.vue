@@ -16,7 +16,7 @@ import CampArchivesSection from '@/components/admin/CampArchivesSection.vue'
 import { mockArchivedCamps } from '@/assets/mocks/camps'
 import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
 import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
-
+import MemberSection from '@/components/admin/MemberSection.vue'
 const selectedUser = ref(null)
 const step = ref('home')
 
@@ -585,13 +585,19 @@ function onOpenArchiveEvent(ev) {
     <!-- ÉCRAN 3 : MEMBRES -->
     <!-- ========================= -->
     <template v-else-if="step === 'members'">
-      <header>
+      <header class="page-header">
         <BackButton @click="goHome" />
       </header>
 
-      <section class="mock">
-        <p>👤 Liste des membres (mock)</p>
-        <p>🔍 Recherche / filtres</p>
+      <section>
+        <MemberSection
+          @openUser="
+            (u) => {
+              selectedUser = u
+              step = 'user-details'
+            }
+          "
+        />
       </section>
     </template>
 

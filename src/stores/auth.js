@@ -55,7 +55,7 @@ const MOCK_USERS = {
     },
     parent: null,
     children: ['1', '5'],
-    camps: ['1'],
+    camps: ['camp-2026'],
     participationInfo: {
       birthDate: '1996-09-18',
       tshirtInfo: {
