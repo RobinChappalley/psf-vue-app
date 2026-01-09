@@ -79,7 +79,6 @@ function onContinue() {
 
 <style scoped>
 .card {
-  background: rgba(0, 0, 0, 0.02);
   border-radius: var(--r-input);
   padding: var(--sp-3);
   display: grid;
