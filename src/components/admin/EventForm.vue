@@ -64,20 +64,23 @@ watch(
   (v) => {
     if (!v) return
 
-    // On remplit au mieux selon ce qu’on reçoit
     form.title = v.title ?? ''
     form.description = v.remark ?? v.description ?? ''
     form.date = v.date ?? (v.dateTime ? String(v.dateTime).slice(0, 10) : '')
     form.location = v.location ?? ''
 
-    // training
+    // training: accepter plusieurs noms (compat mock/backend)
     form.meetingPoint = v.meetingPoint ?? ''
     form.meetingTime = v.meetingTime ?? ''
-    form.arrivalMeetingPoint = v.arrivalMeetingPoint ?? ''
-    form.arrivalTime = v.arrivalTime ?? ''
+
+    // ✅ arrivée: supporte returnTime (ton modèle)
+    form.arrivalMeetingPoint = v.arrivalMeetingPoint ?? v.returnPoint ?? ''
+    form.arrivalTime = v.arrivalTime ?? v.returnTime ?? ''
+
     form.distance = v.distance != null ? String(v.distance) : ''
     form.elevationGain = v.elevationGain != null ? String(v.elevationGain) : ''
     form.elevationLoss = v.elevationLoss != null ? String(v.elevationLoss) : ''
+
     form.responsiblePerson = v.responsiblePerson ?? ''
 
     // stage
@@ -211,6 +214,12 @@ function onSubmit() {
 
   emit('submit', payload)
 }
+
+//s'assurer que l'évènement ne soit pas dans le passé
+const today = computed(() => {
+  const d = new Date()
+  return d.toISOString().slice(0, 10) // YYYY-MM-DD
+})
 </script>
 
 <template>
@@ -242,7 +251,7 @@ function onSubmit() {
       <div class="field">
         <label>Date</label>
         <div class="input-wrap">
-          <input v-model="form.date" type="date" />
+          <input id="date" v-model="form.date" type="date" :min="today" />
         </div>
       </div>
 
@@ -291,13 +300,29 @@ function onSubmit() {
       <!-- Champs communs training + stage -->
       <template v-if="visible.showTraining || visible.showStage">
         <div class="field">
-          <label>Distance</label>
-          <input v-model.trim="form.distance" type="number" step="0.1" placeholder="20" />
+          <label for="distance">Distance (km)</label>
+          <input
+            id="distance"
+            v-model.number="form.distance"
+            type="number"
+            inputmode="decimal"
+            min="0"
+            step="0.1"
+            placeholder="ex : 12.5"
+          />
         </div>
 
         <div class="field">
-          <label>Dénivelé positif</label>
-          <input v-model.trim="form.elevationGain" type="number" step="1" placeholder="1000" />
+          <label for="elevationGain">Dénivelé positif (m)</label>
+          <input
+            id="elevationGain"
+            v-model.number="form.elevationGain"
+            type="number"
+            inputmode="numeric"
+            min="0"
+            step="1"
+            placeholder="ex : 300"
+          />
         </div>
 
         <div v-if="visible.showStage" class="field">
@@ -372,5 +397,9 @@ input[type='date'] {
 
 .input-wrap input[type='date'] {
   padding-right: 0.5rem;
+}
+
+input[type='date']:valid {
+  color: var(--c-text);
 }
 </style>

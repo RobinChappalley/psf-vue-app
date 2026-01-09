@@ -8,6 +8,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import CampEventsSection from '@/components/admin/CampEventsSection.vue'
 import CreateCampEventSection from '@/components/admin/CreateCampEventSection.vue'
+import EventForm from '@/components/admin/EventForm.vue'
 
 const step = ref('home')
 
@@ -165,6 +166,49 @@ function onUpdateCamp(payload) {
 
   // Retour menu camp
   step.value = 'camp-menu'
+}
+
+//Pour mettre à jour un évènement (ici uniquement un training)
+const selectedEvent = ref(null) // { type: 'trainings', data: training }
+
+function onOpenTraining(training) {
+  selectedEvent.value = { type: 'trainings', data: training }
+  step.value = 'camp-event-edit'
+}
+
+function onUpdateCampEvent(payload) {
+  if (!selectedCamp.value || !selectedEvent.value) return
+
+  // v1: uniquement trainings
+  if (selectedEvent.value.type === 'trainings') {
+    const old = selectedEvent.value.data
+    const list = selectedCamp.value.trainings ?? []
+
+    const updated = {
+      ...old, // garde number + items-list + tout ce que tu ne modifies pas
+      date: payload.date ?? old.date,
+      remark: payload.remark ?? old.remark,
+
+      meetingPoint: payload.meetingPoint ?? old.meetingPoint,
+      meetingTime: payload.meetingTime ?? old.meetingTime,
+
+      returnTime: payload.arrivalTime ?? old.returnTime,
+
+      distance: payload.distance ?? old.distance,
+      elevationGain: payload.elevationGain ?? old.elevationGain,
+      elevationLoss: payload.elevationLoss ?? old.elevationLoss,
+
+      responsiblePerson: payload.responsiblePerson ?? old.responsiblePerson,
+    }
+
+    // update immuable
+    selectedCamp.value.trainings = list.map((t) => (t.number === old.number ? updated : t))
+
+    // keep selection in sync
+    selectedEvent.value.data = updated
+  }
+
+  step.value = 'camp-events'
 }
 </script>
 
@@ -329,8 +373,25 @@ function onUpdateCamp(payload) {
         :camp-title="selectedCamp?.title ?? ''"
         :trainings="selectedCamp?.trainings ?? []"
         @create="step = 'camp-event-create'"
-        @openTraining="(t) => console.log('open training', t)"
+        @openTraining="onOpenTraining"
       />
+    </template>
+    <!-- ========================= -->
+    <!-- ÉCRAN : MODIFIER CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-edit'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <section class="section">
+        <CampForm
+          mode="edit"
+          :initial-values="selectedCamp"
+          :existing-gpx="selectedCamp?.gpsTrack ?? null"
+          @submit="onUpdateCamp"
+        />
+      </section>
     </template>
 
     <!-- ========================= -->
@@ -350,21 +411,28 @@ function onUpdateCamp(payload) {
     </template>
 
     <!-- ========================= -->
-    <!-- ÉCRAN : MODIFIER CAMP -->
+    <!-- ÉCRAN : MODIFIER ÉVÈNEMENT -->
     <!-- ========================= -->
-    <template v-else-if="step === 'camp-edit'">
+    <template v-else-if="step === 'camp-event-edit'">
       <header class="page-header">
-        <BackButton @click="step = 'camp-menu'" />
+        <BackButton @click="step = 'camp-events'" />
       </header>
 
-      <section class="section">
-        <CampForm
-          mode="edit"
-          :initial-values="selectedCamp"
-          :existing-gpx="selectedCamp?.gpsTrack ?? null"
-          @submit="onUpdateCamp"
-        />
-      </section>
+      <EventForm
+        mode="edit"
+        :type="selectedEvent?.type ?? 'trainings'"
+        :initial-values="selectedEvent?.data ?? null"
+        :type-options="[
+          { key: 'trainings', label: 'Entrainement', enabled: true },
+          { key: 'stages', label: 'Etape', enabled: false },
+          { key: 'information-evening', label: `Soirée d'information`, enabled: false },
+          { key: 'generalMeeting', label: 'Assemblée générale', enabled: false },
+          { key: 'fundraisings', label: 'Vente de pâtisserie', enabled: false },
+        ]"
+        :responsible-options="responsibleOptions"
+        @update:type="() => {}"
+        @submit="onUpdateCampEvent"
+      />
     </template>
 
     <!-- ========================= -->

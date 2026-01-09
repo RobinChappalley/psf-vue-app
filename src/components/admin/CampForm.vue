@@ -93,6 +93,12 @@ function onSubmit() {
 
   emit('submit', payload)
 }
+
+//S'assurer que la date sélectionnée ne soit pas dans le passé
+const today = computed(() => {
+  const d = new Date()
+  return d.toISOString().slice(0, 10) // YYYY-MM-DD
+})
 </script>
 
 <template>
@@ -116,7 +122,7 @@ function onSubmit() {
       <div class="field">
         <label for="startDate">Date de début</label>
         <div class="input-wrap">
-          <input id="startDate" v-model="form.startDate" type="date" />
+          <input id="startDate" v-model="form.startDate" type="date" :min="today" />
         </div>
       </div>
 
@@ -124,7 +130,7 @@ function onSubmit() {
       <div class="field">
         <label for="endDate">Date de fin</label>
         <div class="input-wrap">
-          <input id="endDate" v-model="form.endDate" type="date" />
+          <input id="endDate" v-model="form.endDate" type="date" :min="today" />
         </div>
       </div>
 
@@ -132,7 +138,7 @@ function onSubmit() {
       <div class="field">
         <label for="subStart">Date de début d’inscription</label>
         <div class="input-wrap">
-          <input id="subStart" v-model="form.subscriptionStartDate" type="date" />
+          <input id="subStart" v-model="form.subscriptionStartDate" type="date" :min="today" />
         </div>
       </div>
 
@@ -140,7 +146,7 @@ function onSubmit() {
       <div class="field">
         <label for="subEnd">Date limite d’inscription</label>
         <div class="input-wrap">
-          <input id="subEnd" v-model="form.subscriptionDeadline" type="date" />
+          <input id="subEnd" v-model="form.subscriptionDeadline" type="date" :min="today" />
         </div>
       </div>
 
