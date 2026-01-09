@@ -31,6 +31,7 @@ camps.value = [
   {
     id: '1',
     title: 'Camp 2026',
+    status: 'draft', // 'draft' | 'published' | 'archived'
     startDate: '2026-07-01',
     endDate: '2026-07-15',
     subStartDatetime: '2026-03-01T09:00:00Z',
@@ -74,7 +75,9 @@ const responsibleOptions = computed(() =>
   })),
 )
 
-const hasCamps = computed(() => (camps.value?.length ?? 0) > 0)
+const activeCamps = computed(() => (camps.value ?? []).filter((c) => c.status !== 'archived'))
+
+const hasCamps = computed(() => activeCamps.value.length > 0)
 
 function onCreateCampEvent(payload) {
   console.log('NEW EVENT', payload)
@@ -116,21 +119,56 @@ function openCampCreate() {
 }
 
 const selectedCamp = ref(null)
+const campStatus = computed(() => selectedCamp.value?.status ?? 'draft')
+
+const hasPublishedCamp = computed(() => (camps.value ?? []).some((c) => c.status === 'published'))
+
+const anotherPublishedCamp = computed(() =>
+  (camps.value ?? []).find((c) => c.status === 'published' && c.id !== selectedCamp.value?.id),
+)
 
 function onOpenCamp(camp) {
   selectedCamp.value = camp
   step.value = 'camp-menu'
 }
 
+function publishCamp() {
+  if (!selectedCamp.value) return
+
+  // règle: 1 seul camp publié
+  if (anotherPublishedCamp.value) {
+    alert(
+      `Un camp est déjà publié (${anotherPublishedCamp.value.title}). ` +
+        `Archivez-le avant d'en publier un autre.`,
+    )
+    return
+  }
+
+  selectedCamp.value.status = 'published'
+  // optionnel: feedback
+  console.log('Camp publié', selectedCamp.value)
+}
+
 function archiveCamp() {
-  console.log('Archiver le camp', selectedCamp.value)
-  // TODO: appel API + update camps.value
+  if (!selectedCamp.value) return
+
+  selectedCamp.value.status = 'archived'
+  console.log('Camp archivé', selectedCamp.value)
+
+  // retour liste camps
   step.value = 'events'
 }
 
 function deleteCamp() {
-  console.log('Supprimer le camp', selectedCamp.value)
-  // TODO: appel API + update camps.value
+  if (!selectedCamp.value) return
+
+  const ok = confirm(`Supprimer définitivement "${selectedCamp.value.title}" ?`)
+  if (!ok) return
+
+  camps.value = (camps.value ?? []).filter((c) => c.id !== selectedCamp.value.id)
+  selectedCamp.value = null
+
+  console.log('Camp supprimé')
   step.value = 'events'
 }
 
@@ -282,7 +320,7 @@ function onDeleteCampEvent() {
       >
         <template v-if="hasCamps">
           <DashboardCard
-            v-for="camp in camps"
+            v-for="camp in activeCamps"
             :key="camp.id"
             icon="camp"
             :title="(camp.title ?? 'Camp').toUpperCase()"
@@ -367,10 +405,32 @@ function onDeleteCampEvent() {
         </section>
 
         <div class="actions">
-          <BaseButton type="button" variant="primary" size="md" :block="true" @click="archiveCamp">
+          <BaseButton
+            v-if="campStatus !== 'published'"
+            type="button"
+            variant="primary"
+            size="md"
+            :block="true"
+            @click="publishCamp"
+          >
+            Publier le camp
+          </BaseButton>
+
+          <BaseButton v-else type="button" variant="primary" size="md" :block="true" disabled>
+            Camp publié ✅
+          </BaseButton>
+
+          <BaseButton
+            type="button"
+            variant="secondary"
+            size="md"
+            :block="true"
+            @click="archiveCamp"
+          >
             Archiver le camp
           </BaseButton>
-          <BaseButton type="button" variant="secondary" size="md" :block="true" @click="deleteCamp">
+
+          <BaseButton type="button" variant="tertiary" size="md" :block="true" @click="deleteCamp">
             Supprimer le camp
           </BaseButton>
         </div>
