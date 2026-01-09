@@ -14,6 +14,8 @@ import CampParticipantsSection from '@/components/admin/CampParticipantsSection.
 import UserDetailsPanel from '@/components/admin/UserDetailsPanel.vue'
 import CampArchivesSection from '@/components/admin/CampArchivesSection.vue'
 import { mockArchivedCamps } from '@/assets/mocks/camps'
+import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
+
 const selectedUser = ref(null)
 const step = ref('home')
 
@@ -22,6 +24,7 @@ function goHome() {
 }
 const camps = ref([])
 camps.value = [...mockArchivedCamps]
+
 // Admin users options
 const responsibleOptions = computed(() =>
   authStore.adminUsers.value.map((u) => ({
@@ -275,6 +278,16 @@ function onDeleteCampEvent() {
 
   selectedEvent.value = null
   step.value = 'camp-events'
+}
+
+//Archive section
+const archiveYear = ref(null)
+const archiveYearCamps = ref([])
+
+function onOpenArchiveYear({ year, camps }) {
+  archiveYear.value = year
+  archiveYearCamps.value = camps
+  step.value = 'archives-year'
 }
 </script>
 
@@ -583,9 +596,23 @@ function onDeleteCampEvent() {
         <BackButton @click="goHome" />
       </header>
 
-      <CampArchivesSection
-        :camps="camps"
-        @openYear="({ year, camps }) => console.log('année:', year, 'camps:', camps)"
+      <CampArchivesSection :camps="camps" @openYear="onOpenArchiveYear" />
+    </template>
+
+    <template v-else-if="step === 'archives-year'">
+      <header class="page-header">
+        <BackButton @click="step = 'archives'" />
+      </header>
+
+      <CampArchiveEventSection
+        v-if="archiveYear"
+        :year="archiveYear"
+        :camps="archiveYearCamps"
+        @openTraining="
+          (payload) => {
+            console.log(payload) /* ouvrir détail */
+          }
+        "
       />
     </template>
   </div>
