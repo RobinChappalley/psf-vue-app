@@ -62,7 +62,19 @@ const selectedCamp = ref(null)
 
 function onOpenCamp(camp) {
   selectedCamp.value = camp
-  step.value = 'camp-edit' // ou 'camp-details'
+  step.value = 'camp-menu'
+}
+
+function archiveCamp() {
+  console.log('Archiver le camp', selectedCamp.value)
+  // TODO: appel API + update camps.value
+  step.value = 'events'
+}
+
+function deleteCamp() {
+  console.log('Supprimer le camp', selectedCamp.value)
+  // TODO: appel API + update camps.value
+  step.value = 'events'
 }
 </script>
 
@@ -156,15 +168,54 @@ function onOpenCamp(camp) {
       </section>
     </template>
     <!-- ========================= -->
-    <!-- ÉCRAN 2ter : MODIFIER UN CAMP -->
+    <!-- ÉCRAN : MENU CAMP -->
     <!-- ========================= -->
-    <template v-else-if="step === 'camp-edit'">
-      <header>
+    <template v-else-if="step === 'camp-menu'">
+      <header class="page-header">
         <BackButton @click="step = 'events'" />
       </header>
 
-      <section class="section">
-        <CampForm :initialValue="selectedCamp" @submit="onEditCamp" />
+      <section class="camp-panel">
+        <section class="cards">
+          <DashboardCard
+            icon="edit"
+            title="Modifier le camp"
+            description="Ajouter, modifier ou supprimer du matériel"
+            asButton
+            @click="step = 'camp-edit'"
+          />
+
+          <DashboardCard
+            icon="boots"
+            title="Ajouter du matériel pour le camp"
+            description="Ajouter, modifier ou supprimer du matériel"
+            asButton
+            @click="step = 'camp-items'"
+          />
+
+          <DashboardCard
+            icon="calendarPlus"
+            title="Ajouter des évènements liés au camp"
+            description="Créer, modifier ou archiver les entraînements, AG, soirées d'information"
+            asButton
+            @click="step = 'camp-events'"
+          />
+
+          <DashboardCard
+            icon="profile"
+            title="Gérer les inscription du camp"
+            description="Créer, modifier ou archiver les camps, entraînements, AG, soirées d'information"
+            asButton
+            @click="step = 'camp-signups'"
+          />
+        </section>
+
+        <div class="actions">
+          <button class="cta" type="button" @click="archiveCamp">Archiver le camp</button>
+          <button class="cta cta--outline" type="button" @click="deleteCamp">
+            Supprimer le camp
+          </button>
+        </div>
       </section>
     </template>
 
@@ -254,5 +305,38 @@ function onOpenCamp(camp) {
   margin: 0.75rem 0 0;
   font-size: var(--fs-caption);
   color: rgba(38, 38, 24, 0.65);
+}
+
+.camp-panel {
+  display: grid;
+  gap: var(--sp-3);
+}
+
+.actions {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
+}
+
+.cta {
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  padding: 0.85rem 1rem;
+  background: var(--c-primary);
+  color: var(--c-bg);
+  font-size: var(--fs-body);
+  cursor: pointer;
+}
+
+.cta--outline {
+  background: transparent;
+  color: var(--c-primary);
+  border: 1px solid var(--c-primary);
+}
+.cards {
+  background-color: var(--c-surface);
+  padding: 1rem;
+  border-radius: var(--r-input);
 }
 </style>
