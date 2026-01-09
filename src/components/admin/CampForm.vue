@@ -226,12 +226,6 @@ const today = computed(() => {
         </div>
       </div>
 
-      <!-- Matériel (placeholder comme ton screen) -->
-      <div class="field">
-        <label>Matériel pour le camp</label>
-        <p class="placeholder">??????????????????</p>
-      </div>
-
       <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
         {{ props.mode === 'edit' ? 'Enregistrer' : 'Valider' }}
       </BaseButton>

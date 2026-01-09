@@ -16,10 +16,35 @@ import CampArchivesSection from '@/components/admin/CampArchivesSection.vue'
 import { mockArchivedCamps } from '@/assets/mocks/camps'
 import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
 import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
+import MemberSection from '@/components/admin/MemberSection.vue'
+import UserManagement from '@/components/admin/UserManagement.vue'
+import CampItemsPicker from '@/components/admin/CampItemsPicker.vue'
+
+// Items disponibles
+const availableItems = ref([
+  { id: 'water-bottle', name: 'Gourde' },
+  { id: 'rain-jacket', name: 'Veste de pluie' },
+  { id: 'helmet', name: 'Casque' },
+  { id: 'first-aid-kit', name: 'Trousse de secours' },
+])
 
 const selectedUser = ref(null)
 const step = ref('home')
+const previousStep = ref('home')
 
+//navigation
+function openUserDetails(u, fromStep) {
+  selectedUser.value = u
+  previousStep.value = fromStep
+
+  if (fromStep === 'members') {
+    step.value = 'user-management'
+  } else {
+    step.value = 'user-details'
+  }
+}
+
+////début des trucs
 function goHome() {
   step.value = 'home'
 }
@@ -40,6 +65,28 @@ const hasCamps = computed(() => activeCamps.value.length > 0)
 
 // Camp "courant" dans l'admin: draft > published
 const currentAdminCamp = computed(() => getCurrentCamp(activeCamps.value, 'admin'))
+
+// Camp actif = celui retourné par getCurrentCamp (draft > published)
+const activeCamp = computed(() => currentAdminCamp.value)
+
+// v-model pour CampItemsPicker -> activeCamp.itemsList
+const activeCampItemsModel = computed({
+  get() {
+    return activeCamp.value?.itemsList ?? []
+  },
+  set(next) {
+    if (!activeCamp.value) return
+    activeCamp.value.itemsList = next
+  },
+})
+
+// (mock) action d'enregistrement
+function onSaveCampItems() {
+  if (!activeCamp.value) return
+  console.log('SAVE camp items', activeCamp.value.id, activeCamp.value.itemsList)
+  // plus tard: appel API PUT/PATCH
+  step.value = 'camp-menu'
+}
 
 // Camp sélectionné dans l’UI (menu camp, events etc.)
 const selectedCamp = ref(null)
@@ -296,6 +343,17 @@ function onOpenArchiveEvent(ev) {
   selectedArchiveEvent.value = ev
   step.value = 'archive-event-details'
 }
+
+//User
+function onUserDeleted(deletedId) {
+  // optionnel: si tu veux être sûr
+  if (selectedUser.value && String(selectedUser.value.id) === String(deletedId)) {
+    selectedUser.value = null
+  }
+
+  // revenir à la liste
+  step.value = 'members'
+}
 </script>
 
 <template>
@@ -449,7 +507,7 @@ function onOpenArchiveEvent(ev) {
           </BaseButton>
 
           <BaseButton v-else type="button" variant="primary" size="md" :block="true" disabled>
-            Camp publié ✅
+            Camp publié
           </BaseButton>
 
           <BaseButton
@@ -558,12 +616,7 @@ function onOpenArchiveEvent(ev) {
         <CampParticipantsSection
           v-if="selectedCamp"
           :camp="selectedCamp"
-          @openUser="
-            (u) => {
-              selectedUser = u
-              step = 'user-details'
-            }
-          "
+          @openUser="(u) => openUserDetails(u, 'camp-signups')"
         />
       </section>
     </template>
@@ -573,7 +626,7 @@ function onOpenArchiveEvent(ev) {
     <!-- ========================= -->
     <template v-else-if="step === 'user-details'">
       <header class="page-header">
-        <BackButton @click="step = 'camp-signups'" />
+        <BackButton @click="step = previousStep" />
       </header>
 
       <section class="section">
@@ -582,16 +635,65 @@ function onOpenArchiveEvent(ev) {
     </template>
 
     <!-- ========================= -->
+    <!-- ÉCRAN : MATÉRIEL DU CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-items'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <section class="section">
+        <AdminPanel title="MATÉRIEL DU CAMP" :is-empty="!activeCamp" empty-text="Aucun camp actif">
+          <template v-if="activeCamp">
+            <p class="hint">
+              Camp actif : <strong>{{ activeCamp.title }}</strong>
+            </p>
+
+            <CampItemsPicker
+              v-model="activeCampItemsModel"
+              :items="availableItems"
+              title="Matériel"
+              :defaultOpen="true"
+            />
+          </template>
+
+          <template #actions>
+            <BaseButton
+              variant="primary"
+              size="md"
+              :block="true"
+              :disabled="!activeCamp"
+              @click="onSaveCampItems"
+            >
+              Enregistrer
+            </BaseButton>
+          </template>
+        </AdminPanel>
+      </section>
+    </template>
+
+    <!-- ========================= -->
     <!-- ÉCRAN 3 : MEMBRES -->
     <!-- ========================= -->
     <template v-else-if="step === 'members'">
-      <header>
+      <header class="page-header">
         <BackButton @click="goHome" />
       </header>
 
-      <section class="mock">
-        <p>👤 Liste des membres (mock)</p>
-        <p>🔍 Recherche / filtres</p>
+      <section>
+        <MemberSection @openUser="(u) => openUserDetails(u, 'members')" />
+      </section>
+    </template>
+    <!-- ========================= -->
+    <!-- ÉCRAN : USER MANAGEMENT -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'user-management'">
+      <header class="page-header">
+        <BackButton @click="step = previousStep" />
+      </header>
+
+      <section class="section">
+        <UserManagement v-if="selectedUser" :user="selectedUser" @deleted="onUserDeleted" />
       </section>
     </template>
 
