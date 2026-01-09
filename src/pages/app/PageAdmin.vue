@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { authStore } from '@/stores/auth'
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import CampForm from '@/components/admin/CampForm.vue'
@@ -60,18 +61,48 @@ camps.value = [
   },
 ]
 
+//Récupérer les admins
+const responsibleOptions = computed(() =>
+  authStore.adminUsers.value.map((u) => ({
+    value: u.id, // ou email si tu préfères
+    label: `${u.firstname} ${u.lastname}`,
+  })),
+)
+
 const hasCamps = computed(() => (camps.value?.length ?? 0) > 0)
 
-function onCreateCamp(payload) {
-  if (hasCamps.value) {
-    console.warn('Un camp existe déjà, création bloquée.')
-    step.value = 'events'
-    return
+function onCreateCampEvent(payload) {
+  console.log('NEW EVENT', payload)
+
+  if (!selectedCamp.value) return
+
+  if (payload.type === 'trainings') {
+    const nextNumber =
+      (selectedCamp.value.trainings?.reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0) + 1
+
+    const training = {
+      number: nextNumber,
+      date: payload.date,
+      meetingTime: payload.meetingTime,
+      meetingPoint: payload.meetingPoint,
+      returnTime: payload.arrivalTime,
+      // tu peux mapper plus précisément comme tu veux
+      trainGoingTime: payload.trainGoingTime ?? null,
+      trainReturnTime: payload.trainReturnTime ?? null,
+      distance: payload.distance,
+      elevationGain: payload.elevationGain,
+      elevationLoss: payload.elevationLoss,
+      responsiblePerson: payload.responsiblePerson,
+      remark: payload.remark,
+      'items-list': [],
+    }
+
+    if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
+    selectedCamp.value.trainings = [...selectedCamp.value.trainings, training]
   }
 
-  console.log('payload camp', payload)
-  // TODO: envoyer au backend
-  step.value = 'events'
+  // retour à la liste
+  step.value = 'camp-events'
 }
 
 function openCampCreate() {
@@ -313,11 +344,8 @@ function onUpdateCamp(payload) {
       <CreateCampEventSection
         :camp="selectedCamp"
         :allowed-keys="['trainings']"
-        @select="
-          (key) => {
-            if (key === 'trainings') step = 'camp-training-create'
-          }
-        "
+        :responsible-options="responsibleOptions"
+        @submit="onCreateCampEvent"
       />
     </template>
 

@@ -3,37 +3,36 @@ import { computed, ref } from 'vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import EventDropdown from '@/components/ui/EventDropdown.vue'
+import EventForm from '@/components/admin/EventForm.vue'
 
 const props = defineProps({
   camp: { type: Object, required: true },
-
-  // v1: on n’autorise que trainings (mais l’UI peut afficher d’autres options plus tard)
-  allowedKeys: { type: Array, default: () => ['trainings'] },
+  allowedKeys: { type: Array, default: () => ['trainings'] }, // v1
+  responsibleOptions: { type: Array, default: () => [] }, // optionnel
 })
 
-const emit = defineEmits(['select'])
+const emit = defineEmits(['submit'])
 
+const phase = ref('pick') // 'pick' | 'form'
 const selectedKey = ref('')
 
-// mapping clé -> label UI
 const LABELS = {
   trainings: 'Entrainement',
+  stages: 'Etape',
   'information-evening': "Soirée d'information",
-  fundraisings: 'Vente de pâtisserie',
   generalMeeting: 'Assemblée générale',
-  stages: 'Stage',
+  fundraisings: 'Vente de pâtisserie',
 }
 
-// types potentiels dans le camp (on se base sur TON modèle)
+// clés connues du camp
 const POSSIBLE_KEYS = [
   'trainings',
-  'information-evening',
-  'fundraisings',
-  'generalMeeting',
   'stages',
+  'information-evening',
+  'generalMeeting',
+  'fundraisings',
 ]
 
-// options visibles = clés présentes dans camp (même si vides) + label
 const options = computed(() => {
   return POSSIBLE_KEYS.filter((k) => k in (props.camp ?? {})).map((k) => ({
     key: k,
@@ -42,14 +41,26 @@ const options = computed(() => {
   }))
 })
 
-// validation
-const canContinue = computed(
-  () => !!selectedKey.value && options.value.some((o) => o.key === selectedKey.value && o.enabled),
-)
+const canContinue = computed(() => {
+  const o = options.value.find((x) => x.key === selectedKey.value)
+  return !!o && o.enabled
+})
 
 function onContinue() {
   if (!canContinue.value) return
-  emit('select', selectedKey.value)
+  phase.value = 'form'
+}
+
+function onUpdateType(newType) {
+  // si l’utilisateur change le type dans le form
+  const o = options.value.find((x) => x.key === newType)
+  if (!o?.enabled) return
+  selectedKey.value = newType
+}
+
+function onSubmit(payload) {
+  // payload contient { type: 'trainings', ... }
+  emit('submit', payload)
 }
 </script>
 
@@ -58,7 +69,8 @@ function onContinue() {
     :title="`CRÉATION D’UN ÉVÈNEMENT POUR LE ${(camp?.title ?? 'CAMP').toUpperCase()}`"
     :is-empty="false"
   >
-    <div class="card">
+    <!-- Phase 1: choix -->
+    <div v-if="phase === 'pick'" class="card">
       <div class="field">
         <label>Évènement</label>
         <EventDropdown v-model="selectedKey" :options="options" />
@@ -74,6 +86,17 @@ function onContinue() {
         Continuer
       </BaseButton>
     </div>
+
+    <!-- Phase 2: formulaire adaptatif -->
+    <EventForm
+      v-else
+      mode="create"
+      :type="selectedKey || 'trainings'"
+      :type-options="options"
+      :responsible-options="responsibleOptions"
+      @update:type="onUpdateType"
+      @submit="onSubmit"
+    />
   </AdminPanel>
 </template>
 
@@ -92,18 +115,5 @@ function onContinue() {
   line-height: 1.2;
   margin-bottom: 0.35rem;
   color: var(--c-text);
-}
-
-.select {
-  width: 100%;
-  box-sizing: border-box;
-  font-family: var(--font-body);
-  font-size: var(--fs-body);
-  padding: 0.65rem 0.75rem;
-  border-radius: var(--r-input);
-  border: 1px solid var(--c-border);
-  background: var(--c-bg);
-  color: var(--c-text);
-  outline: none;
 }
 </style>

@@ -180,6 +180,10 @@ function updateChild(childPayload) {
   return MOCK_CHILDREN[id]
 }
 
+const adminUsers = computed(() => {
+  return Object.values(MOCK_USERS).filter((u) => u.role?.includes('admin'))
+})
+
 export const authStore = {
   token,
   user,
@@ -191,4 +195,5 @@ export const authStore = {
   createEmptyChild,
   createChild,
   updateChild,
+  adminUsers,
 }
