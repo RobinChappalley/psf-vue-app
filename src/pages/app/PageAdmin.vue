@@ -17,20 +17,25 @@ import { mockArchivedCamps } from '@/assets/mocks/camps'
 import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
 import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
 import MemberSection from '@/components/admin/MemberSection.vue'
+import UserManagement from '@/components/admin/UserManagement.vue'
 
-//navigation
+const selectedUser = ref(null)
+const step = ref('home')
 const previousStep = ref('home')
 
+//navigation
 function openUserDetails(u, fromStep) {
   selectedUser.value = u
   previousStep.value = fromStep
-  step.value = 'user-details'
+
+  if (fromStep === 'members') {
+    step.value = 'user-management'
+  } else {
+    step.value = 'user-details'
+  }
 }
 
 ////début des trucs
-const selectedUser = ref(null)
-const step = ref('home')
-
 function goHome() {
   step.value = 'home'
 }
@@ -597,6 +602,18 @@ function onOpenArchiveEvent(ev) {
 
       <section>
         <MemberSection @openUser="(u) => openUserDetails(u, 'members')" />
+      </section>
+    </template>
+    <!-- ========================= -->
+    <!-- ÉCRAN : USER MANAGEMENT -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'user-management'">
+      <header class="page-header">
+        <BackButton @click="step = previousStep" />
+      </header>
+
+      <section class="section">
+        <UserManagement v-if="selectedUser" :user="selectedUser" />
       </section>
     </template>
 
