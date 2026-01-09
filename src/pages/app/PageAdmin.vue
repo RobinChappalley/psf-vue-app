@@ -17,6 +17,17 @@ import { mockArchivedCamps } from '@/assets/mocks/camps'
 import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
 import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
 import MemberSection from '@/components/admin/MemberSection.vue'
+
+//navigation
+const previousStep = ref('home')
+
+function openUserDetails(u, fromStep) {
+  selectedUser.value = u
+  previousStep.value = fromStep
+  step.value = 'user-details'
+}
+
+////début des trucs
 const selectedUser = ref(null)
 const step = ref('home')
 
@@ -558,12 +569,7 @@ function onOpenArchiveEvent(ev) {
         <CampParticipantsSection
           v-if="selectedCamp"
           :camp="selectedCamp"
-          @openUser="
-            (u) => {
-              selectedUser = u
-              step = 'user-details'
-            }
-          "
+          @openUser="(u) => openUserDetails(u, 'camp-signups')"
         />
       </section>
     </template>
@@ -573,7 +579,7 @@ function onOpenArchiveEvent(ev) {
     <!-- ========================= -->
     <template v-else-if="step === 'user-details'">
       <header class="page-header">
-        <BackButton @click="step = 'camp-signups'" />
+        <BackButton @click="step = previousStep" />
       </header>
 
       <section class="section">
@@ -590,14 +596,7 @@ function onOpenArchiveEvent(ev) {
       </header>
 
       <section>
-        <MemberSection
-          @openUser="
-            (u) => {
-              selectedUser = u
-              step = 'user-details'
-            }
-          "
-        />
+        <MemberSection @openUser="(u) => openUserDetails(u, 'members')" />
       </section>
     </template>
 
