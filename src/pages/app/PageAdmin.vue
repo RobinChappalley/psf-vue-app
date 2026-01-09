@@ -201,6 +201,11 @@ function onOpenCamp(camp) {
 /* Tu gardes tes styles existants si tu en as déjà.
    J’ajoute seulement ceux nécessaires pour l’écran ÉVÈNEMENTS. */
 
+.admin {
+  background-color: var(--c-surface);
+  padding: 1rem;
+  border-radius: var(--r-input);
+}
 .cards {
   display: grid;
   gap: var(--sp-2);
