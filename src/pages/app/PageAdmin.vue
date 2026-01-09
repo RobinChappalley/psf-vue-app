@@ -449,7 +449,7 @@ function onOpenArchiveEvent(ev) {
           </BaseButton>
 
           <BaseButton v-else type="button" variant="primary" size="md" :block="true" disabled>
-            Camp publié ✅
+            Camp publié
           </BaseButton>
 
           <BaseButton
