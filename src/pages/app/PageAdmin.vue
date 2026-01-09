@@ -147,7 +147,7 @@ function onOpenCamp(camp) {
     <!-- ÉCRAN 2bis : CRÉER UN CAMP -->
     <!-- ========================= -->
     <template v-else-if="step === 'camp-create'">
-      <header class="page-header">
+      <header>
         <BackButton @click="step = 'events'" />
       </header>
 
@@ -159,7 +159,7 @@ function onOpenCamp(camp) {
     <!-- ÉCRAN 2ter : MODIFIER UN CAMP -->
     <!-- ========================= -->
     <template v-else-if="step === 'camp-edit'">
-      <header class="page-header">
+      <header>
         <BackButton @click="step = 'events'" />
       </header>
 
