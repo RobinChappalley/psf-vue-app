@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref, watch } from 'vue'
 import StepperBubbles from '@/components/ui/StepperBubbles.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 
 const props = defineProps({
   user: { type: Object, required: true },
@@ -285,7 +286,7 @@ const isChild = computed(() => (props.user?.role || []).includes('child'))
             </div>
           </slot>
 
-          <button class="cta" type="submit">Valider</button>
+          <BaseButton type="submit" variant="primary" size="md" :block="true"> Valider </BaseButton>
         </section>
 
         <!-- Étape 2 : Informations médicales -->
@@ -341,7 +342,7 @@ const isChild = computed(() => (props.user?.role || []).includes('child'))
             </div>
           </slot>
 
-          <button class="cta" type="submit">Valider</button>
+          <BaseButton type="submit" variant="primary" size="md" :block="true"> Valider </BaseButton>
         </section>
 
         <!-- Étape 3 : Autres informations -->
@@ -403,7 +404,7 @@ const isChild = computed(() => (props.user?.role || []).includes('child'))
             </div>
           </slot>
 
-          <button class="cta" type="submit">Valider</button>
+          <BaseButton type="submit" variant="primary" size="md" :block="true"> Valider </BaseButton>
         </section>
 
         <!-- Étape 4 : Confirmation -->
@@ -411,7 +412,9 @@ const isChild = computed(() => (props.user?.role || []).includes('child'))
           <h3 class="confirm-title">MODIFICATIONS ENREGISTRÉES</h3>
           <p class="confirm-text">Les modifications apportées ont bien été enregistrées.</p>
 
-          <button class="cta" type="button" @click="finish">Retourner au profil</button>
+          <BaseButton type="button" variant="primary" size="md" :block="true" @click="finish">
+            Retourner au profil
+          </BaseButton>
         </section>
       </Transition>
     </form>
@@ -499,24 +502,6 @@ input:focus {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-2);
-}
-
-/* CTA */
-.cta {
-  width: 100%;
-  margin-top: auto;
-  padding: var(--sp-2);
-  border: none;
-  border-radius: var(--r-button);
-  background: var(--c-primary);
-  color: var(--c-bg);
-  font-size: var(--fs-button);
-  font-weight: var(--fw-semibold);
-  cursor: pointer;
-}
-
-.cta:active {
-  opacity: 0.85;
 }
 
 /* Chips */

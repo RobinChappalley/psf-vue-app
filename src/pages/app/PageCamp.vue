@@ -216,7 +216,9 @@ const continueSignup = () => {
       </section>
 
       <section class="section">
-        <BaseButton class="cta" type="button" @click="openSignup"> Inscrire un enfant </BaseButton>
+        <BaseButton type="button" variant="primary" size="md" :block="true" @click="openSignup">
+          Inscrire un enfant
+        </BaseButton>
       </section>
     </template>
 
@@ -247,8 +249,7 @@ const continueSignup = () => {
             </article>
           </div>
 
-          <!-- ✅ ton bouton appelle maintenant addChild() -->
-          <BaseButton class="cta btn--secondary" type="button" @click="addChild">
+          <BaseButton type="button" variant="secondary" size="md" :block="true" @click="addChild">
             Ajouter un enfant
           </BaseButton>
         </div>
@@ -267,8 +268,10 @@ const continueSignup = () => {
         </div>
 
         <BaseButton
-          class="cta"
           type="button"
+          variant="primary"
+          size="md"
+          :block="true"
           :disabled="selectedPeople.length === 0"
           @click="continueSignup"
         >
@@ -309,10 +312,23 @@ const continueSignup = () => {
           Si vous souhaitez le faire plus tard, vous pourrez retrouver toutes les informations dans
           votre profil, sous la rubrique Enfants
         </p>
-        <BaseButton class="cta btn--secondary" as="link" :to="{ name: 'app.home' }">
+        <BaseButton
+          as="link"
+          :to="{ name: 'app.home' }"
+          variant="secondary"
+          size="md"
+          :block="true"
+        >
           Retour à l'accueil
         </BaseButton>
-        <BaseButton class="cta" as="link" :to="{ name: 'app.profile' }">
+
+        <BaseButton
+          as="link"
+          :to="{ name: 'app.profile' }"
+          variant="primary"
+          size="md"
+          :block="true"
+        >
           Mettre à jour les données
         </BaseButton>
       </section>
@@ -340,12 +356,6 @@ dt {
 
 dd {
   margin: 0;
-}
-
-.cta {
-  margin: var(--sp-4) auto 0;
-  display: block;
-  max-width: 20rem;
 }
 
 p + p {

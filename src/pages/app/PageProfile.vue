@@ -125,7 +125,13 @@ function closeChildEditAndBack() {
       <div class="spacer"></div>
 
       <section class="section">
-        <BaseButton class="logout cta" type="button" @click="authStore.logout()">
+        <BaseButton
+          type="button"
+          variant="primary"
+          size="md"
+          :block="true"
+          @click="authStore.logout()"
+        >
           Déconnexion
         </BaseButton>
       </section>
@@ -274,12 +280,6 @@ function closeChildEditAndBack() {
 /* ---------- FOOTER ---------- */
 .spacer {
   margin-top: 4rem;
-}
-
-.cta {
-  margin: var(--sp-4) auto 0;
-  display: block;
-  max-width: 20rem;
 }
 
 .back {

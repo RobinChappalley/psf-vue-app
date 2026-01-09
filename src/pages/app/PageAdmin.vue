@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import CampForm from '@/components/admin/CampForm.vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 
 const step = ref('home')
 
@@ -144,9 +145,15 @@ function deleteCamp() {
         </div>
 
         <!-- Important : ici, tu dois ouvrir la section camp-create -->
-        <button class="cta" type="button" :disabled="hasCamps" @click="openCampCreate">
+        <BaseButton
+          variant="primary"
+          size="md"
+          :block="true"
+          :disabled="hasCamps"
+          @click="openCampCreate"
+        >
           Créer un nouveau camp
-        </button>
+        </BaseButton>
 
         <p v-if="hasCamps" class="hint">
           Un camp est déjà actif. Archivez ou supprimez le camp existant avant d’en créer un
@@ -211,10 +218,12 @@ function deleteCamp() {
         </section>
 
         <div class="actions">
-          <button class="cta" type="button" @click="archiveCamp">Archiver le camp</button>
-          <button class="cta cta--outline" type="button" @click="deleteCamp">
+          <BaseButton type="button" variant="primary" size="md" :block="true" @click="archiveCamp">
+            Archiver le camp
+          </BaseButton>
+          <BaseButton type="button" variant="secondary" size="md" :block="true" @click="deleteCamp">
             Supprimer le camp
-          </button>
+          </BaseButton>
         </div>
       </section>
     </template>
@@ -254,12 +263,14 @@ function deleteCamp() {
 
 .admin {
   background-color: var(--c-surface);
-  padding: 1rem;
   border-radius: var(--r-input);
 }
 .cards {
   display: grid;
   gap: var(--sp-2);
+  background-color: var(--c-surface);
+  border-radius: var(--r-input);
+  padding: 1rem;
 }
 
 /* ====== EVENTS (match screenshots) ====== */
@@ -281,26 +292,6 @@ function deleteCamp() {
   margin-bottom: var(--sp-3);
 }
 
-/* CTA rouge */
-.cta {
-  width: 100%;
-  border: none;
-  border-radius: 6px;
-  padding: 0.85rem 1rem;
-  background: var(--c-primary);
-  color: var(--c-bg);
-  font-size: var(--fs-body);
-  cursor: pointer;
-}
-.cta:active {
-  opacity: 0.85;
-}
-
-.cta:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .hint {
   margin: 0.75rem 0 0;
   font-size: var(--fs-caption);
@@ -316,27 +307,5 @@ function deleteCamp() {
   display: grid;
   gap: var(--sp-2);
   margin-top: var(--sp-3);
-}
-
-.cta {
-  width: 100%;
-  border: none;
-  border-radius: 6px;
-  padding: 0.85rem 1rem;
-  background: var(--c-primary);
-  color: var(--c-bg);
-  font-size: var(--fs-body);
-  cursor: pointer;
-}
-
-.cta--outline {
-  background: transparent;
-  color: var(--c-primary);
-  border: 1px solid var(--c-primary);
-}
-.cards {
-  background-color: var(--c-surface);
-  padding: 1rem;
-  border-radius: var(--r-input);
 }
 </style>

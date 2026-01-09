@@ -142,7 +142,9 @@ function onSubmit() {
         />
       </div>
 
-      <button class="cta" type="submit">Valider les modifications</button>
+      <BaseButton type="submit" variant="primary" size="md" :block="true">
+        Valider les modifications
+      </BaseButton>
     </form>
   </section>
 </template>
@@ -222,33 +224,5 @@ input:focus {
 /* Code postal un peu plus étroit comme sur ta capture */
 .grid-2 .field.cp {
   flex: 0.85;
-}
-
-/* --- CTA button --- */
-.cta {
-  width: 100%;
-  border: 0;
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: var(--fs-button);
-  font-weight: var(--fw-semibold);
-  padding: 0.9rem 1rem;
-  border-radius: var(--r-button);
-  background: var(--c-primary);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
-  transition:
-    transform 120ms ease,
-    filter 120ms ease;
-}
-
-.cta:hover {
-  filter: brightness(0.98);
-  transform: translateY(-1px);
-}
-
-.cta:active {
-  transform: translateY(0);
-  filter: brightness(0.96);
 }
 </style>

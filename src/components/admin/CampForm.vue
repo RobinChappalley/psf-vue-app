@@ -1,5 +1,6 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import BaseButton from '@/components/ui/BaseButton.vue'
 
 const emit = defineEmits(['submit'])
 
@@ -107,7 +108,9 @@ function onSubmit() {
         <p class="placeholder">??????????????????</p>
       </div>
 
-      <button class="cta" type="submit" :disabled="!canSubmit">Valider</button>
+      <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
+        Valider
+      </BaseButton>
     </form>
   </section>
 </template>
@@ -202,25 +205,5 @@ input[type='date'] {
   margin: 0;
   font-size: var(--fs-caption);
   color: rgba(38, 38, 24, 0.55);
-}
-
-/* CTA button */
-.cta {
-  width: 100%;
-  border: 0;
-  cursor: pointer;
-  font-family: var(--font-body);
-  font-size: var(--fs-button);
-  font-weight: var(--fw-semibold);
-  padding: 0.9rem 1rem;
-  border-radius: var(--r-button);
-  background: var(--c-primary);
-  color: #fff;
-  box-shadow: var(--shadow-sm);
-}
-
-.cta:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
 }
 </style>

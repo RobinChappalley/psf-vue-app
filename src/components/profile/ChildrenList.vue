@@ -32,7 +32,7 @@ const hasChildren = computed(() => (props.children?.length || 0) > 0)
       </div>
     </template>
 
-    <BaseButton class="cta btn--secondary" type="button" @click="$emit('add')">
+    <BaseButton type="button" variant="secondary" size="md" :block="true" @click="$emit('add')">
       Ajouter un enfant
     </BaseButton>
   </section>
@@ -91,10 +91,5 @@ const hasChildren = computed(() => (props.children?.length || 0) > 0)
   border-radius: var(--r-card);
   padding: var(--sp-2);
   margin-bottom: var(--sp-3);
-}
-
-/* bouton largeur figma-ish */
-.cta {
-  width: 100%;
 }
 </style>

@@ -121,7 +121,13 @@ const infoEveningLabel = computed(() => {
         </p>
       </div>
 
-      <BaseButton class="cta" as="link" :to="{ name: 'public.signup' }">
+      <BaseButton
+        as="link"
+        :to="{ name: 'public.signup' }"
+        variant="primary"
+        size="md"
+        :block="true"
+      >
         Créer un compte parent
       </BaseButton>
     </section>
@@ -138,7 +144,13 @@ const infoEveningLabel = computed(() => {
         </p>
         <p>Créez un compte parent pour rester informé et suivre l’ouverture des inscriptions.</p>
 
-        <BaseButton class="cta" as="link" :to="{ name: 'public.signup' }">
+        <BaseButton
+          as="link"
+          :to="{ name: 'public.signup' }"
+          variant="primary"
+          size="md"
+          :block="true"
+        >
           Créer un compte
         </BaseButton>
       </section>
@@ -168,11 +180,6 @@ dd {
   margin: 0;
 }
 
-.cta {
-  margin: var(--sp-4) auto 0;
-  display: block;
-  max-width: 20rem;
-}
 p + p {
   padding-top: 01rem;
 }

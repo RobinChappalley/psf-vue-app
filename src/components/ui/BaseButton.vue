@@ -1,19 +1,32 @@
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   variant: { type: String, default: 'primary' }, // primary | secondary | tertiary
   as: { type: String, default: 'button' }, // button | link
-  to: { type: Object, default: null }, // pour RouterLink
+  to: { type: Object, default: null },
   type: { type: String, default: 'button' },
   disabled: { type: Boolean, default: false },
+
+  // ✅ nouveaux
+  size: { type: String, default: 'md' }, // sm | md | lg
+  block: { type: Boolean, default: false }, // full width
 })
+
+const classes = computed(() => [
+  'btn',
+  `btn--${props.variant}`,
+  `btn--${props.size}`,
+  { 'btn--block': props.block },
+])
 </script>
 
 <template>
-  <RouterLink v-if="as === 'link' && to" class="btn" :class="`btn--${variant}`" :to="to">
+  <RouterLink v-if="as === 'link' && to" :class="classes" :to="to">
     <slot />
   </RouterLink>
 
-  <button v-else class="btn" :class="`btn--${variant}`" :type="type" :disabled="disabled">
+  <button v-else :class="classes" :type="type" :disabled="disabled">
     <slot />
   </button>
 </template>
@@ -25,46 +38,61 @@ defineProps({
   justify-content: center;
   gap: 0.5ch;
 
-  font-family: var(--font-body);
-  font-size: var(--fs-button);
-  font-weight: var(--fw-semibold);
+  border: none;
+  border-radius: 6px;
 
-  padding: var(--sp-2) var(--sp-2);
-  border-radius: var(--r-button);
-
+  cursor: pointer;
   text-decoration: none;
   text-align: center;
-  border: none;
-  cursor: pointer;
 
   transition:
     transform 120ms ease,
     opacity 120ms ease;
 }
 
+/* ✅ tailles (c’est ça qui uniformise partout) */
+.btn--sm {
+  font-size: 0.875rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.btn--md {
+  font-size: var(--fs-body);
+  padding: 0.85rem 1rem;
+}
+
+.btn--lg {
+  font-size: 1.05rem;
+  padding: 1rem 1.25rem;
+}
+
+/* ✅ full width */
+.btn--block {
+  width: 100%;
+}
+
+/* Active / Disabled */
 .btn:active {
   transform: scale(0.98);
 }
 
 .btn:disabled {
-  opacity: 0.55;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* Primary */
+/* Variants */
 .btn--primary {
   background: var(--c-primary);
   color: var(--c-bg);
 }
 
-/* Secondary */
 .btn--secondary {
   background: transparent;
   color: var(--c-primary);
   border: 0.125rem solid var(--c-primary);
 }
 
-/* Tertiary */
 .btn--tertiary {
   background: transparent;
   color: var(--c-text);

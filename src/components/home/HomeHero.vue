@@ -14,7 +14,13 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 
         <p class="subtitle">des camps de marche pour les jeunes, depuis 1998</p>
 
-        <BaseButton class="cta" as="link" :to="{ name: 'public.history' }">
+        <BaseButton
+          as="link"
+          :to="{ name: 'public.history' }"
+          variant="primary"
+          size="md"
+          :block="true"
+        >
           Découvrez les camps <br />des précédentes années
         </BaseButton>
       </div>
@@ -61,11 +67,5 @@ import BaseButton from '@/components/ui/BaseButton.vue'
   color: var(--c-bg);
   margin-bottom: var(--sp-3);
   font-size: 1rem;
-}
-
-.cta {
-  margin: 2rem auto 0;
-  display: block;
-  max-width: 20rem;
 }
 </style>
