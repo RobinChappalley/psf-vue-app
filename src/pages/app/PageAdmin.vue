@@ -77,6 +77,35 @@ function deleteCamp() {
   // TODO: appel API + update camps.value
   step.value = 'events'
 }
+
+//Fonctions propres à un camp
+function onUpdateCamp(payload) {
+  if (!selectedCamp.value) return
+
+  console.log('payload update camp', payload)
+
+  // MOCK update local (en attendant le backend)
+  // Ici payload est en kebab-case (comme ton submit), donc on remappe vers ton objet camp
+  selectedCamp.value.title = payload.name
+  selectedCamp.value.startDate = payload['start-date']
+  selectedCamp.value.endDate = payload['end-date']
+
+  // tes champs mock sont en datetime ISO, ton form renvoie date YYYY-MM-DD
+  // on peut stocker en date simple, ou reconstruire un ISO. Je te montre simple :
+  selectedCamp.value.subStartDatetime = payload['subscription-start-date']
+    ? `${payload['subscription-start-date']}T00:00:00Z`
+    : null
+
+  selectedCamp.value.subEndDatetime = payload['subscription-deadline']
+    ? `${payload['subscription-deadline']}T23:59:59Z`
+    : null
+
+  // gps track
+  selectedCamp.value.gpsTrack = payload['GPS-track'] ?? selectedCamp.value.gpsTrack
+
+  // Retour menu camp
+  step.value = 'camp-menu'
+}
 </script>
 
 <template>
@@ -225,6 +254,19 @@ function deleteCamp() {
             Supprimer le camp
           </BaseButton>
         </div>
+      </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : MODIFIER CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-edit'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <section class="section">
+        <CampForm mode="edit" :initial-values="selectedCamp" @submit="onUpdateCamp" />
       </section>
     </template>
 

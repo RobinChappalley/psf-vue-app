@@ -1,8 +1,13 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 
 const emit = defineEmits(['submit'])
+
+const props = defineProps({
+  mode: { type: String, default: 'create' }, // "create" | "edit"
+  initialValues: { type: Object, default: null }, // camp existant
+})
 
 const form = reactive({
   name: '',
@@ -14,6 +19,31 @@ const form = reactive({
 
 const gpxFile = ref(null)
 
+function isoToDate(iso) {
+  // "2026-03-01T09:00:00Z" -> "2026-03-01"
+  if (!iso) return ''
+  return String(iso).slice(0, 10)
+}
+
+watch(
+  () => props.initialValues,
+  (camp) => {
+    if (!camp) return
+
+    // Remap camp -> form
+    form.name = camp.title ?? camp.name ?? ''
+    form.startDate = camp.startDate ?? ''
+    form.endDate = camp.endDate ?? ''
+    form.subscriptionStartDate = isoToDate(camp.subStartDatetime)
+    form.subscriptionDeadline = isoToDate(camp.subEndDatetime)
+
+    // GPX: tu ne peux pas pré-remplir un input file (sécurité navigateur)
+    // donc on laisse gpxFile à null et on affiche juste un hint éventuel
+    gpxFile.value = null
+  },
+  { immediate: true },
+)
+
 function onPickGpx(e) {
   gpxFile.value = e.target.files?.[0] ?? null
 }
@@ -23,16 +53,12 @@ const canSubmit = computed(() => form.name.trim().length > 0)
 function onSubmit() {
   if (!canSubmit.value) return
 
-  // Payload conforme à ton modèle (clé-kebab-case)
   const payload = {
     name: form.name.trim(),
     'start-date': form.startDate || null,
     'end-date': form.endDate || null,
     'subscription-start-date': form.subscriptionStartDate || null,
     'subscription-deadline': form.subscriptionDeadline || null,
-
-    // Mock : on met le fichier dans l'objet.
-    // Plus tard: envoyer le fichier séparément (FormData) et stocker un lien ou un id.
     'GPS-track': gpxFile.value ? { file: gpxFile.value } : {},
   }
 
@@ -42,7 +68,7 @@ function onSubmit() {
 
 <template>
   <section class="wrap">
-    <h2>Création d'un nouveau camp</h2>
+    <h2>{{ props.mode === 'edit' ? 'Modifier le camp' : "Création d'un nouveau camp" }}</h2>
 
     <form class="card" @submit.prevent="onSubmit">
       <!-- Titre -->
@@ -109,7 +135,7 @@ function onSubmit() {
       </div>
 
       <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
-        Valider
+        {{ props.mode === 'edit' ? 'Enregistrer' : 'Valider' }}
       </BaseButton>
     </form>
   </section>
