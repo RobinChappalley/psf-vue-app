@@ -100,7 +100,14 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
 
           <p v-if="emailExists" class="error">Un compte existe déjà pour cette adresse e-mail.</p>
 
-          <BaseButton class="cta" type="button" :disabled="!canGoStep2" @click="goStep2">
+          <BaseButton
+            type="button"
+            variant="primary"
+            size="md"
+            :block="true"
+            :disabled="!canGoStep2"
+            @click="goStep2"
+          >
             Continuer
           </BaseButton>
         </div>
@@ -187,7 +194,13 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
             placeholder="Suisse"
           />
 
-          <BaseButton class="cta" type="submit" :disabled="!isFormValid">
+          <BaseButton
+            type="submit"
+            variant="primary"
+            size="md"
+            :block="true"
+            :disabled="!isFormValid"
+          >
             Créer le compte
           </BaseButton>
 
@@ -205,11 +218,11 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
       </p>
 
       <div class="content confirm">
-        <BaseButton class="cta" :class="`btn--secondary`" type="button" @click="goHome">
+        <BaseButton type="button" variant="secondary" size="md" :block="true" @click="goHome">
           Retour à la page d’accueil
         </BaseButton>
 
-        <BaseButton class="cta" type="button" @click="goToCamp">
+        <BaseButton type="button" variant="primary" size="md" :block="true" @click="goToCamp">
           Inscrire un enfant à un camp
         </BaseButton>
       </div>
@@ -284,13 +297,6 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
   grid-template-columns: 1fr 1fr;
   gap: var(--sp-2);
   margin-top: var(--sp-1);
-}
-
-/* Buttons */
-.cta {
-  margin: var(--sp-4) auto 0;
-  display: block;
-  max-width: 20rem;
 }
 
 .confirm {

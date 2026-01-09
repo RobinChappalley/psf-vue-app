@@ -36,22 +36,43 @@ const MOCK_USERS = {
     phoneNumber: '+41876543210',
     email: 'paul.doe@example.com',
     address: null,
-    camps: [],
+    camps: ['1'],
     participationInfo: null,
   },
 
   admin: {
     id: '4',
     role: ['admin'],
-    parent: null,
-    children: ['1', '5'],
     lastname: 'Chappalley',
     firstname: 'Robin',
-    phoneNumber: null,
     email: 'robin@chapi.ch',
-    address: null,
-    camps: [],
-    participationInfo: null,
+    phoneNumber: '+41791234567',
+    address: {
+      street: 'Chemin des Alpes 12',
+      city: 'Fribourg',
+      postalCode: 1700,
+      country: 'CH',
+    },
+    parent: null,
+    children: ['1', '5'],
+    camps: ['1'],
+    participationInfo: {
+      birthDate: '1996-09-18',
+      tshirtInfo: {
+        size: 'L',
+        gender: 'm',
+      },
+      allergies: ['pollen'],
+      medication: [],
+      insuranceNumber: '756.1234.5678.97',
+      insuranceName: 'CSS',
+      idExpireDate: '2028-04-20',
+      publicTransportPass: 'AG',
+      isCASMember: true,
+      isHelicopterInsured: true,
+      hasPhotoConsent: true,
+      hasPaid: true,
+    },
   },
 }
 
@@ -66,7 +87,7 @@ const MOCK_CHILDREN = {
     email: null,
     phoneNumber: null,
     address: null,
-    camps: [],
+    camps: ['1'],
     participationInfo: {
       birthDate: '2014-05-02',
       tshirtInfo: { size: 'm', gender: 'm' },
@@ -79,7 +100,7 @@ const MOCK_CHILDREN = {
       isCASMember: false,
       isHelicopterInsured: false,
       hasPhotoConsent: false,
-      hasPaid: false,
+      hasPaid: true,
     },
   },
   5: {
@@ -92,7 +113,7 @@ const MOCK_CHILDREN = {
     email: null,
     phoneNumber: null,
     address: null,
-    camps: [],
+    camps: [1],
     participationInfo: null,
   },
 }
@@ -180,6 +201,17 @@ function updateChild(childPayload) {
   return MOCK_CHILDREN[id]
 }
 
+const adminUsers = computed(() => {
+  return Object.values(MOCK_USERS).filter((u) => u.role?.includes('admin'))
+})
+
+//Pour récupérer tous les utilisateurs
+const allUsers = computed(() => {
+  const adults = Object.values(MOCK_USERS)
+  const kids = Object.values(MOCK_CHILDREN)
+  return [...adults, ...kids]
+})
+
 export const authStore = {
   token,
   user,
@@ -191,4 +223,6 @@ export const authStore = {
   createEmptyChild,
   createChild,
   updateChild,
+  adminUsers,
+  allUsers,
 }

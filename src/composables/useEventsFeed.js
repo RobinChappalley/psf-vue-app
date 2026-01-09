@@ -1,34 +1,17 @@
-import { computed, ref } from 'vue'
+import { computed, unref } from 'vue'
 
-export function useEventsFeed(options = {}) {
-  const events = ref(options.initialEvents || [])
+export function useEventsFeed({ events }) {
+  const source = computed(() => unref(events) ?? [])
 
-  // --- Helpers ---
-  //MODIFIER ICI pour accéder aux évènements auxquels les personnes sont inscrites
-  const isRegistered = (e) => e?.userStatus === 'registered'
-
-  const isOpenForSubscription = (e) => {
-    const deadline = e?.['subscription-deadline-date-time']
-    if (!deadline) return false
-    return new Date(deadline) > new Date()
-  }
-
-  // --- Sections ---
-  // 1) "Vos prochains évènements" => seulement inscrits
-  const upcomingRegistered = computed(() => events.value.filter(isRegistered))
-
-  // 2) "Ouverts à l'inscription" => pas inscrit + inscription ouverte
-  const openToSubscribe = computed(() =>
-    events.value.filter((e) => !isRegistered(e) && isOpenForSubscription(e)),
+  const upcomingRegistered = computed(() =>
+    source.value.filter((e) => e.userStatus === 'registered'),
   )
 
-  // (optionnel) prochain camp ouvert
-  const nextOpenCamp = computed(() => openToSubscribe.value.find((e) => e.type === 'camp') || null)
+  const openToSubscribe = computed(() =>
+    source.value.filter(
+      (e) => e.userStatus !== 'registered' && e['subscription-deadline-date-time'],
+    ),
+  )
 
-  return {
-    events,
-    upcomingRegistered,
-    openToSubscribe,
-    nextOpenCamp,
-  }
+  return { upcomingRegistered, openToSubscribe }
 }

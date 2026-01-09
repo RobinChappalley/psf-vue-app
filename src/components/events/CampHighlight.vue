@@ -62,7 +62,9 @@ const goMoreInfo = () => {
       entrainements.
     </p>
 
-    <BaseButton class="cta" @click="goMoreInfo"> Obtenir davantage d'information </BaseButton>
+    <BaseButton variant="primary" size="md" :block="true" @click="goMoreInfo">
+      Obtenir davantage d'information
+    </BaseButton>
   </section>
 </template>
 
@@ -113,13 +115,5 @@ dt {
 
 dd {
   margin: 0;
-}
-
-/* gros bouton */
-.cta {
-  display: block;
-  width: 100%;
-  margin-top: var(--sp-4);
-  border-radius: var(--r-button);
 }
 </style>

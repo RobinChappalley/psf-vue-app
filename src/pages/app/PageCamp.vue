@@ -1,37 +1,53 @@
 <script setup>
 import { computed, ref } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import BackButton from '@/components/ui/BackButton.vue'
+import FullDataForm from '@/components/profile/FullDataForm.vue'
 import { authStore } from '@/stores/auth'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
-import FullDataForm from '@/components/profile/FullDataForm.vue' // si utilisé dans le template "child-create"
+import { getCurrentCamp } from '@/composables/getCurrentCamp'
 
-// Mock DB : mets null pour simuler "pas de camp"
-// const camp = ref(null)
-
-// Décommente pour simuler "camp existant"
-const camp = ref({
-  id: 'c1',
-  name: 'Camp 2026',
-  'start-date': '2026-07-12',
-  'end-date': '2026-07-31',
-  'subscription-start-date-time': '2026-05-01T08:00:00',
-  'subscription-deadline-date-time': '2026-06-15T23:59:00',
-  'GPS-track': {},
-  'items-list': [{ item_id: 'i1', quantity: 1 }],
-  'information-evening': {
-    'date-time': '2026-06-16T18:30:00',
-    location: 'Neuchâtel',
-    participants: [],
+// -------------------------------------------------
+// MOCK Camps (plus tard: API)
+// Mets [] pour simuler "pas de camp publié"
+// -------------------------------------------------
+const camps = ref([
+  {
+    id: 'camp-2026',
+    title: 'Camp 2026',
+    status: 'published', // 🔑 côté app publique: on ne montrera que published
+    startDate: '2026-07-12',
+    endDate: '2026-07-31',
+    subStartDatetime: '2026-05-01T08:00:00',
+    subEndDatetime: '2026-06-15T23:59:00',
+    gpsTrack: {},
+    itemsList: [{ item_id: 'i1', quantity: 1 }],
+    infoEvening: {
+      dateTime: '2026-06-16T18:30:00',
+      location: 'Neuchâtel',
+      participants: [],
+    },
+    trainings: [],
+    fundraisings: [],
+    generalMeeting: null,
+    stages: [],
   },
-})
+])
 
-// --- navigation interne ---
-const step = ref('camp') // 'camp' | 'signup' | 'child-create' | 'confirm'
-
-// section pour afficher le camp
+// -------------------------------------------------
+// Camp courant (HOME => published only)
+// -------------------------------------------------
+const camp = computed(() => getCurrentCamp(camps.value, 'home'))
 const hasCamp = computed(() => !!camp.value)
 
-// --- helpers dates ---
+// -------------------------------------------------
+// Navigation interne
+// -------------------------------------------------
+const step = ref('camp') // 'camp' | 'signup' | 'child-create' | 'confirm'
+
+// -------------------------------------------------
+// Helpers dates
+// -------------------------------------------------
 const fmtDate = (iso) => {
   if (!iso) return ''
   const d = new Date(iso)
@@ -41,16 +57,16 @@ const fmtDate = (iso) => {
 
 const campDateLabel = computed(() => {
   if (!camp.value) return ''
-  const start = fmtDate(camp.value['start-date'])
-  const end = fmtDate(camp.value['end-date'])
+  const start = fmtDate(camp.value.startDate)
+  const end = fmtDate(camp.value.endDate)
   if (!start || !end) return ''
   return `du ${start} au ${end}`
 })
 
 const subscriptionStatus = computed(() => {
   if (!camp.value) return null
-  const start = new Date(camp.value['subscription-start-date-time'])
-  const end = new Date(camp.value['subscription-deadline-date-time'])
+  const start = new Date(camp.value.subStartDatetime)
+  const end = new Date(camp.value.subEndDatetime)
   const now = new Date()
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'unknown'
@@ -61,8 +77,8 @@ const subscriptionStatus = computed(() => {
 
 const subscriptionLabel = computed(() => {
   if (!camp.value) return ''
-  const start = fmtDate(camp.value['subscription-start-date-time'])
-  const end = fmtDate(camp.value['subscription-deadline-date-time'])
+  const start = fmtDate(camp.value.subStartDatetime)
+  const end = fmtDate(camp.value.subEndDatetime)
 
   if (subscriptionStatus.value === 'soon') return `Inscriptions dès le ${start}`
   if (subscriptionStatus.value === 'open') return `Inscriptions ouvertes jusqu’au ${end}`
@@ -71,13 +87,15 @@ const subscriptionLabel = computed(() => {
 })
 
 const infoEveningLabel = computed(() => {
-  if (!camp.value?.['information-evening']?.['date-time']) return ''
-  const d = fmtDate(camp.value['information-evening']['date-time'])
-  const loc = camp.value['information-evening'].location
+  if (!camp.value?.infoEvening?.dateTime) return ''
+  const d = fmtDate(camp.value.infoEvening.dateTime)
+  const loc = camp.value.infoEvening.location
   return loc ? `${d} – ${loc}` : d
 })
 
-// --- user + roles ---
+// -------------------------------------------------
+// User + rôles
+// -------------------------------------------------
 const currentUser = computed(() => authStore.user.value)
 
 const isStaff = computed(() => {
@@ -85,7 +103,9 @@ const isStaff = computed(() => {
   return roles.includes('admin') || roles.includes('accompagnant')
 })
 
-// --- composable enfants (création) ---
+// -------------------------------------------------
+// Composable enfants (création)
+// -------------------------------------------------
 const { children, selectedChild, openCreateChild, submitChild, closeChildEdit } =
   useChildrenEditor()
 
@@ -96,18 +116,18 @@ function openCreateChildFlow() {
 
 function onSubmitChildData(payload) {
   submitChild(payload)
-  // ✅ ne pas changer de step ici : FullDataForm doit afficher la confirmation
+  // ✅ FullDataForm gère l’affichage de confirmation
 }
 
 function closeChildCreate() {
   closeChildEdit()
-  // ✅ on revient à la page signup
   step.value = 'signup'
-  // ✅ et on reconstruit la liste pour inclure le nouvel enfant
   signupPeople.value = buildSignupPeople()
 }
 
-// --- signup list (enfants + éventuellement user staff) ---
+// -------------------------------------------------
+// Signup list (enfants + éventuellement user staff)
+// -------------------------------------------------
 const signupPeople = ref([])
 
 const buildSignupPeople = () => {
@@ -115,11 +135,10 @@ const buildSignupPeople = () => {
     key: `child-${c.id}`,
     id: c.id,
     firstname: c.firstname,
-    selected: false, // mets ta logique si tu veux préselection
+    selected: false,
     kind: 'child',
   }))
 
-  // si admin/accompagnant => se rajoute dans la liste
   if (isStaff.value && currentUser.value) {
     list.unshift({
       key: `user-${currentUser.value.id}`,
@@ -135,7 +154,9 @@ const buildSignupPeople = () => {
 
 const selectedPeople = computed(() => signupPeople.value.filter((p) => p.selected))
 
-// --- navigation actions ---
+// -------------------------------------------------
+// Navigation actions
+// -------------------------------------------------
 const openSignup = () => {
   signupPeople.value = buildSignupPeople()
   step.value = 'signup'
@@ -145,29 +166,14 @@ const goBackToCamp = () => {
   step.value = 'camp'
 }
 
-// ✅ fonction appelée par ton bouton "Ajouter un enfant"
 const addChild = () => {
   openCreateChildFlow()
-}
-
-const editPerson = (person) => {
-  console.log('Modifier', person)
 }
 
 const continueSignup = () => {
   if (selectedPeople.value.length === 0) return
   console.log('Continuer avec', selectedPeople.value)
   step.value = 'confirm'
-}
-
-// confirmation actions
-const goHome = () => {
-  console.log('Retour accueil')
-  step.value = 'camp'
-}
-
-const updateData = () => {
-  console.log('Mettre à jour les données')
 }
 </script>
 
@@ -190,7 +196,7 @@ const updateData = () => {
     <!-- ÉCRAN 1 : infos camp -->
     <template v-if="step === 'camp'">
       <section class="section intro">
-        <h1>{{ camp.name }}</h1>
+        <h1>{{ camp.title }}</h1>
         <div>
           <p v-if="campDateLabel">Cette année, le camp se déroulera {{ campDateLabel }}.</p>
           <p v-if="subscriptionLabel">{{ subscriptionLabel }}</p>
@@ -229,16 +235,18 @@ const updateData = () => {
       </section>
 
       <section class="section">
-        <BaseButton class="cta" type="button" @click="openSignup"> Inscrire un enfant </BaseButton>
+        <BaseButton type="button" variant="primary" size="md" :block="true" @click="openSignup">
+          Inscrire un enfant
+        </BaseButton>
       </section>
     </template>
 
     <!-- ÉCRAN 2 : inscription enfants -->
     <template v-else-if="step === 'signup'">
       <section class="section signup">
-        <button class="back" type="button" @click="goBackToCamp">← {{ camp.name }}</button>
+        <BackButton @click="goBackToCamp" />
 
-        <h1>INSCRIPTION AU {{ camp.name.toUpperCase() }}</h1>
+        <h2>INSCRIPTION AU {{ camp.title.toUpperCase() }}</h2>
 
         <p>Sélectionnez les personnes que vous souhaitez inscrire pour le camp 2026.</p>
         <p>Les personnes ayant déjà participés sont pré-sélectionnées.</p>
@@ -260,8 +268,7 @@ const updateData = () => {
             </article>
           </div>
 
-          <!-- ✅ ton bouton appelle maintenant addChild() -->
-          <BaseButton class="cta btn--secondary" type="button" @click="addChild">
+          <BaseButton type="button" variant="secondary" size="md" :block="true" @click="addChild">
             Ajouter un enfant
           </BaseButton>
         </div>
@@ -280,8 +287,10 @@ const updateData = () => {
         </div>
 
         <BaseButton
-          class="cta"
           type="button"
+          variant="primary"
+          size="md"
+          :block="true"
           :disabled="selectedPeople.length === 0"
           @click="continueSignup"
         >
@@ -293,9 +302,9 @@ const updateData = () => {
     <!-- ✅ NOUVEL ÉCRAN : création enfant -->
     <template v-else-if="step === 'child-create'">
       <section class="section signup">
-        <button class="back" type="button" @click="closeChildCreate">← Retour</button>
+        <BackButton @click="closeChildCreate" />
 
-        <h1>AJOUTER UN ENFANT</h1>
+        <h2>AJOUTER UN ENFANT</h2>
 
         <FullDataForm
           v-if="selectedChild"
@@ -309,7 +318,7 @@ const updateData = () => {
     <!--ÉCRAN 3 : confirmation -->
     <template v-else>
       <section class="section confirm">
-        <h1>CONFIRMATION D’INSCRIPTION AU {{ camp.name.toUpperCase() }}</h1>
+        <h1>CONFIRMATION D’INSCRIPTION AU {{ camp.title.toUpperCase() }}</h1>
 
         <p>Un grand merci !</p>
 
@@ -322,10 +331,24 @@ const updateData = () => {
           Si vous souhaitez le faire plus tard, vous pourrez retrouver toutes les informations dans
           votre profil, sous la rubrique Enfants
         </p>
-        <BaseButton class="cta btn--secondary" as="link" :to="{ name: 'app.home' }">
+
+        <BaseButton
+          as="link"
+          :to="{ name: 'app.home' }"
+          variant="secondary"
+          size="md"
+          :block="true"
+        >
           Retour à l'accueil
         </BaseButton>
-        <BaseButton class="cta" as="link" :to="{ name: 'app.profile' }">
+
+        <BaseButton
+          as="link"
+          :to="{ name: 'app.profile' }"
+          variant="primary"
+          size="md"
+          :block="true"
+        >
           Mettre à jour les données
         </BaseButton>
       </section>
@@ -353,12 +376,6 @@ dt {
 
 dd {
   margin: 0;
-}
-
-.cta {
-  margin: var(--sp-4) auto 0;
-  display: block;
-  max-width: 20rem;
 }
 
 p + p {
@@ -391,6 +408,7 @@ p + p {
   margin-top: var(--sp-3);
   display: grid;
   gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
 }
 
 .child-card {
@@ -403,8 +421,6 @@ p + p {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
-  margin-left: 1rem;
-  margin-right: 1rem;
 }
 
 .child-main {
@@ -477,6 +493,7 @@ p + p {
 /* bloc sélection */
 .selection {
   margin-top: var(--sp-3);
+  margin-bottom: var(--sp-3);
   background: var(--c-bg);
   border: 1px solid var(--c-secondary);
   border-radius: var(--r-input);
@@ -492,8 +509,7 @@ p + p {
   border: 1px solid var(--c-surface);
   border-radius: var(--r-input);
   box-shadow: none;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding: 0.5rem 1rem;
   margin-top: 1rem;
   margin-bottom: 1rem;
 }

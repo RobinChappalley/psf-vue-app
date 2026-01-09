@@ -1,15 +1,29 @@
-export function getCurrentCamp(camps) {
+// getCurrentCamp.js (DB-ready)
+export function getCurrentCamp(camps, context = 'home') {
   if (!Array.isArray(camps) || camps.length === 0) return null
 
-  const now = new Date()
+  const pickBestByEndDate = (list) => {
+    const withEnd = list
+      .map((camp) => ({ camp, end: new Date(camp?.endDate) }))
+      .filter((x) => !isNaN(x.end))
 
-  const upcoming = camps
-    .map((camp) => ({
-      camp,
-      end: new Date(camp['end-date']),
-    }))
-    .filter((c) => !isNaN(c.end) && c.end >= now)
-    .sort((a, b) => a.end - b.end)
+    if (withEnd.length === 0) return list[0] ?? null
+    withEnd.sort((a, b) => a.end - b.end)
+    return withEnd[0].camp
+  }
 
-  return upcoming.length ? upcoming[0].camp : null
+  const published = camps.filter((c) => c?.status === 'published')
+  const drafts = camps.filter((c) => c?.status === 'draft')
+
+  if (context === 'home') {
+    return published.length ? pickBestByEndDate(published) : null
+  }
+
+  if (context === 'admin') {
+    if (drafts.length) return pickBestByEndDate(drafts)
+    if (published.length) return pickBestByEndDate(published)
+    return null
+  }
+
+  return published.length ? pickBestByEndDate(published) : null
 }
