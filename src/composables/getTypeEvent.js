@@ -11,7 +11,7 @@ export function getTypeEvent(item) {
       title: () => e?.title ?? 'Camp',
     },
 
-    trainings: {
+    training: {
       icon: 'training',
       title: () => `Entrainement ${e.number ?? ''}`.trim(),
       description: () => e.meetingPoint ?? '',
