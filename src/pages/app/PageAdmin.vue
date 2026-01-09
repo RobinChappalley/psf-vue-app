@@ -6,6 +6,7 @@ import CampForm from '@/components/admin/CampForm.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import CampEventsSection from '@/components/admin/CampEventsSection.vue'
+import CreateCampEventSection from '@/components/admin/CreateCampEventSection.vue'
 
 const step = ref('home')
 
@@ -176,7 +177,7 @@ function onUpdateCamp(payload) {
     </template>
 
     <!-- ========================= -->
-    <!-- ÉCRAN 2 : ÉVÈNEMENTS -->
+    <!-- ÉCRAN 2 : ÉVÈNEMENTS (CAMPS) -->
     <!-- ========================= -->
     <template v-else-if="step === 'events'">
       <header>
@@ -230,6 +231,7 @@ function onUpdateCamp(payload) {
         <CampForm @submit="onCreateCamp" />
       </section>
     </template>
+
     <!-- ========================= -->
     <!-- ÉCRAN : MENU CAMP -->
     <!-- ========================= -->
@@ -243,7 +245,7 @@ function onUpdateCamp(payload) {
           <DashboardCard
             icon="edit"
             title="Modifier le camp"
-            description="Ajouter, modifier ou supprimer du matériel"
+            description="Modifier les informations du camp"
             asButton
             @click="step = 'camp-edit'"
           />
@@ -266,8 +268,8 @@ function onUpdateCamp(payload) {
 
           <DashboardCard
             icon="users"
-            title="Gérer les inscription du camp"
-            description="Créer, modifier ou archiver les camps, entraînements, AG, soirées d'information"
+            title="Gérer les inscriptions du camp"
+            description="Gérer les inscriptions des participants"
             asButton
             @click="step = 'camp-signups'"
           />
@@ -282,6 +284,41 @@ function onUpdateCamp(payload) {
           </BaseButton>
         </div>
       </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : ÉVÈNEMENTS DU CAMP (TRAININGS) -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-events'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <CampEventsSection
+        :camp-title="selectedCamp?.title ?? ''"
+        :trainings="selectedCamp?.trainings ?? []"
+        @create="step = 'camp-event-create'"
+        @openTraining="(t) => console.log('open training', t)"
+      />
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : CRÉER UN ÉVÈNEMENT (CHOIX TYPE) -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-event-create'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-events'" />
+      </header>
+
+      <CreateCampEventSection
+        :camp="selectedCamp"
+        :allowed-keys="['trainings']"
+        @select="
+          (key) => {
+            if (key === 'trainings') step = 'camp-training-create'
+          }
+        "
+      />
     </template>
 
     <!-- ========================= -->
@@ -300,22 +337,6 @@ function onUpdateCamp(payload) {
           @submit="onUpdateCamp"
         />
       </section>
-    </template>
-
-    <!-- ========================= -->
-    <!-- ÉCRAN : ÉVÈNEMENTS DU CAMP -->
-    <!-- ========================= -->
-    <template v-else-if="step === 'camp-events'">
-      <header class="page-header">
-        <BackButton @click="step = 'camp-menu'" />
-      </header>
-
-      <CampEventsSection
-        :camp-title="selectedCamp?.title ?? ''"
-        :trainings="selectedCamp?.trainings ?? []"
-        @create="step = 'camp-event-create-type'"
-        @openTraining="(t) => console.log('open training', t)"
-      />
     </template>
 
     <!-- ========================= -->
