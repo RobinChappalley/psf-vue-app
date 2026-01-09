@@ -227,7 +227,7 @@ const continueSignup = () => {
       <section class="section signup">
         <BackButton @click="goBackToCamp" />
 
-        <h1>INSCRIPTION AU {{ camp.name.toUpperCase() }}</h1>
+        <h2>INSCRIPTION AU {{ camp.name.toUpperCase() }}</h2>
 
         <p>Sélectionnez les personnes que vous souhaitez inscrire pour le camp 2026.</p>
         <p>Les personnes ayant déjà participés sont pré-sélectionnées.</p>
@@ -285,7 +285,7 @@ const continueSignup = () => {
       <section class="section signup">
         <BackButton @click="closeChildCreate" />
 
-        <h1>AJOUTER UN ENFANT</h1>
+        <h2>AJOUTER UN ENFANT</h2>
 
         <FullDataForm
           v-if="selectedChild"
@@ -388,6 +388,7 @@ p + p {
   margin-top: var(--sp-3);
   display: grid;
   gap: var(--sp-2);
+  padding-bottom: var(--sp-2);
 }
 
 .child-card {
@@ -400,8 +401,6 @@ p + p {
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
-  margin-left: 1rem;
-  margin-right: 1rem;
 }
 
 .child-main {
@@ -474,6 +473,7 @@ p + p {
 /* bloc sélection */
 .selection {
   margin-top: var(--sp-3);
+  margin-bottom: var(--sp-3);
   background: var(--c-bg);
   border: 1px solid var(--c-secondary);
   border-radius: var(--r-input);
@@ -489,8 +489,7 @@ p + p {
   border: 1px solid var(--c-surface);
   border-radius: var(--r-input);
   box-shadow: none;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
+  padding: 0.5rem 1rem;
   margin-top: 1rem;
   margin-bottom: 1rem;
 }
