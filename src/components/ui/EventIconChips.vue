@@ -62,25 +62,24 @@ function pick(key) {
   position: relative;
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr; /* ✅ chaque chip prend la même largeur */
+  grid-auto-columns: 1fr;
   align-items: center;
 
-  background: #ededed;
+  background: var(--c-bg);
   padding: 0.3rem;
   border-radius: 999px;
 
   overflow: hidden;
-  isolation: isolate; /* pour gérer le z-index du ::before */
+  isolation: isolate;
 }
 
-/* pastille blanche glissante */
 .chips::before {
   content: '';
   position: absolute;
-  inset: 0.3rem; /* même que le padding pour coller pile */
-  width: calc((100% - 0.6rem) / var(--n)); /* 0.6rem = padding left+right */
+  inset: 0.3rem;
+  width: calc((100% - 0.6rem) / var(--n));
   border-radius: 999px;
-  background: #ffffff;
+  background: var(--c-border);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 
   transform: translateX(calc(var(--i) * 100%));
@@ -88,7 +87,6 @@ function pick(key) {
   z-index: 0;
 }
 
-/* boutons transparents au-dessus */
 .chip {
   position: relative;
   z-index: 1;
