@@ -89,7 +89,6 @@ button.card {
   color: var(--c-text);
   line-height: 1.25rem;
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }

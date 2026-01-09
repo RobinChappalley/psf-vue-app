@@ -3,7 +3,7 @@ import { computed, reactive, watch } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import EventDropdown from '@/components/ui/EventDropdown.vue'
 
-const emit = defineEmits(['submit', 'cancel', 'update:type'])
+const emit = defineEmits(['submit', 'cancel', 'update:type', 'delete'])
 
 const props = defineProps({
   mode: { type: String, default: 'create' }, // create | edit
@@ -143,6 +143,14 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) ? n : null
 }
 
+function onDelete() {
+  if (props.mode !== 'edit') return
+  if (props.confirmDelete) {
+    const ok = window.confirm('Supprimer cet évènement ? Cette action est définitive.')
+    if (!ok) return
+  }
+  emit('delete')
+}
 function onSubmit() {
   if (!canSubmit.value) return
 
@@ -343,9 +351,23 @@ const today = computed(() => {
         />
       </div>
 
-      <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
-        Valider
-      </BaseButton>
+      <div class="actions">
+        <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
+          Valider
+        </BaseButton>
+
+        <!-- Visible uniquement en edit -->
+        <BaseButton
+          v-if="mode === 'edit'"
+          type="button"
+          variant="secondary"
+          size="md"
+          :block="true"
+          @click="onDelete"
+        >
+          Supprimer l’évènement
+        </BaseButton>
+      </div>
     </form>
   </section>
 </template>
@@ -401,5 +423,10 @@ input[type='date'] {
 
 input[type='date']:valid {
   color: var(--c-text);
+}
+.actions {
+  display: grid;
+  gap: var(--sp-2);
+  margin-top: var(--sp-3);
 }
 </style>

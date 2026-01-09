@@ -208,33 +208,21 @@ function onUpdateCampEvent(payload) {
     // keep selection in sync
     selectedEvent.value.data = updated
   }
-
   step.value = 'camp-events'
 }
+function onDeleteCampEvent() {
+  if (!selectedCamp.value || !selectedEvent.value) return
 
-//Partie user dans un camp
-const signupFilter = ref('all') // 'all' | 'paid' | 'pending'
+  if (selectedEvent.value.type === 'trainings') {
+    const old = selectedEvent.value.data
+    const list = selectedCamp.value.trainings ?? []
+    selectedCamp.value.trainings = list.filter((t) => t.number !== old.number)
+  }
 
-const campUsers = computed(() => {
-  if (!selectedCamp.value) return []
-  return authStore.allUsers.value.filter(
-    (u) => Array.isArray(u.camps) && u.camps.includes(String(selectedCamp.value.id)),
-  )
-})
-
-const paidUsers = computed(() =>
-  campUsers.value.filter((u) => u.participationInfo?.hasPaid === true),
-)
-
-const pendingUsers = computed(() =>
-  campUsers.value.filter((u) => u.participationInfo?.hasPaid !== true),
-)
-
-const visibleUsers = computed(() => {
-  if (signupFilter.value === 'paid') return paidUsers.value
-  if (signupFilter.value === 'pending') return pendingUsers.value
-  return campUsers.value
-})
+  // reset selection + retour liste
+  selectedEvent.value = null
+  step.value = 'camp-events'
+}
 </script>
 
 <template>
@@ -457,6 +445,7 @@ const visibleUsers = computed(() => {
         :responsible-options="responsibleOptions"
         @update:type="() => {}"
         @submit="onUpdateCampEvent"
+        @delete="onDeleteCampEvent"
       />
     </template>
 
