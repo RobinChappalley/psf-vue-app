@@ -360,7 +360,7 @@ const today = computed(() => {
         <BaseButton
           v-if="mode === 'edit'"
           type="button"
-          variant="secondary"
+          variant="tertiary"
           size="md"
           :block="true"
           @click="onDelete"
