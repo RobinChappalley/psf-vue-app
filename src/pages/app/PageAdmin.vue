@@ -1,6 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { authStore } from '@/stores/auth'
+import { getCurrentCamp } from '@/composables/getCurrentCamp'
+
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import CampForm from '@/components/admin/CampForm.vue'
@@ -13,21 +15,19 @@ import CampParticipantsSection from '@/components/admin/CampParticipantsSection.
 import UserDetailsPanel from '@/components/admin/UserDetailsPanel.vue'
 
 const selectedUser = ref(null)
-
 const step = ref('home')
 
 function goHome() {
   step.value = 'home'
 }
-
+const camps = ref([])
 /**
  * MOCK API — Camps
- * Laisse vide => écran "Aucun évènement pour le moment"
- * Décommente => 1 camp dans la liste
  */
-const camps = ref([])
+/*
+ 
 
-camps.value = [
+const camps = ref([
   {
     id: '1',
     title: 'Camp 2026',
@@ -38,7 +38,7 @@ camps.value = [
     subEndDatetime: '2026-05-31T23:59:59Z',
     gpsTrack: { fileName: 'camp-2026-trace.gpx' },
     itemsList: [{ item_id: 'string', quantity: 'string' }],
-    'information-evening': {
+    infoEvening: {
       dateTime: '2026-06-15T18:00:00Z',
       location: 'Salle des fêtes, Lausanne',
       participants: [{ email: 'parent@example.com', nbOfParticipants: 2 }],
@@ -56,7 +56,6 @@ camps.value = [
         elevationGain: 300,
         elevationLoss: 200,
         responsiblePerson: 'Julie Martin',
-        // si tu veux garder le nom exact backend:
         'items-list': [{ item_id: 'water-bottle', quantity: '1' }],
         remark: 'Prévoir des chaussures imperméables',
       },
@@ -65,52 +64,54 @@ camps.value = [
     generalMeeting: null,
     stages: [],
   },
-]
+])
+   */
 
-//Récupérer les admins
+// Admin users options
 const responsibleOptions = computed(() =>
   authStore.adminUsers.value.map((u) => ({
-    value: u.id, // ou email si tu préfères
+    value: u.id,
     label: `${u.firstname} ${u.lastname}`,
   })),
 )
 
+// Camps visibles dans "events" (non archivés)
 const activeCamps = computed(() => (camps.value ?? []).filter((c) => c.status !== 'archived'))
-
 const hasCamps = computed(() => activeCamps.value.length > 0)
 
-function onCreateCampEvent(payload) {
-  console.log('NEW EVENT', payload)
+// Camp "courant" dans l'admin: draft > published
+const currentAdminCamp = computed(() => getCurrentCamp(activeCamps.value, 'admin'))
 
-  if (!selectedCamp.value) return
+// Camp sélectionné dans l’UI (menu camp, events etc.)
+const selectedCamp = ref(null)
 
-  if (payload.type === 'trainings') {
-    const nextNumber =
-      (selectedCamp.value.trainings?.reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0) + 1
+// Initialiser selectedCamp automatiquement sur le camp courant (draft/published)
+watch(
+  currentAdminCamp,
+  (camp) => {
+    // si le camp sélectionné n’existe plus (supprimé/archivé), ou n’est pas set => on resync
+    const stillExists =
+      camp && (camps.value ?? []).some((c) => c.id === camp.id && c.status !== 'archived')
 
-    const training = {
-      number: nextNumber,
-      date: payload.date,
-      meetingTime: payload.meetingTime,
-      meetingPoint: payload.meetingPoint,
-      returnTime: payload.arrivalTime,
-      // tu peux mapper plus précisément comme tu veux
-      trainGoingTime: payload.trainGoingTime ?? null,
-      trainReturnTime: payload.trainReturnTime ?? null,
-      distance: payload.distance,
-      elevationGain: payload.elevationGain,
-      elevationLoss: payload.elevationLoss,
-      responsiblePerson: payload.responsiblePerson,
-      remark: payload.remark,
-      'items-list': [],
+    if (!selectedCamp.value || !stillExists) {
+      selectedCamp.value = camp
     }
+  },
+  { immediate: true },
+)
 
-    if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
-    selectedCamp.value.trainings = [...selectedCamp.value.trainings, training]
-  }
+// Helpers statut
+const campStatus = computed(() => selectedCamp.value?.status ?? 'draft')
+const anotherPublishedCamp = computed(() =>
+  (camps.value ?? []).find((c) => c.status === 'published' && c.id !== selectedCamp.value?.id),
+)
 
-  // retour à la liste
-  step.value = 'camp-events'
+/**
+ * Navigation camp
+ */
+function onOpenCamp(camp) {
+  selectedCamp.value = camp
+  step.value = 'camp-menu'
 }
 
 function openCampCreate() {
@@ -118,24 +119,60 @@ function openCampCreate() {
   step.value = 'camp-create'
 }
 
-const selectedCamp = ref(null)
-const campStatus = computed(() => selectedCamp.value?.status ?? 'draft')
+/**
+ * Actions statut
+ */
 
-const hasPublishedCamp = computed(() => (camps.value ?? []).some((c) => c.status === 'published'))
+function onCreateCamp(payload) {
+  console.log('payload create camp', payload)
 
-const anotherPublishedCamp = computed(() =>
-  (camps.value ?? []).find((c) => c.status === 'published' && c.id !== selectedCamp.value?.id),
-)
+  // sécurité (cohérente avec ton UX)
+  if (hasCamps.value) {
+    alert("Un camp est déjà actif. Archivez-le avant d'en créer un nouveau.")
+    step.value = 'events'
+    return
+  }
 
-function onOpenCamp(camp) {
-  selectedCamp.value = camp
+  const newCamp = {
+    id: `camp-${Date.now()}`, // temporaire, remplacé par l’ID backend plus tard
+    title: payload.name,
+    status: 'draft',
+
+    startDate: payload['start-date'] ?? null,
+    endDate: payload['end-date'] ?? null,
+
+    subStartDatetime: payload['subscription-start-date']
+      ? `${payload['subscription-start-date']}T00:00:00Z`
+      : null,
+
+    subEndDatetime: payload['subscription-deadline']
+      ? `${payload['subscription-deadline']}T23:59:59Z`
+      : null,
+
+    gpsTrack: (() => {
+      const file = payload?.['GPS-track']?.file
+      return file ? { fileName: file.name } : {}
+    })(),
+
+    itemsList: [],
+    infoEvening: null,
+    trainings: [],
+    fundraisings: [],
+    generalMeeting: null,
+    stages: [],
+  }
+
+  // ajout à la liste
+  camps.value = [...camps.value, newCamp]
+
+  // sélection + navigation
+  selectedCamp.value = newCamp
   step.value = 'camp-menu'
 }
 
 function publishCamp() {
   if (!selectedCamp.value) return
 
-  // règle: 1 seul camp publié
   if (anotherPublishedCamp.value) {
     alert(
       `Un camp est déjà publié (${anotherPublishedCamp.value.title}). ` +
@@ -145,7 +182,6 @@ function publishCamp() {
   }
 
   selectedCamp.value.status = 'published'
-  // optionnel: feedback
   console.log('Camp publié', selectedCamp.value)
 }
 
@@ -155,7 +191,8 @@ function archiveCamp() {
   selectedCamp.value.status = 'archived'
   console.log('Camp archivé', selectedCamp.value)
 
-  // retour liste camps
+  // reset pour laisser le watch re-sélectionner si besoin
+  selectedCamp.value = null
   step.value = 'events'
 }
 
@@ -172,20 +209,16 @@ function deleteCamp() {
   step.value = 'events'
 }
 
-//Fonctions propres à un camp
+/**
+ * Update camp (mock)
+ */
 function onUpdateCamp(payload) {
   if (!selectedCamp.value) return
 
-  console.log('payload update camp', payload)
-
-  // MOCK update local (en attendant le backend)
-  // Ici payload est en kebab-case (comme ton submit), donc on remappe vers ton objet camp
   selectedCamp.value.title = payload.name
   selectedCamp.value.startDate = payload['start-date']
   selectedCamp.value.endDate = payload['end-date']
 
-  // tes champs mock sont en datetime ISO, ton form renvoie date YYYY-MM-DD
-  // on peut stocker en date simple, ou reconstruire un ISO. Je te montre simple :
   selectedCamp.value.subStartDatetime = payload['subscription-start-date']
     ? `${payload['subscription-start-date']}T00:00:00Z`
     : null
@@ -194,23 +227,54 @@ function onUpdateCamp(payload) {
     ? `${payload['subscription-deadline']}T23:59:59Z`
     : null
 
-  // gps track
   if ('GPS-track' in payload) {
-    // null => suppression
     if (payload['GPS-track'] === null) {
       selectedCamp.value.gpsTrack = {}
     } else {
-      // remplacement => ici on n'a pas de vrai upload, donc on stocke le nom
       const file = payload['GPS-track']?.file
       selectedCamp.value.gpsTrack = file ? { fileName: file.name } : {}
     }
   }
 
-  // Retour menu camp
   step.value = 'camp-menu'
 }
 
-//Pour mettre à jour un évènement (ici uniquement un training)
+/**
+ * Create camp event (mock)
+ */
+function onCreateCampEvent(payload) {
+  if (!selectedCamp.value) return
+
+  if (payload.type === 'trainings') {
+    const nextNumber =
+      (selectedCamp.value.trainings?.reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0) + 1
+
+    const training = {
+      number: nextNumber,
+      date: payload.date,
+      meetingTime: payload.meetingTime,
+      meetingPoint: payload.meetingPoint,
+      returnTime: payload.arrivalTime,
+      trainGoingTime: payload.trainGoingTime ?? null,
+      trainReturnTime: payload.trainReturnTime ?? null,
+      distance: payload.distance,
+      elevationGain: payload.elevationGain,
+      elevationLoss: payload.elevationLoss,
+      responsiblePerson: payload.responsiblePerson,
+      remark: payload.remark,
+      'items-list': [],
+    }
+
+    if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
+    selectedCamp.value.trainings = [...selectedCamp.value.trainings, training]
+  }
+
+  step.value = 'camp-events'
+}
+
+/**
+ * Edit camp event (trainings v1)
+ */
 const selectedEvent = ref(null) // { type: 'trainings', data: training }
 
 function onOpenTraining(training) {
@@ -221,36 +285,30 @@ function onOpenTraining(training) {
 function onUpdateCampEvent(payload) {
   if (!selectedCamp.value || !selectedEvent.value) return
 
-  // v1: uniquement trainings
   if (selectedEvent.value.type === 'trainings') {
     const old = selectedEvent.value.data
     const list = selectedCamp.value.trainings ?? []
 
     const updated = {
-      ...old, // garde number + items-list + tout ce que tu ne modifies pas
+      ...old,
       date: payload.date ?? old.date,
       remark: payload.remark ?? old.remark,
-
       meetingPoint: payload.meetingPoint ?? old.meetingPoint,
       meetingTime: payload.meetingTime ?? old.meetingTime,
-
       returnTime: payload.arrivalTime ?? old.returnTime,
-
       distance: payload.distance ?? old.distance,
       elevationGain: payload.elevationGain ?? old.elevationGain,
       elevationLoss: payload.elevationLoss ?? old.elevationLoss,
-
       responsiblePerson: payload.responsiblePerson ?? old.responsiblePerson,
     }
 
-    // update immuable
     selectedCamp.value.trainings = list.map((t) => (t.number === old.number ? updated : t))
-
-    // keep selection in sync
     selectedEvent.value.data = updated
   }
+
   step.value = 'camp-events'
 }
+
 function onDeleteCampEvent() {
   if (!selectedCamp.value || !selectedEvent.value) return
 
@@ -260,7 +318,6 @@ function onDeleteCampEvent() {
     selectedCamp.value.trainings = list.filter((t) => t.number !== old.number)
   }
 
-  // reset selection + retour liste
   selectedEvent.value = null
   step.value = 'camp-events'
 }
