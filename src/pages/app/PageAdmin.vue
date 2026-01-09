@@ -15,6 +15,7 @@ import UserDetailsPanel from '@/components/admin/UserDetailsPanel.vue'
 import CampArchivesSection from '@/components/admin/CampArchivesSection.vue'
 import { mockArchivedCamps } from '@/assets/mocks/camps'
 import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
+import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
 
 const selectedUser = ref(null)
 const step = ref('home')
@@ -283,11 +284,17 @@ function onDeleteCampEvent() {
 //Archive section
 const archiveYear = ref(null)
 const archiveYearCamps = ref([])
+const selectedArchiveEvent = ref(null)
 
 function onOpenArchiveYear({ year, camps }) {
   archiveYear.value = year
   archiveYearCamps.value = camps
   step.value = 'archives-year'
+}
+
+function onOpenArchiveEvent(ev) {
+  selectedArchiveEvent.value = ev
+  step.value = 'archive-event-details'
 }
 </script>
 
@@ -599,6 +606,9 @@ function onOpenArchiveYear({ year, camps }) {
       <CampArchivesSection :camps="camps" @openYear="onOpenArchiveYear" />
     </template>
 
+    <!-- ========================= -->
+    <!-- ÉCRAN 4bis : ARCHIVES — ANNÉE (LISTE DES ÉVÈNEMENTS) -->
+    <!-- ========================= -->
     <template v-else-if="step === 'archives-year'">
       <header class="page-header">
         <BackButton @click="step = 'archives'" />
@@ -608,12 +618,21 @@ function onOpenArchiveYear({ year, camps }) {
         v-if="archiveYear"
         :year="archiveYear"
         :camps="archiveYearCamps"
-        @openTraining="
-          (payload) => {
-            console.log(payload) /* ouvrir détail */
-          }
-        "
+        @openEvent="onOpenArchiveEvent"
       />
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN 4ter : ARCHIVES — DÉTAIL ÉVÈNEMENT -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'archive-event-details'">
+      <header class="page-header">
+        <BackButton @click="step = 'archives-year'" />
+      </header>
+
+      <section class="section">
+        <EventDetailsPanel v-if="selectedArchiveEvent" :event="selectedArchiveEvent" />
+      </section>
     </template>
   </div>
 </template>
