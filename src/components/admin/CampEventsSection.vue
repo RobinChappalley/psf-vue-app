@@ -27,32 +27,33 @@ const visibleTrainings = computed(() => {
 </script>
 
 <template>
-  <AdminPanel
-    title="ÉVÈNEMENTS EXISTANTS"
-    :is-empty="isEmpty"
-    empty-text="Aucun évènement pour le moment"
-  >
-    <template #tools>
-      <EventIconChips v-model="filter" :enabled="enabledFilters" />
-    </template>
+  <div class="camp-events">
+    <AdminPanel
+      title="ÉVÈNEMENTS EXISTANTS"
+      :is-empty="isEmpty"
+      empty-text="Aucun évènement pour le moment"
+    >
+      <template #tools>
+        <EventIconChips v-model="filter" />
+      </template>
 
-    <!-- Liste (v1 trainings) -->
-    <template v-if="!isEmpty">
-      <DashboardCard
-        v-for="t in visibleTrainings"
-        :key="t.number"
-        icon="boots"
-        :title="`ENTRAINEMENT ${t.number}`"
-        :description="t.date"
-        asButton
-        @click="$emit('openTraining', t)"
-      />
-    </template>
+      <template v-if="!isEmpty">
+        <DashboardCard
+          v-for="t in visibleTrainings"
+          :key="t.number"
+          icon="boots"
+          :title="`ENTRAINEMENT ${t.number}`"
+          :description="t.meetingPoint"
+          asButton
+          @click="$emit('openTraining', t)"
+        />
+      </template>
 
-    <template #actions>
-      <BaseButton variant="primary" size="md" :block="true" @click="$emit('create')">
-        Créer un nouvel évènement
-      </BaseButton>
-    </template>
-  </AdminPanel>
+      <template #actions>
+        <BaseButton variant="primary" size="md" :block="true" @click="$emit('create')">
+          Créer un nouvel évènement
+        </BaseButton>
+      </template>
+    </AdminPanel>
+  </div>
 </template>

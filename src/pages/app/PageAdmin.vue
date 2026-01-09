@@ -4,6 +4,8 @@ import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import CampForm from '@/components/admin/CampForm.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import AdminPanel from '@/components/admin/AdminPanel.vue'
+import CampEventsSection from '@/components/admin/CampEventsSection.vue'
 
 const step = ref('home')
 
@@ -33,7 +35,24 @@ camps.value = [
       location: 'Salle des fêtes, Lausanne',
       participants: [{ email: 'parent@example.com', nbOfParticipants: 2 }],
     },
-    trainings: [],
+    trainings: [
+      {
+        number: 1,
+        date: '2026-07-02',
+        trainGoingTime: '08:00',
+        trainReturnTime: '18:00',
+        meetingTime: '08:30',
+        meetingPoint: 'Gare centrale',
+        returnTime: '17:30',
+        distance: 12.5,
+        elevationGain: 300,
+        elevationLoss: 200,
+        responsiblePerson: 'Julie Martin',
+        // si tu veux garder le nom exact backend:
+        'items-list': [{ item_id: 'water-bottle', quantity: '1' }],
+        remark: 'Prévoir des chaussures imperméables',
+      },
+    ],
     fundraisings: [],
     generalMeeting: null,
     stages: [],
@@ -164,14 +183,12 @@ function onUpdateCamp(payload) {
         <BackButton @click="goHome" />
       </header>
 
-      <section class="events-panel">
-        <h2>ÉVÈNEMENTS EXISTANTS</h2>
-
-        <!-- État vide -->
-        <p v-if="!hasCamps" class="empty">Aucun évènement pour le moment</p>
-
-        <!-- État avec camp(s) -->
-        <div v-else class="events-list">
+      <AdminPanel
+        title="ÉVÈNEMENTS EXISTANTS"
+        :is-empty="!hasCamps"
+        empty-text="Aucun évènement pour le moment"
+      >
+        <template v-if="hasCamps">
           <DashboardCard
             v-for="camp in camps"
             :key="camp.id"
@@ -180,24 +197,25 @@ function onUpdateCamp(payload) {
             asButton
             @click="onOpenCamp(camp)"
           />
-        </div>
+        </template>
 
-        <!-- Important : ici, tu dois ouvrir la section camp-create -->
-        <BaseButton
-          variant="primary"
-          size="md"
-          :block="true"
-          :disabled="hasCamps"
-          @click="openCampCreate"
-        >
-          Créer un nouveau camp
-        </BaseButton>
+        <template #actions>
+          <BaseButton
+            variant="primary"
+            size="md"
+            :block="true"
+            :disabled="hasCamps"
+            @click="openCampCreate"
+          >
+            Créer un nouveau camp
+          </BaseButton>
+        </template>
 
-        <p v-if="hasCamps" class="hint">
+        <template v-if="hasCamps" #hint>
           Un camp est déjà actif. Archivez ou supprimez le camp existant avant d’en créer un
           nouveau.
-        </p>
-      </section>
+        </template>
+      </AdminPanel>
     </template>
 
     <!-- ========================= -->
@@ -282,6 +300,22 @@ function onUpdateCamp(payload) {
           @submit="onUpdateCamp"
         />
       </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : ÉVÈNEMENTS DU CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-events'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <CampEventsSection
+        :camp-title="selectedCamp?.title ?? ''"
+        :trainings="selectedCamp?.trainings ?? []"
+        @create="step = 'camp-event-create-type'"
+        @openTraining="(t) => console.log('open training', t)"
+      />
     </template>
 
     <!-- ========================= -->
