@@ -26,7 +26,7 @@ camps.value = [
     endDate: '2026-07-15',
     subStartDatetime: '2026-03-01T09:00:00Z',
     subEndDatetime: '2026-05-31T23:59:59Z',
-    gpsTrack: {},
+    gpsTrack: { fileName: 'camp-2026-trace.gpx' },
     itemsList: [{ item_id: 'string', quantity: 'string' }],
     'information-evening': {
       dateTime: '2026-06-15T18:00:00Z',
@@ -101,7 +101,16 @@ function onUpdateCamp(payload) {
     : null
 
   // gps track
-  selectedCamp.value.gpsTrack = payload['GPS-track'] ?? selectedCamp.value.gpsTrack
+  if ('GPS-track' in payload) {
+    // null => suppression
+    if (payload['GPS-track'] === null) {
+      selectedCamp.value.gpsTrack = {}
+    } else {
+      // remplacement => ici on n'a pas de vrai upload, donc on stocke le nom
+      const file = payload['GPS-track']?.file
+      selectedCamp.value.gpsTrack = file ? { fileName: file.name } : {}
+    }
+  }
 
   // Retour menu camp
   step.value = 'camp-menu'
@@ -266,7 +275,12 @@ function onUpdateCamp(payload) {
       </header>
 
       <section class="section">
-        <CampForm mode="edit" :initial-values="selectedCamp" @submit="onUpdateCamp" />
+        <CampForm
+          mode="edit"
+          :initial-values="selectedCamp"
+          :existing-gpx="selectedCamp?.gpsTrack ?? null"
+          @submit="onUpdateCamp"
+        />
       </section>
     </template>
 
