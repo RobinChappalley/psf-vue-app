@@ -285,6 +285,9 @@ input::placeholder {
 input[type='date'] {
   color: var(--c-border);
 }
+input[type='date']:valid {
+  color: var(--c-text);
+}
 
 .input-wrap input[type='date'] {
   padding-right: 0.5rem;
