@@ -2,7 +2,6 @@
 import { computed, ref, watch } from 'vue'
 import { authStore } from '@/stores/auth'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
-
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import CampForm from '@/components/admin/CampForm.vue'
@@ -13,7 +12,8 @@ import CreateCampEventSection from '@/components/admin/CreateCampEventSection.vu
 import EventForm from '@/components/admin/EventForm.vue'
 import CampParticipantsSection from '@/components/admin/CampParticipantsSection.vue'
 import UserDetailsPanel from '@/components/admin/UserDetailsPanel.vue'
-
+import CampArchivesSection from '@/components/admin/CampArchivesSection.vue'
+import { mockArchivedCamps } from '@/assets/mocks/camps'
 const selectedUser = ref(null)
 const step = ref('home')
 
@@ -21,52 +21,7 @@ function goHome() {
   step.value = 'home'
 }
 const camps = ref([])
-/**
- * MOCK API — Camps
- */
-/*
- 
-
-const camps = ref([
-  {
-    id: '1',
-    title: 'Camp 2026',
-    status: 'draft', // 'draft' | 'published' | 'archived'
-    startDate: '2026-07-01',
-    endDate: '2026-07-15',
-    subStartDatetime: '2026-03-01T09:00:00Z',
-    subEndDatetime: '2026-05-31T23:59:59Z',
-    gpsTrack: { fileName: 'camp-2026-trace.gpx' },
-    itemsList: [{ item_id: 'string', quantity: 'string' }],
-    infoEvening: {
-      dateTime: '2026-06-15T18:00:00Z',
-      location: 'Salle des fêtes, Lausanne',
-      participants: [{ email: 'parent@example.com', nbOfParticipants: 2 }],
-    },
-    trainings: [
-      {
-        number: 1,
-        date: '2026-07-02',
-        trainGoingTime: '08:00',
-        trainReturnTime: '18:00',
-        meetingTime: '08:30',
-        meetingPoint: 'Gare centrale',
-        returnTime: '17:30',
-        distance: 12.5,
-        elevationGain: 300,
-        elevationLoss: 200,
-        responsiblePerson: 'Julie Martin',
-        'items-list': [{ item_id: 'water-bottle', quantity: '1' }],
-        remark: 'Prévoir des chaussures imperméables',
-      },
-    ],
-    fundraisings: [],
-    generalMeeting: null,
-    stages: [],
-  },
-])
-   */
-
+camps.value = [...mockArchivedCamps]
 // Admin users options
 const responsibleOptions = computed(() =>
   authStore.adminUsers.value.map((u) => ({
@@ -628,9 +583,10 @@ function onDeleteCampEvent() {
         <BackButton @click="goHome" />
       </header>
 
-      <section class="mock">
-        <p>🗂️ Archives (mock)</p>
-      </section>
+      <CampArchivesSection
+        :camps="camps"
+        @openYear="({ year, camps }) => console.log('année:', year, 'camps:', camps)"
+      />
     </template>
   </div>
 </template>
