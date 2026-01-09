@@ -1,46 +1,50 @@
 <script setup>
+import { computed } from 'vue'
 import AppIcone from '@/components/AppIcone.vue'
 
 const props = defineProps({
-  modelValue: { type: String, default: 'all' }, // 'all' | 'training' | ...
-  enabled: { type: Array, default: () => ['all', 'training'] },
+  modelValue: { type: String, default: 'all' },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
-/**
- * Mapping type -> icône AppIcone
- * Adapte les keys si tu changes ton modèle.
- */
 const CHIPS = [
   { key: 'all', label: 'tous', icon: null },
+  { key: 'stages', label: '', icon: 'stage' },
   { key: 'training', label: '', icon: 'training' },
-  { key: 'information-evening', label: '', icon: 'information-evening' },
+  { key: 'information-evening', label: '', icon: 'informationEvening' },
   { key: 'fundraisings', label: '', icon: 'fundraising' },
   { key: 'generalMeeting', label: '', icon: 'ag' },
-  { key: 'stages', label: '', icon: 'stage' },
 ]
 
-function isEnabled(key) {
-  return props.enabled.includes(key)
-}
+// index actif pour déplacer la pastille
+const activeIndex = computed(() => {
+  const idx = CHIPS.findIndex((c) => c.key === props.modelValue)
+  return idx >= 0 ? idx : 0
+})
 
 function pick(key) {
-  if (!isEnabled(key)) return
   emit('update:modelValue', key)
 }
 </script>
 
 <template>
-  <div class="chips" role="tablist" aria-label="Filtres évènements">
+  <div
+    class="chips"
+    role="tablist"
+    aria-label="Filtres évènements"
+    :style="{
+      '--n': CHIPS.length,
+      '--i': activeIndex,
+    }"
+  >
     <button
       v-for="c in CHIPS"
       :key="c.key"
       type="button"
       class="chip"
-      :class="{ active: modelValue === c.key, disabled: !isEnabled(c.key) }"
+      :class="{ active: modelValue === c.key }"
       :aria-pressed="modelValue === c.key"
-      :aria-disabled="!isEnabled(c.key)"
       @click="pick(c.key)"
     >
       <span v-if="c.label">{{ c.label }}</span>
@@ -53,40 +57,71 @@ function pick(key) {
 </template>
 
 <style scoped>
+/* rail global + pastille animée */
 .chips {
-  display: flex;
-  gap: 0.5rem;
+  position: relative;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr; /* ✅ chaque chip prend la même largeur */
   align-items: center;
-  overflow-x: auto;
-  padding-bottom: 0.25rem;
+
+  background: #ededed;
+  padding: 0.3rem;
+  border-radius: 999px;
+
+  overflow: hidden;
+  isolation: isolate; /* pour gérer le z-index du ::before */
 }
 
-.chip {
-  border: 1px solid var(--c-border);
-  background: var(--c-bg);
-  padding: 0.35rem 0.8rem;
+/* pastille blanche glissante */
+.chips::before {
+  content: '';
+  position: absolute;
+  inset: 0.3rem; /* même que le padding pour coller pile */
+  width: calc((100% - 0.6rem) / var(--n)); /* 0.6rem = padding left+right */
   border-radius: 999px;
-  font-size: var(--fs-caption);
-  cursor: pointer;
-  white-space: nowrap;
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+
+  transform: translateX(calc(var(--i) * 100%));
+  transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
+  z-index: 0;
+}
+
+/* boutons transparents au-dessus */
+.chip {
+  position: relative;
+  z-index: 1;
+
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+
+  height: 34px;
+  min-width: 34px;
+  padding: 0 0.6rem;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
+  font-size: var(--fs-caption);
+  cursor: pointer;
+  white-space: nowrap;
+
+  transition: transform 120ms ease;
 }
 
-.chip.active {
-  background: rgba(0, 0, 0, 0.04);
-}
-
-.chip.disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
+/* icône */
 .icon {
+  width: 20px;
+  height: 20px;
   display: grid;
   place-items: center;
-  width: 1.8rem;
-  height: 1.8rem;
+}
+
+/* feedback tactile */
+.chip:active {
+  transform: scale(0.96);
 }
 </style>
