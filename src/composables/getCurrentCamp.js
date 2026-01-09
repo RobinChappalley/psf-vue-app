@@ -1,10 +1,10 @@
-// getCurrentCamp.js
+// getCurrentCamp.js (DB-ready)
 export function getCurrentCamp(camps, context = 'home') {
   if (!Array.isArray(camps) || camps.length === 0) return null
 
   const pickBestByEndDate = (list) => {
     const withEnd = list
-      .map((camp) => ({ camp, end: new Date(camp['end-date']) }))
+      .map((camp) => ({ camp, end: new Date(camp?.endDate) }))
       .filter((x) => !isNaN(x.end))
 
     if (withEnd.length === 0) return list[0] ?? null
@@ -15,18 +15,15 @@ export function getCurrentCamp(camps, context = 'home') {
   const published = camps.filter((c) => c?.status === 'published')
   const drafts = camps.filter((c) => c?.status === 'draft')
 
-  // ✅ HOME: seulement published
   if (context === 'home') {
     return published.length ? pickBestByEndDate(published) : null
   }
 
-  // ✅ ADMIN: draft en priorité, sinon published
   if (context === 'admin') {
     if (drafts.length) return pickBestByEndDate(drafts)
     if (published.length) return pickBestByEndDate(published)
     return null
   }
 
-  // défaut: même logique que home (sécuritaire)
   return published.length ? pickBestByEndDate(published) : null
 }

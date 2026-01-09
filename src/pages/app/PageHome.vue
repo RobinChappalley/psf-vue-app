@@ -14,36 +14,28 @@ import EventCard from '@/components/events/EventCard.vue'
 const camps = [
   {
     id: 'camp-2026',
-    name: 'Camp 2026',
+    title: 'Camp 2026',
     status: 'published',
-    'start-date': '2026-07-12',
-    'end-date': '2026-07-31',
-    'subscription-start-date-time': '2026-05-01T08:00:00',
-    'subscription-deadline-date-time': '2026-06-15T23:59:00',
+    startDate: '2026-07-12',
+    endDate: '2026-07-31',
+    subStartDatetime: '2026-05-01T08:00:00',
+    subEndDatetime: '2026-06-15T23:59:00',
     trainings: [
-      {
-        id: 'training-1',
-        date: '2026-03-23',
-        'meeting-point': 'Payerne - Neuchâtel',
-      },
-      {
-        id: 'training-2',
-        date: '2026-04-15',
-        'meeting-point': 'Lac Noir',
-      },
+      { id: 'training-1', date: '2026-03-23', meetingPoint: 'Payerne - Neuchâtel' },
+      { id: 'training-2', date: '2026-04-15', meetingPoint: 'Lac Noir' },
     ],
-    fundraising: [
+    fundraisings: [
       {
         id: 'fund-1',
-        'date-time': '2026-06-16T10:00:00',
+        dateTime: '2026-06-16T10:00:00',
         location: 'Informations complémentaires',
-        'users-id': ['4'], // parent inscrit
+        usersId: ['4'],
       },
     ],
-    AG: {
-      'date-time': '2026-06-01T18:30:00',
+    generalMeeting: {
+      dateTime: '2026-06-01T18:30:00',
       location: 'Fribourg',
-      participants: [{ mail: 'pauldoe@example.com' }],
+      participants: [{ email: 'pauldoe@example.com' }],
     },
   },
 ]
@@ -82,12 +74,13 @@ const events = computed(() => {
   baseEvents.push({
     id: camp.id,
     type: 'camp',
-    name: camp.name,
-    'start-date': camp['start-date'],
-    'end-date': camp['end-date'],
-    'subscription-deadline-date-time': camp['subscription-deadline-date-time'],
+    name: camp.title, // ✅ title
+    'start-date': camp.startDate, // ✅ startDate
+    'end-date': camp.endDate, // ✅ endDate
+    'subscription-deadline-date-time': camp.subEndDatetime, // ✅ subEndDatetime
     location: '',
   })
+
   // 2) trainings : visibles SEULEMENT si inscrit au camp
   if (campRegistered) {
     for (const t of camp.trainings || []) {
@@ -97,40 +90,43 @@ const events = computed(() => {
         name: 'Entraînement',
         'start-date': t.date,
         'end-date': t.date,
-        // pas d'inscription pour un training
-        'subscription-deadline-date-time': null,
-        location: t['meeting-point'] || '',
-        // ✅ important : ils sont "acquis" dès que tu es inscrit au camp
+        'subscription-deadline-date-time': null, // pas inscriptible
+        location: t.meetingPoint || '', // ✅ meetingPoint
         userStatus: 'registered',
+        subscribable: false,
       })
     }
   }
 
-  // 3) fundraising
-  for (const f of camp.fundraising || []) {
+  // 3) fundraisings
+  for (const f of camp.fundraisings || []) {
+    // ✅ fundraisings
     baseEvents.push({
       id: f.id,
       type: 'fundraising',
       name: 'Vente de pâtisserie',
-      'start-date': f['date-time'],
-      'end-date': f['date-time'],
-      'subscription-deadline-date-time': camp['subscription-deadline-date-time'],
+      'start-date': f.dateTime, // ✅ dateTime
+      'end-date': f.dateTime,
+      'subscription-deadline-date-time': camp.subEndDatetime, // ✅ subEndDatetime
       location: f.location || '',
-      'users-id': f['users-id'] || [],
+      'users-id': f.usersId || [], // ✅ usersId
+      subscribable: true,
     })
   }
 
-  // 4) AG
-  if (camp.AG?.['date-time']) {
+  // 4) generalMeeting
+  if (camp.generalMeeting?.dateTime) {
+    // ✅ generalMeeting
     baseEvents.push({
       id: `ag-${camp.id}`,
       type: 'ag',
       name: 'Assemblée générale',
-      'start-date': camp.AG['date-time'],
-      'end-date': camp.AG['date-time'],
-      'subscription-deadline-date-time': camp['subscription-deadline-date-time'],
-      location: camp.AG.location || '',
-      participants: camp.AG.participants || [],
+      'start-date': camp.generalMeeting.dateTime,
+      'end-date': camp.generalMeeting.dateTime,
+      'subscription-deadline-date-time': camp.subEndDatetime,
+      location: camp.generalMeeting.location || '',
+      participants: camp.generalMeeting.participants || [],
+      subscribable: true,
     })
   }
 
