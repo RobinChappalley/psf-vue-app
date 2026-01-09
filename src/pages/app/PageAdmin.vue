@@ -10,6 +10,9 @@ import CampEventsSection from '@/components/admin/CampEventsSection.vue'
 import CreateCampEventSection from '@/components/admin/CreateCampEventSection.vue'
 import EventForm from '@/components/admin/EventForm.vue'
 import CampParticipantsSection from '@/components/admin/CampParticipantsSection.vue'
+import UserDetailsPanel from '@/components/admin/UserDetailsPanel.vue'
+
+const selectedUser = ref(null)
 
 const step = ref('home')
 
@@ -453,11 +456,37 @@ function onDeleteCampEvent() {
     <!-- ÉCRAN : INSCRIPTIONS DU CAMP -->
     <!-- ========================= -->
     <template v-else-if="step === 'camp-signups'">
+      <!-- Header / retour -->
       <header class="page-header">
         <BackButton @click="step = 'camp-menu'" />
       </header>
 
-      <CampParticipantsSection :camp="selectedCamp" />
+      <!-- Contenu principal -->
+      <section>
+        <CampParticipantsSection
+          v-if="selectedCamp"
+          :camp="selectedCamp"
+          @openUser="
+            (u) => {
+              selectedUser = u
+              step = 'user-details'
+            }
+          "
+        />
+      </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : DÉTAIL UTILISATEUR -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'user-details'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-signups'" />
+      </header>
+
+      <section class="section">
+        <UserDetailsPanel v-if="selectedUser" :user="selectedUser" />
+      </section>
     </template>
 
     <!-- ========================= -->
