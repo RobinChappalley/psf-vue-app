@@ -100,7 +100,7 @@ function deleteCamp() {
           />
 
           <DashboardCard
-            icon="profile"
+            icon="users"
             title="Gérer les membres"
             description="Gérer tous les comptes utilisateurs"
             asButton
@@ -209,7 +209,7 @@ function deleteCamp() {
           />
 
           <DashboardCard
-            icon="profile"
+            icon="users"
             title="Gérer les inscription du camp"
             description="Créer, modifier ou archiver les camps, entraînements, AG, soirées d'information"
             asButton
