@@ -74,12 +74,12 @@ const visibleUsers = computed(() => {
 }
 
 .pill.paid {
-  background: #efe7ea;
-  color: rgba(0, 0, 0, 0.75);
+  background: var(--c-border);
+  color: var(--c-text);
 }
 
 .pill.pending {
-  background: #b44b2a;
-  color: white;
+  background: var(--c-primary);
+  color: var(--c-bg);
 }
 </style>

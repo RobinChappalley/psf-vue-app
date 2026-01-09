@@ -50,7 +50,7 @@ defineEmits(['click'])
   width: 100%;
   box-sizing: border-box;
   display: grid;
-  grid-template-columns: 56px 1fr auto; /* ✅ 3e colonne pour la pastille */
+  grid-template-columns: 56px 1fr auto;
   gap: var(--sp-2);
   align-items: center;
   padding: var(--sp-2);
@@ -86,7 +86,7 @@ button.card {
 .desc {
   margin: 0.25rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.7);
+  color: var(--c-text);
   line-height: 1.25rem;
   display: -webkit-box;
   -webkit-line-clamp: 2;
