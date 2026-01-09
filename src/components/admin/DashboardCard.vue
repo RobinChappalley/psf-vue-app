@@ -5,7 +5,7 @@ defineProps({
   icon: { type: String, required: true },
   title: { type: String, required: true },
   description: { type: String, default: '' },
-  clickable: { type: Boolean, default: true }, // si tu veux pouvoir désactiver
+  clickable: { type: Boolean, default: true },
 })
 
 defineEmits(['click'])
@@ -21,6 +21,11 @@ defineEmits(['click'])
       <h3>{{ title }}</h3>
       <p class="desc">{{ description }}</p>
     </div>
+
+    <!-- ✅ nouveau : zone droite -->
+    <div v-if="$slots.right" class="right">
+      <slot name="right" />
+    </div>
   </button>
 
   <article v-else class="card">
@@ -32,21 +37,26 @@ defineEmits(['click'])
       <h3 class="title">{{ title }}</h3>
       <p class="desc">{{ description }}</p>
     </div>
+
+    <!-- ✅ nouveau : zone droite -->
+    <div v-if="$slots.right" class="right">
+      <slot name="right" />
+    </div>
   </article>
 </template>
 
 <style scoped>
 .card {
   width: 100%;
+  box-sizing: border-box;
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 56px 1fr auto; /* ✅ 3e colonne pour la pastille */
   gap: var(--sp-2);
   align-items: center;
   padding: var(--sp-2);
   border: 1px solid var(--c-border);
   border-radius: var(--r-card);
   box-shadow: var(--shadow-sm);
-  text-decoration: none;
   color: inherit;
   background-color: var(--c-bg);
   text-align: left;
@@ -54,7 +64,6 @@ defineEmits(['click'])
 
 button.card {
   cursor: pointer;
-  border: 1px solid var(--c-border);
 }
 
 .card:active {
@@ -83,5 +92,11 @@ button.card {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+/* ✅ colonne droite */
+.right {
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

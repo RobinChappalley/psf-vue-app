@@ -9,6 +9,7 @@ import AdminPanel from '@/components/admin/AdminPanel.vue'
 import CampEventsSection from '@/components/admin/CampEventsSection.vue'
 import CreateCampEventSection from '@/components/admin/CreateCampEventSection.vue'
 import EventForm from '@/components/admin/EventForm.vue'
+import CampParticipantsSection from '@/components/admin/CampParticipantsSection.vue'
 
 const step = ref('home')
 
@@ -25,7 +26,7 @@ const camps = ref([])
 
 camps.value = [
   {
-    id: 'string',
+    id: '1',
     title: 'Camp 2026',
     startDate: '2026-07-01',
     endDate: '2026-07-15',
@@ -210,6 +211,30 @@ function onUpdateCampEvent(payload) {
 
   step.value = 'camp-events'
 }
+
+//Partie user dans un camp
+const signupFilter = ref('all') // 'all' | 'paid' | 'pending'
+
+const campUsers = computed(() => {
+  if (!selectedCamp.value) return []
+  return authStore.allUsers.value.filter(
+    (u) => Array.isArray(u.camps) && u.camps.includes(String(selectedCamp.value.id)),
+  )
+})
+
+const paidUsers = computed(() =>
+  campUsers.value.filter((u) => u.participationInfo?.hasPaid === true),
+)
+
+const pendingUsers = computed(() =>
+  campUsers.value.filter((u) => u.participationInfo?.hasPaid !== true),
+)
+
+const visibleUsers = computed(() => {
+  if (signupFilter.value === 'paid') return paidUsers.value
+  if (signupFilter.value === 'pending') return pendingUsers.value
+  return campUsers.value
+})
 </script>
 
 <template>
@@ -343,8 +368,8 @@ function onUpdateCampEvent(payload) {
 
           <DashboardCard
             icon="users"
-            title="Gérer les inscriptions du camp"
-            description="Gérer les inscriptions des participants"
+            title="Inscriptions du camp"
+            description="Voir les personnes inscrites au camp"
             asButton
             @click="step = 'camp-signups'"
           />
@@ -433,6 +458,17 @@ function onUpdateCampEvent(payload) {
         @update:type="() => {}"
         @submit="onUpdateCampEvent"
       />
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : INSCRIPTIONS DU CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-signups'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <CampParticipantsSection :camp="selectedCamp" />
     </template>
 
     <!-- ========================= -->

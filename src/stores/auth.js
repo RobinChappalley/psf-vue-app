@@ -36,7 +36,7 @@ const MOCK_USERS = {
     phoneNumber: '+41876543210',
     email: 'paul.doe@example.com',
     address: null,
-    camps: [],
+    camps: ['1'],
     participationInfo: null,
   },
 
@@ -50,7 +50,7 @@ const MOCK_USERS = {
     phoneNumber: null,
     email: 'robin@chapi.ch',
     address: null,
-    camps: [],
+    camps: ['1'],
     participationInfo: null,
   },
 }
@@ -66,7 +66,7 @@ const MOCK_CHILDREN = {
     email: null,
     phoneNumber: null,
     address: null,
-    camps: [],
+    camps: ['1'],
     participationInfo: {
       birthDate: '2014-05-02',
       tshirtInfo: { size: 'm', gender: 'm' },
@@ -79,7 +79,7 @@ const MOCK_CHILDREN = {
       isCASMember: false,
       isHelicopterInsured: false,
       hasPhotoConsent: false,
-      hasPaid: false,
+      hasPaid: true,
     },
   },
   5: {
@@ -92,7 +92,7 @@ const MOCK_CHILDREN = {
     email: null,
     phoneNumber: null,
     address: null,
-    camps: [],
+    camps: [1],
     participationInfo: null,
   },
 }
@@ -184,6 +184,13 @@ const adminUsers = computed(() => {
   return Object.values(MOCK_USERS).filter((u) => u.role?.includes('admin'))
 })
 
+//Pour récupérer tous les utilisateurs
+const allUsers = computed(() => {
+  const adults = Object.values(MOCK_USERS)
+  const kids = Object.values(MOCK_CHILDREN)
+  return [...adults, ...kids]
+})
+
 export const authStore = {
   token,
   user,
@@ -196,4 +203,5 @@ export const authStore = {
   createChild,
   updateChild,
   adminUsers,
+  allUsers,
 }
