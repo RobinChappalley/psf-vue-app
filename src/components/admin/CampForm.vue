@@ -21,6 +21,11 @@ const form = reactive({
 })
 
 const gpxFile = ref(null)
+const fileInputKey = ref(0)
+
+function resetFileInput() {
+  fileInputKey.value += 1
+}
 
 // true = l’admin a demandé de supprimer le GPX existant
 const removeExistingGpx = ref(false)
@@ -44,25 +49,25 @@ watch(
     // reset GPX UI
     gpxFile.value = null
     removeExistingGpx.value = false
+    resetFileInput()
   },
   { immediate: true },
 )
 
 function onPickGpx(e) {
   gpxFile.value = e.target.files?.[0] ?? null
-  // si je choisis un nouveau fichier, ça veut dire "je ne supprime pas",
-  // je remplace
   if (gpxFile.value) removeExistingGpx.value = false
 }
 
 function clearPickedGpx() {
   gpxFile.value = null
+  resetFileInput()
 }
 
 function requestRemoveExistingGpx() {
-  // si on demande la suppression, on annule un éventuel fichier choisi
   removeExistingGpx.value = true
   gpxFile.value = null
+  resetFileInput()
 }
 
 const canSubmit = computed(() => form.name.trim().length > 0)
@@ -80,6 +85,7 @@ function onSubmit() {
   }
 
   // ---- gestion GPX (3 états) ----
+
   // 1) remplacement
   if (gpxFile.value) {
     payload['GPS-track'] = { file: gpxFile.value }
@@ -172,12 +178,6 @@ const today = computed(() => {
             >
               Retirer le GPX
             </BaseButton>
-
-            <label class="upload">
-              <input class="upload-input" type="file" accept=".gpx" @change="onPickGpx" />
-              <span class="upload-btn" aria-hidden="true">＋</span>
-              <span class="upload-text">Remplacer le fichier</span>
-            </label>
           </div>
         </div>
 
@@ -187,26 +187,29 @@ const today = computed(() => {
 
           <div class="gpx-actions">
             <label class="upload">
-              <input class="upload-input" type="file" accept=".gpx" @change="onPickGpx" />
+              <input
+                :key="fileInputKey"
+                class="upload-input"
+                type="file"
+                accept=".gpx"
+                @change="onPickGpx"
+              />
               <span class="upload-btn" aria-hidden="true">＋</span>
               <span class="upload-text">Ajouter un nouveau fichier</span>
             </label>
-
-            <BaseButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              @click="removeExistingGpx = false"
-            >
-              Annuler
-            </BaseButton>
           </div>
         </div>
 
         <!-- Etat: aucun existant OU create -->
         <div v-else class="gpx-new">
           <label class="upload">
-            <input class="upload-input" type="file" accept=".gpx" @change="onPickGpx" />
+            <input
+              :key="fileInputKey"
+              class="upload-input"
+              type="file"
+              accept=".gpx"
+              @change="onPickGpx"
+            />
             <span class="upload-btn" aria-hidden="true">＋</span>
             <span class="upload-text">Ajouter un fichier</span>
           </label>
