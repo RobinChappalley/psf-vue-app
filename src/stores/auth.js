@@ -244,7 +244,70 @@ function setUserRoles(userId, roles = []) {
 }
 
 function deleteUser(userId, { deleteChildren = false } = {}) {
-  // logique mock (comme vu avant)
+  const found = findUserById(userId)
+  if (!found) return false
+
+  const id = String(userId)
+
+  // --------------------
+  // SUPPRIMER UN ENFANT
+  // --------------------
+  if (found.kind === 'child') {
+    const child = found.user
+    const parentId = child.parent ? String(child.parent) : null
+
+    // enlever l'enfant de la liste children du parent (si adulte existant)
+    if (parentId) {
+      const parent = Object.values(MOCK_USERS).find((u) => String(u.id) === parentId)
+      if (parent && Array.isArray(parent.children)) {
+        parent.children = parent.children.map(String).filter((cid) => cid !== id)
+      }
+      // si le parent est le user courant dans le store, sync aussi
+      if (user.value && String(user.value.id) === parentId && Array.isArray(user.value.children)) {
+        user.value.children = user.value.children.map(String).filter((cid) => cid !== id)
+      }
+    }
+
+    delete MOCK_CHILDREN[id]
+    return true
+  }
+
+  // --------------------
+  // SUPPRIMER UN ADULTE
+  // --------------------
+  const adult = found.user
+
+  // gérer ses enfants si parent/admin a children
+  const childrenIds = (adult.children ?? []).map(String)
+
+  if (childrenIds.length) {
+    if (deleteChildren) {
+      // supprime chaque enfant
+      for (const cid of childrenIds) {
+        if (MOCK_CHILDREN[cid]) delete MOCK_CHILDREN[cid]
+      }
+    } else {
+      // orphelins (tu peux choisir une autre politique)
+      for (const cid of childrenIds) {
+        if (MOCK_CHILDREN[cid]) MOCK_CHILDREN[cid].parent = null
+      }
+    }
+  }
+
+  // si c'est le user connecté, logout
+  if (user.value && String(user.value.id) === id) {
+    logout()
+  }
+
+  // IMPORTANT: MOCK_USERS est un objet indexé par clés "parent/accompagnant/admin"
+  // donc on supprime par clé
+  const keyToDelete = Object.keys(MOCK_USERS).find((k) => String(MOCK_USERS[k].id) === id)
+  if (keyToDelete) {
+    delete MOCK_USERS[keyToDelete]
+    return true
+  }
+
+  return false
 }
 
 export const authStore = {

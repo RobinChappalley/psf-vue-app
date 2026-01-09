@@ -312,6 +312,17 @@ function onOpenArchiveEvent(ev) {
   selectedArchiveEvent.value = ev
   step.value = 'archive-event-details'
 }
+
+//User
+function onUserDeleted(deletedId) {
+  // optionnel: si tu veux être sûr
+  if (selectedUser.value && String(selectedUser.value.id) === String(deletedId)) {
+    selectedUser.value = null
+  }
+
+  // revenir à la liste
+  step.value = 'members'
+}
 </script>
 
 <template>
@@ -613,7 +624,7 @@ function onOpenArchiveEvent(ev) {
       </header>
 
       <section class="section">
-        <UserManagement v-if="selectedUser" :user="selectedUser" />
+        <UserManagement v-if="selectedUser" :user="selectedUser" @deleted="onUserDeleted" />
       </section>
     </template>
 
