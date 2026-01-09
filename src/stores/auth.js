@@ -212,6 +212,41 @@ const allUsers = computed(() => {
   return [...adults, ...kids]
 })
 
+// Helpers admin (mock)
+function findUserById(userId) {
+  const id = String(userId)
+
+  // adultes : MOCK_USERS = { parent: {...}, accompagnant: {...}, admin: {...} }
+  const adult = Object.values(MOCK_USERS).find((u) => String(u.id) === id)
+  if (adult) return { kind: 'adult', user: adult }
+
+  // enfants : MOCK_CHILDREN = { '1': {...}, '5': {...} }
+  const child = MOCK_CHILDREN[id]
+  if (child) return { kind: 'child', user: child }
+
+  return null
+}
+
+//Pour modifier les users
+function setUserRoles(userId, roles = []) {
+  const found = findUserById(userId)
+  if (!found) return null
+
+  // enfant: on force toujours child (à toi de décider si tu veux permettre autre chose)
+  if (found.kind === 'child') {
+    found.user.role = ['child']
+    return found.user
+  }
+
+  const next = Array.isArray(roles) ? roles : [String(roles)]
+  found.user.role = next
+  return found.user
+}
+
+function deleteUser(userId, { deleteChildren = false } = {}) {
+  // logique mock (comme vu avant)
+}
+
 export const authStore = {
   token,
   user,
@@ -225,4 +260,6 @@ export const authStore = {
   updateChild,
   adminUsers,
   allUsers,
+  setUserRoles,
+  deleteUser,
 }
