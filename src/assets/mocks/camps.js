@@ -8,7 +8,7 @@ export const mockArchivedCamps = [
     subStartDatetime: '2026-03-01T09:00:00Z',
     subEndDatetime: '2026-05-31T23:59:59Z',
     gpsTrack: { fileName: 'camp-2026-trace.gpx' },
-    itemsList: [{ item_id: 'string', quantity: 'string' }],
+    itemsList: [],
     infoEvening: {
       dateTime: '2026-06-15T18:00:00Z',
       location: 'Salle des fêtes, Lausanne',

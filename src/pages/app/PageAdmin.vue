@@ -18,6 +18,15 @@ import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.
 import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
 import MemberSection from '@/components/admin/MemberSection.vue'
 import UserManagement from '@/components/admin/UserManagement.vue'
+import CampItemsPicker from '@/components/admin/CampItemsPicker.vue'
+
+// Items disponibles
+const availableItems = ref([
+  { id: 'water-bottle', name: 'Gourde' },
+  { id: 'rain-jacket', name: 'Veste de pluie' },
+  { id: 'helmet', name: 'Casque' },
+  { id: 'first-aid-kit', name: 'Trousse de secours' },
+])
 
 const selectedUser = ref(null)
 const step = ref('home')
@@ -56,6 +65,28 @@ const hasCamps = computed(() => activeCamps.value.length > 0)
 
 // Camp "courant" dans l'admin: draft > published
 const currentAdminCamp = computed(() => getCurrentCamp(activeCamps.value, 'admin'))
+
+// Camp actif = celui retourné par getCurrentCamp (draft > published)
+const activeCamp = computed(() => currentAdminCamp.value)
+
+// v-model pour CampItemsPicker -> activeCamp.itemsList
+const activeCampItemsModel = computed({
+  get() {
+    return activeCamp.value?.itemsList ?? []
+  },
+  set(next) {
+    if (!activeCamp.value) return
+    activeCamp.value.itemsList = next
+  },
+})
+
+// (mock) action d'enregistrement
+function onSaveCampItems() {
+  if (!activeCamp.value) return
+  console.log('SAVE camp items', activeCamp.value.id, activeCamp.value.itemsList)
+  // plus tard: appel API PUT/PATCH
+  step.value = 'camp-menu'
+}
 
 // Camp sélectionné dans l’UI (menu camp, events etc.)
 const selectedCamp = ref(null)
@@ -600,6 +631,44 @@ function onUserDeleted(deletedId) {
 
       <section class="section">
         <UserDetailsPanel v-if="selectedUser" :user="selectedUser" />
+      </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN : MATÉRIEL DU CAMP -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'camp-items'">
+      <header class="page-header">
+        <BackButton @click="step = 'camp-menu'" />
+      </header>
+
+      <section class="section">
+        <AdminPanel title="MATÉRIEL DU CAMP" :is-empty="!activeCamp" empty-text="Aucun camp actif">
+          <template v-if="activeCamp">
+            <p class="hint">
+              Camp actif : <strong>{{ activeCamp.title }}</strong>
+            </p>
+
+            <CampItemsPicker
+              v-model="activeCampItemsModel"
+              :items="availableItems"
+              title="Matériel"
+              :defaultOpen="true"
+            />
+          </template>
+
+          <template #actions>
+            <BaseButton
+              variant="primary"
+              size="md"
+              :block="true"
+              :disabled="!activeCamp"
+              @click="onSaveCampItems"
+            >
+              Enregistrer
+            </BaseButton>
+          </template>
+        </AdminPanel>
       </section>
     </template>
 
