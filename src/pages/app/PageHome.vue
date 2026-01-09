@@ -15,6 +15,7 @@ const camps = [
   {
     id: 'camp-2026',
     name: 'Camp 2026',
+    status: 'published',
     'start-date': '2026-07-12',
     'end-date': '2026-07-31',
     'subscription-start-date-time': '2026-05-01T08:00:00',
@@ -53,7 +54,7 @@ const camps = [
 const user = computed(() => authStore.user.value)
 const firstname = computed(() => user.value?.firstname || '')
 
-const currentCamp = computed(() => getCurrentCamp(camps))
+const currentCamp = computed(() => getCurrentCamp(camps, 'home'))
 
 // lookup usersById (pour parent -> enfants plus tard)
 // pour l’instant Map vide (tu brancheras la DB ensuite)
@@ -87,20 +88,22 @@ const events = computed(() => {
     'subscription-deadline-date-time': camp['subscription-deadline-date-time'],
     location: '',
   })
-
-  // 2) trainings (pas inscriptibles tant que pas inscrit au camp)
-  for (const t of camp.trainings || []) {
-    baseEvents.push({
-      id: t.id,
-      type: 'training',
-      name: 'Entraînement',
-      'start-date': t.date,
-      'end-date': t.date,
-      'subscription-deadline-date-time': campRegistered
-        ? camp['subscription-deadline-date-time']
-        : null,
-      location: t['meeting-point'] || '',
-    })
+  // 2) trainings : visibles SEULEMENT si inscrit au camp
+  if (campRegistered) {
+    for (const t of camp.trainings || []) {
+      baseEvents.push({
+        id: t.id,
+        type: 'training',
+        name: 'Entraînement',
+        'start-date': t.date,
+        'end-date': t.date,
+        // pas d'inscription pour un training
+        'subscription-deadline-date-time': null,
+        location: t['meeting-point'] || '',
+        // ✅ important : ils sont "acquis" dès que tu es inscrit au camp
+        userStatus: 'registered',
+      })
+    }
   }
 
   // 3) fundraising
@@ -131,8 +134,10 @@ const events = computed(() => {
     })
   }
 
-  // userStatus calculé depuis ta logique DB
   return baseEvents.map((e) => {
+    // si déjà défini (ex: trainings), ne pas recalculer
+    if (e.userStatus) return e
+
     const registered = isRegisteredToEvent({
       user: user.value,
       camp,
@@ -151,7 +156,7 @@ const events = computed(() => {
 // useEventsFeed (inchangé) : split registered vs open-to-subscribe
 // --------------------
 const { upcomingRegistered, openToSubscribe } = useEventsFeed({
-  initialEvents: events.value,
+  events,
 })
 </script>
 
