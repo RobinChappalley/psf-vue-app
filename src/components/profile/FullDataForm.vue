@@ -17,6 +17,25 @@ function cloneUser(u) {
   }
 }
 
+/**
+ * ✅ Helpers dates
+ * - HTML <input type="date"> attend "YYYY-MM-DD"
+ * - backend renvoie souvent ISO ("YYYY-MM-DDTHH:mm:ss.sssZ")
+ */
+function isoToYmd(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toISOString().slice(0, 10)
+}
+
+function ymdToIso(dateStr) {
+  if (!dateStr) return undefined
+  // force minuit UTC pour éviter les décalages timezone
+  const d = new Date(`${dateStr}T00:00:00.000Z`)
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+}
+
 const form = reactive(cloneUser(props.user))
 
 watch(
@@ -28,7 +47,7 @@ watch(
     ensureAddress()
     ensureParticipationInfo()
   },
-  { deep: true },
+  { deep: true, immediate: true },
 )
 
 const steps = [
@@ -96,8 +115,8 @@ function ensureParticipationInfo() {
       hasPhotoConsent: false,
       hasPaid: false,
     }
-    return
   }
+
   form.participationInfo.birthDate ??= ''
   form.participationInfo.tshirtInfo ??= { size: '', gender: '' }
   form.participationInfo.tshirtInfo.size ??= ''
@@ -112,6 +131,10 @@ function ensureParticipationInfo() {
   form.participationInfo.isHelicopterInsured ??= false
   form.participationInfo.hasPhotoConsent ??= false
   form.participationInfo.hasPaid ??= false
+
+  // ✅ Normalisation ISO -> YMD pour les inputs type="date"
+  form.participationInfo.birthDate = isoToYmd(form.participationInfo.birthDate)
+  form.participationInfo.idExpireDate = isoToYmd(form.participationInfo.idExpireDate)
 }
 
 ensureAddress()
@@ -124,10 +147,12 @@ function addAllergy() {
   if (!form.participationInfo.allergies.includes(v)) form.participationInfo.allergies.push(v)
   allergyDraft.value = ''
 }
+
 function removeAllergy(i) {
   ensureParticipationInfo()
   form.participationInfo.allergies.splice(i, 1)
 }
+
 function addMedication() {
   ensureParticipationInfo()
   const v = medDraft.value.trim()
@@ -135,6 +160,7 @@ function addMedication() {
   if (!form.participationInfo.medication.includes(v)) form.participationInfo.medication.push(v)
   medDraft.value = ''
 }
+
 function removeMedication(i) {
   ensureParticipationInfo()
   form.participationInfo.medication.splice(i, 1)
@@ -146,21 +172,16 @@ function goToStep(i) {
 
 const isChild = computed(() => (props.user?.role || []).includes('enfant'))
 
-function toISO(dateStr) {
-  if (!dateStr) return undefined
-  const d = new Date(dateStr) // "YYYY-MM-DD"
-  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
-}
-
 function nonEmptyString(v) {
   const s = String(v ?? '').trim()
   return s ? s : undefined
 }
 
 /**
- * ✅ Construit un payload conforme backend:
+ * ✅ Payload backend-compatible:
  * - supprime champs vides
- * - convertit types (postalCode number, dates ISO)
+ * - convertit postalCode en number
+ * - convertit dates YMD -> ISO
  * - supprime objets vides
  */
 function buildApiPayload() {
@@ -170,7 +191,7 @@ function buildApiPayload() {
   payload.firstname = nonEmptyString(form.firstname)
   payload.lastname = nonEmptyString(form.lastname)
 
-  // role / parentId si présents dans le form
+  // role / parent si présents dans le form
   if (Array.isArray(form.role) && form.role.length) payload.role = form.role
   if (form.parent) payload.parent = form.parent
 
@@ -199,13 +220,14 @@ function buildApiPayload() {
   if (postalCode !== undefined) address.postalCode = postalCode
   if (Object.keys(address).length) payload.address = address
 
-  // participationInfo: seulement si au moins 1 champ est rempli
+  // participationInfo
   const pi = {}
 
-  const birthDateIso = toISO(form.participationInfo?.birthDate)
-  if (birthDateIso) pi.birthDate = birthDateIso
+  // dates: YMD -> ISO
+  const birthIso = ymdToIso(form.participationInfo?.birthDate)
+  if (birthIso) pi.birthDate = birthIso
 
-  const idExpireIso = toISO(form.participationInfo?.idExpireDate)
+  const idExpireIso = ymdToIso(form.participationInfo?.idExpireDate)
   if (idExpireIso) pi.idExpireDate = idExpireIso
 
   const insNum = nonEmptyString(form.participationInfo?.insuranceNumber)
@@ -214,14 +236,12 @@ function buildApiPayload() {
   const insName = nonEmptyString(form.participationInfo?.insuranceName)
   if (insName) pi.insuranceName = insName
 
-  // arrays: seulement si non vides
   const allergies = (form.participationInfo?.allergies || []).map((a) => a.trim()).filter(Boolean)
   if (allergies.length) pi.allergies = allergies
 
   const medication = (form.participationInfo?.medication || []).map((m) => m.trim()).filter(Boolean)
   if (medication.length) pi.medication = medication
 
-  // enums: seulement si valeur valide (sinon on n'envoie pas)
   const pass = nonEmptyString(form.participationInfo?.publicTransportPass)
   if (pass && ['AG', 'demi-tarif', 'aucun'].includes(pass)) {
     pi.publicTransportPass = pass
@@ -235,15 +255,12 @@ function buildApiPayload() {
   if (tshirtGender && ['m', 'f'].includes(tshirtGender)) tshirt.gender = tshirtGender
   if (Object.keys(tshirt).length) pi.tshirtInfo = tshirt
 
-  // booleans: ici tu peux choisir de toujours envoyer ou seulement si true
-  // (je te laisse toujours envoyer car c'est “valide”)
+  // booleans
   pi.isCASMember = !!form.participationInfo?.isCASMember
   pi.isHelicopterInsured = !!form.participationInfo?.isHelicopterInsured
   pi.hasPhotoConsent = !!form.participationInfo?.hasPhotoConsent
   pi.hasPaid = !!form.participationInfo?.hasPaid
 
-  // n’ajouter participationInfo que si quelque chose est utile
-  // (ou si tu veux forcer les booleans même quand tout est vide, garde comme ça)
   if (Object.keys(pi).length) payload.participationInfo = pi
 
   return payload
@@ -255,7 +272,6 @@ function onNext() {
   }
 
   if (step.value === 'other') {
-    // ✅ on émet un payload backend-compatible, pas l’objet form brut
     emit('submit', buildApiPayload())
     stepIndex.value = steps.findIndex((s) => s.key === 'confirm')
     return

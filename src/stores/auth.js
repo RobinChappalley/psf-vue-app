@@ -1,6 +1,8 @@
+// src/stores/auth.js
+import { ref, computed } from 'vue'
 import { apiFetch } from '@/services/apiFetch'
 import { getChildrenByParent, createChildApi, updateUserApi } from '@/services/children'
-import { ref, computed } from 'vue'
+import { updateUser as updateUserFromUsersApi } from '@/services/usersApi'
 
 /* ======================================================
    AUTH STATE
@@ -17,6 +19,14 @@ function getUserId(u) {
   return u?.id ?? u?._id ?? null
 }
 
+function persistAuth() {
+  if (token.value) localStorage.setItem('token', token.value)
+  else localStorage.removeItem('token')
+
+  if (user.value) localStorage.setItem('user', JSON.stringify(user.value))
+  else localStorage.removeItem('user')
+}
+
 /* ======================================================
    LOGIN / LOGOUT
 ====================================================== */
@@ -28,23 +38,73 @@ async function login(email, password) {
 
   token.value = data.token
   user.value = data.user
+  persistAuth()
 
-  localStorage.setItem('token', token.value)
-  localStorage.setItem('user', JSON.stringify(user.value))
-
-  return data.user
+  return user.value
 }
 
 function logout() {
   user.value = null
   token.value = null
-  localStorage.removeItem('token')
-  localStorage.removeItem('user')
+  persistAuth()
 }
 
 function hasAnyRole(roles) {
   const current = user.value?.role || []
   return roles.some((r) => current.includes(r))
+}
+
+/* ======================================================
+   ME (profil connecté)
+====================================================== */
+async function refreshMe() {
+  const myId = getUserId(user.value)
+  if (!myId) return null
+
+  const fresh = await apiFetch(`/users/${myId}`, { method: 'GET' })
+  // selon backend: {user: {...}} ou directement l'objet
+  user.value = fresh?.user ?? fresh
+  persistAuth()
+
+  return user.value
+}
+
+/**
+ * ✅ Update du profil de l'utilisateur connecté
+ * payload = patch (champs modifiés uniquement)
+ */
+async function updateMe(payload) {
+  const myId = getUserId(user.value)
+  if (!myId) throw new Error('Not authenticated')
+
+  // Tu peux utiliser usersApi.updateUser (PUT /users/:id)
+  await updateUserFromUsersApi(myId, payload)
+
+  // Source de vérité => on resync depuis le backend
+  await refreshMe()
+
+  return user.value
+}
+
+/**
+ * ✅ Update d'un user par id (utile pour enfants/admin)
+ * Retourne l'user updated (et refreshMe si c'est "moi")
+ */
+async function updateUserById(id, payload) {
+  if (!id) throw new Error('Missing user id')
+
+  // Tu peux choisir l'une des deux selon ton code existant :
+  // - updateUserFromUsersApi (usersApi.js)
+  // - updateUserApi (services/children) si ça pointe sur le même endpoint
+  const updated = await updateUserFromUsersApi(id, payload)
+
+  const myId = getUserId(user.value)
+  if (myId && String(myId) === String(id)) {
+    await refreshMe()
+    return user.value
+  }
+
+  return updated
 }
 
 /* ======================================================
@@ -104,8 +164,6 @@ async function createChild(childPayload) {
   // ✅ si le form envoie "parentId", on le vire (mais on garde parent)
   delete payload.parentId
 
-  console.log('CREATE CHILD payload sent:', payload) // ✅ avant l’appel
-
   const created = await createChildApi(payload)
   await fetchChildren(parentId)
 
@@ -117,7 +175,13 @@ async function updateChild(childPayload) {
   const id = getUserId(childPayload)
   if (!id) throw new Error('Missing child id')
 
-  const payload = childPayload
+  // childPayload peut être un patch (recommandé)
+  const payload = { ...childPayload }
+  delete payload.id
+  delete payload._id
+
+  // Ici tu utilisais updateUserApi depuis services/children.
+  // Si ça fait bien PUT /users/:id, c'est OK.
   const updated = await updateUserApi(id, payload)
 
   const pid = getUserId(user.value)
@@ -125,21 +189,12 @@ async function updateChild(childPayload) {
 
   return updated
 }
-//Fonction to refresh
-async function refreshMe() {
-  const myId = user.value?._id ?? user.value?.id
-  if (!myId) return null
-  const fresh = await apiFetch(`/users/${myId}`, { method: 'GET' })
-  user.value = fresh?.user ?? fresh
-  localStorage.setItem('user', JSON.stringify(user.value))
-  return user.value
-}
 
 /* ======================================================
    ADMIN / MOCKS (inchangés, provisoires)
 ====================================================== */
-// ⚠️ Tu peux garder ces parties tant que l’admin n’est pas migré
-
+// ⚠️ Garde si tu as encore des mocks ailleurs.
+// Ces variables doivent exister quelque part, sinon supprime ce bloc.
 const adminUsers = computed(() => {
   return Object.values(MOCK_USERS || {}).filter((u) => u.role?.includes('admin'))
 })
@@ -162,6 +217,11 @@ export const authStore = {
   logout,
   hasAnyRole,
 
+  // me
+  refreshMe,
+  updateMe,
+  updateUserById,
+
   // enfants (API)
   children,
   childrenObjects,
@@ -173,5 +233,4 @@ export const authStore = {
   // admin / mocks
   adminUsers,
   allUsers,
-  refreshMe,
 }

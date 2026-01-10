@@ -62,13 +62,21 @@ function backToProfile() {
 }
 
 //partie pour envoyer des données modifiées au backend (ici parent)
-function onSubmitPersonalData(payload) {
-  // TEMP (sans backend) : tu peux soit log, soit mettre à jour le user mock
-  // Exemple: update local store
-  authStore.user.value = {
-    ...authStore.user.value,
-    ...payload,
-    address: payload.address,
+const saving = ref(false)
+const errorMsg = ref('')
+
+async function onSubmitPersonalData(payload) {
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    await authStore.updateMe(payload)
+    // option UX: revenir au profil direct
+    // step.value = 'profile'
+  } catch (e) {
+    console.error(e)
+    errorMsg.value = e?.message ?? 'Erreur lors de la sauvegarde.'
+  } finally {
+    saving.value = false
   }
 }
 
@@ -86,8 +94,29 @@ function onAddChild() {
   step.value = 'child-edit'
 }
 
-function onSubmitChildData(payload) {
-  submitChild(payload)
+const savingChild = ref(false)
+const childError = ref('')
+
+async function onSubmitChildData(payload) {
+  if (savingChild.value) return
+  savingChild.value = true
+  childError.value = ''
+
+  try {
+    const childId = selectedChild.value?.id ?? selectedChild.value?._id
+
+    if (childId) {
+      await authStore.updateChild({ ...payload, id: childId })
+    } else {
+      await authStore.createChild(payload)
+    }
+    closeChildEditAndBack()
+  } catch (e) {
+    console.error(e)
+    childError.value = e?.message ?? "Erreur lors de la sauvegarde de l'enfant."
+  } finally {
+    savingChild.value = false
+  }
 }
 
 function closeChildEditAndBack() {
