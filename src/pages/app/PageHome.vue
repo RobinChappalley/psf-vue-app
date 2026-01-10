@@ -16,6 +16,7 @@ onMounted(async () => {
   campsStore.ensureCampsLoaded()
   if (authStore.isAuthenticated.value) {
     await authStore.refreshMe()
+    await authStore.fetchChildren()
   }
 })
 
@@ -45,8 +46,14 @@ const events = computed(() => {
 
   // savoir si l'utilisateur est inscrit au camp
   const campId = String(camp.id ?? camp._id ?? '')
-  const userCampIds = (user.value?.camps || []).map(String)
-  const campRegistered = campId && userCampIds.includes(campId)
+  const myCampIds = (user.value?.camps || []).map(String)
+
+  const childrenCampIds = (authStore.childrenObjects.value || [])
+    .flatMap((ch) => (Array.isArray(ch.camps) ? ch.camps : []))
+    .map(String)
+
+  const campRegistered =
+    !!campId && (myCampIds.includes(campId) || childrenCampIds.includes(campId))
 
   const baseEvents = []
 
