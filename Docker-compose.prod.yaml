@@ -1,0 +1,16 @@
+services:
+  frontend-vue:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+    container_name: vue_frontend_prod # <--- C'est ce nom qu'on utilisera dans le Gros Nginx
+    restart: always
+    ports:
+      - '8081:2002' # <--- Expose le port 80 pour le reverse proxy Nginx
+    # Pas de "ports: 80:80" ici car on ne veut pas l'exposer directement sur internet.
+    # Seul le Gros Nginx doit pouvoir lui parler via le réseau interne.
+
+# Assure-toi que ce réseau est le même que celui utilisé par ton Gros Nginx et ton API
+networks:
+  web-network: # Mets ici le nom de ton réseau docker existant
+    external: true
