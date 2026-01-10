@@ -99,11 +99,20 @@ function openCreateChildFlow() {
   step.value = 'child-create'
 }
 
-function onSubmitChildData(payload) {
-  submitChild(payload)
-  // FullDataForm gère l’affichage de confirmation
+const childCreateError = ref('')
+
+async function onSubmitChildData(payload) {
+  await submitChild(payload)
+
+  // ✅ recharge depuis l’API (garanti à jour)
+  await authStore.fetchChildren()
+
+  // ✅ retour à la liste + rebuild
+  step.value = 'signup'
+  signupPeople.value = buildSignupPeople()
 }
 
+// être sûr que la liste est à jour quand on revient
 function closeChildCreate() {
   closeChildEdit()
   step.value = 'signup'
@@ -114,6 +123,8 @@ function closeChildCreate() {
 // Signup list (enfants + éventuellement user staff)
 // -------------------------------------------------
 const signupPeople = ref([])
+const signupLoading = ref(false)
+const signupError = ref('')
 
 const buildSignupPeople = () => {
   const list = (children.value || []).map((c) => ({
@@ -138,16 +149,26 @@ const buildSignupPeople = () => {
   return list
 }
 
+// ✅ charge les enfants avant d'afficher l'écran signup
+const openSignup = async () => {
+  signupError.value = ''
+  signupLoading.value = true
+  try {
+    await authStore.fetchChildren() // parentId pris depuis user.value
+    signupPeople.value = buildSignupPeople()
+    step.value = 'signup'
+  } catch (e) {
+    signupError.value = e?.message || 'Impossible de charger les enfants.'
+  } finally {
+    signupLoading.value = false
+  }
+}
+
 const selectedPeople = computed(() => signupPeople.value.filter((p) => p.selected))
 
 // -------------------------------------------------
 // Navigation actions
 // -------------------------------------------------
-const openSignup = () => {
-  signupPeople.value = buildSignupPeople()
-  step.value = 'signup'
-}
-
 const goBackToCamp = () => {
   step.value = 'camp'
 }

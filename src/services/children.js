@@ -1,21 +1,14 @@
+// src/services/children.js
 import { apiFetch } from '@/services/apiFetch'
 
 export async function getChildrenByParent(parentId) {
-  if (!parentId) throw new Error('parentId is required')
-  const res = await apiFetch(`/users?parentId=${encodeURIComponent(parentId)}`, { method: 'GET' })
-  // selon ton backend ça peut être [] direct ou {data: []}
-  return Array.isArray(res) ? res : (res?.data ?? [])
+  return apiFetch(`/users?parentId=${encodeURIComponent(parentId)}`, { method: 'GET' })
 }
 
-export async function createChild(parentId, payload) {
-  if (!parentId) throw new Error('parentId is required')
+export async function createChildApi(payload) {
+  return apiFetch('/users', { method: 'POST', body: payload })
+}
 
-  const body = {
-    ...payload,
-    parent: parentId,
-    // optionnel: si tu veux tagger les enfants
-    // role: payload.role ?? ['child'],
-  }
-
-  return apiFetch('/user', { method: 'POST', body })
+export async function updateUserApi(userId, payload) {
+  return apiFetch(`/users/${userId}`, { method: 'PUT', body: payload })
 }
