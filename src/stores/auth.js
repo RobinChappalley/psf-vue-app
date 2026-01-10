@@ -5,7 +5,8 @@ import { getChildrenByParent, createChildApi, updateUserApi } from '@/services/c
 import {
   updateUser as updateUserFromUsersApi,
   getAdminUsers as getAdminUsersApi,
-  getUsers as getUsersApi, // ✅ pour récupérer les accompagnants
+  getUsers as getUsersApi,
+  createUser as createUserApi,
 } from '@/services/usersApi'
 
 /* ======================================================
@@ -40,7 +41,7 @@ function normalizeUser(u) {
 }
 
 /* ======================================================
-   LOGIN / LOGOUT
+   LOGIN / LOGOUT / SIGNUP
 ====================================================== */
 async function login(email, password) {
   const data = await apiFetch('/login', {
@@ -56,6 +57,14 @@ async function login(email, password) {
   await fetchResponsibleUsers().catch(() => {})
 
   return user.value
+}
+async function signup(payload) {
+  // payload = { email, firstname, lastname, password, address... }
+  const created = await createUserApi(payload)
+
+  // Option A: après signup, tu rediriges vers login (le plus simple)
+  // Option B: tu fais un auto-login si ton backend le permet (mais tu dis backend fixed)
+  return created
 }
 
 function logout() {
@@ -275,6 +284,7 @@ export const authStore = {
   user,
   isAuthenticated,
   login,
+  signup,
   logout,
   hasAnyRole,
 

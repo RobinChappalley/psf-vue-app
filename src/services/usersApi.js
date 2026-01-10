@@ -44,6 +44,10 @@ export async function updateUser(id, payload) {
   const data = await apiFetch(`/users/${id}`, { method: 'PUT', body: payload })
   return normalizeUser(data?.user ?? data)
 }
+export async function createUser(payload) {
+  const data = await apiFetch('/users', { method: 'POST', body: payload })
+  return normalizeUser(data?.user ?? data)
+}
 
 export async function deleteUser(id) {
   return apiFetch(`/users/${id}`, { method: 'DELETE' })

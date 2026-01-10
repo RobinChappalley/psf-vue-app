@@ -3,17 +3,14 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import EventsBlock from '@/components/events/EventsBlock.vue'
+import { authStore } from '@/stores/auth'
+import { getUsers } from '@/services/usersApi' // pour check email si search supporté
 
 const router = useRouter()
 
-// 1 = email, 2 = formulaire complet, 3 = confirmation
 const step = ref(1)
-
-// ✅ "DB" mock (plus tard: API)
-const existingUsers = ref([
-  { id: 'u1', email: 'jane.doe@example.com' },
-  { id: 'u2', email: 'robin@test.ch' },
-])
+const loading = ref(false)
+const apiError = ref('')
 
 // données du formulaire
 const form = ref({
@@ -27,21 +24,9 @@ const form = ref({
   country: '',
 })
 
-// --- Helpers validation ---
 const normalizedEmail = computed(() => form.value.email.trim().toLowerCase())
 
-const emailExists = computed(() => {
-  if (!normalizedEmail.value) return false
-  return existingUsers.value.some(
-    (u) => (u.email || '').trim().toLowerCase() === normalizedEmail.value,
-  )
-})
-
-const canGoStep2 = computed(() => {
-  // email non vide + n'existe pas déjà
-  return !!normalizedEmail.value && !emailExists.value
-})
-
+// --- validation ---
 const passwordOk = computed(() => (form.value.password || '').length >= 8)
 
 const isFormValid = computed(() => {
@@ -57,22 +42,82 @@ const isFormValid = computed(() => {
   )
 })
 
-// --- Actions ---
-const goStep2 = () => {
-  if (!canGoStep2.value) return
-  step.value = 2
+// --- email exists (via backend si possible) ---
+const emailExists = ref(false)
+
+async function checkEmailExists() {
+  emailExists.value = false
+  apiError.value = ''
+  if (!normalizedEmail.value) return
+
+  try {
+    // Si ton backend gère ?search=, ça marchera.
+    // Sinon ça retournera tout le monde ou ignorera search → dans ce cas, ça ne sert à rien mais ne casse pas.
+    const users = await getUsers({ search: normalizedEmail.value })
+    emailExists.value = users.some(
+      (u) =>
+        String(u.email || '')
+          .trim()
+          .toLowerCase() === normalizedEmail.value,
+    )
+  } catch (e) {
+    // si l'endpoint n'accepte pas search ou autre, on ignore (on laissera le backend trancher au moment du POST)
+    emailExists.value = false
+  }
 }
 
-const createAccount = () => {
+const canGoStep2 = computed(() => {
+  return !!normalizedEmail.value && !emailExists.value && !loading.value
+})
+
+const goStep2 = async () => {
+  if (!normalizedEmail.value) return
+  loading.value = true
+  try {
+    await checkEmailExists()
+    if (!emailExists.value) step.value = 2
+  } finally {
+    loading.value = false
+  }
+}
+
+async function createAccount() {
+  apiError.value = ''
   if (!isFormValid.value) return
 
-  // ✅ Simulation DB (plus tard: backend)
-  existingUsers.value.push({
-    id: String(Date.now()),
-    email: normalizedEmail.value,
-  })
+  loading.value = true
+  try {
+    const payload = {
+      email: normalizedEmail.value,
+      firstname: form.value.firstname.trim(),
+      lastname: form.value.lastname.trim(),
+      password: form.value.password,
+      // selon ton backend / model: soit address string, soit objet
+      // je te mets objet (plus propre), adapte si besoin:
+      address: {
+        address: form.value.address.trim(),
+        zip: form.value.zip.trim(),
+        city: form.value.city.trim(),
+        country: form.value.country.trim(),
+      },
+      role: ['parent'], // si backend accepte
+    }
 
-  step.value = 3
+    await authStore.signup(payload)
+    step.value = 3
+  } catch (e) {
+    // apiFetch devrait throw une erreur; selon ton implémentation tu auras e.message ou e.data.message
+    const msg = e?.data?.message || e?.message || 'Erreur lors de la création du compte. Réessaie.'
+    // Si backend renvoie 409/400 sur email existant
+    if (String(msg).toLowerCase().includes('exist')) {
+      apiError.value = 'Un compte existe déjà pour cette adresse e-mail.'
+      step.value = 1
+    } else {
+      apiError.value = msg
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 const goHome = () => router.push({ name: 'public.home' })
