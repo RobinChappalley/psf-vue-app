@@ -26,7 +26,7 @@ const roleOptions = [
   { key: 'admin', label: 'Admin' },
   { key: 'accompagnant', label: 'Accompagnant' },
   { key: 'parent', label: 'Parent' },
-  { key: 'child', label: 'Enfant' },
+  { key: 'enfant', label: 'Enfant' },
 ]
 
 // draft des rôles
@@ -156,6 +156,7 @@ function openDeleteDialog() {
   deleteError.value = ''
   showDelete.value = true
 }
+console.log('USER MANAGEMENT SUBMIT:', payload)
 </script>
 
 <template>

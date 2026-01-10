@@ -18,9 +18,7 @@ function cloneUser(u) {
 }
 
 /**
- * ✅ Helpers dates
- * - HTML <input type="date"> attend "YYYY-MM-DD"
- * - backend renvoie souvent ISO ("YYYY-MM-DDTHH:mm:ss.sssZ")
+ * Helpers dates
  */
 function isoToYmd(v) {
   if (!v) return ''
@@ -31,7 +29,6 @@ function isoToYmd(v) {
 
 function ymdToIso(dateStr) {
   if (!dateStr) return undefined
-  // force minuit UTC pour éviter les décalages timezone
   const d = new Date(`${dateStr}T00:00:00.000Z`)
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
 }
@@ -95,8 +92,9 @@ function ensureAddress() {
   form.address.street ??= ''
   form.address.city ??= ''
   form.address.country ??= ''
-  if (form.address.postalCode === null || form.address.postalCode === undefined)
+  if (form.address.postalCode === null || form.address.postalCode === undefined) {
     form.address.postalCode = ''
+  }
 }
 
 function ensureParticipationInfo() {
@@ -132,7 +130,6 @@ function ensureParticipationInfo() {
   form.participationInfo.hasPhotoConsent ??= false
   form.participationInfo.hasPaid ??= false
 
-  // ✅ Normalisation ISO -> YMD pour les inputs type="date"
   form.participationInfo.birthDate = isoToYmd(form.participationInfo.birthDate)
   form.participationInfo.idExpireDate = isoToYmd(form.participationInfo.idExpireDate)
 }
@@ -177,31 +174,20 @@ function nonEmptyString(v) {
   return s ? s : undefined
 }
 
-/**
- * ✅ Payload backend-compatible:
- * - supprime champs vides
- * - convertit postalCode en number
- * - convertit dates YMD -> ISO
- * - supprime objets vides
- */
 function buildApiPayload() {
   const payload = {}
 
-  // champs principaux
   payload.firstname = nonEmptyString(form.firstname)
   payload.lastname = nonEmptyString(form.lastname)
 
-  // role / parent si présents dans le form
   if (Array.isArray(form.role) && form.role.length) payload.role = form.role
   if (form.parent) payload.parent = form.parent
 
-  // email (si pas enfant) + uniquement si rempli
   if (!isChild.value) {
     const email = nonEmptyString(form.email)
     if (email) payload.email = email
   }
 
-  // address: seulement si au moins 1 champ est rempli
   const street = nonEmptyString(form.address?.street)
   const city = nonEmptyString(form.address?.city)
   const country = nonEmptyString(form.address?.country)
@@ -220,10 +206,8 @@ function buildApiPayload() {
   if (postalCode !== undefined) address.postalCode = postalCode
   if (Object.keys(address).length) payload.address = address
 
-  // participationInfo
   const pi = {}
 
-  // dates: YMD -> ISO
   const birthIso = ymdToIso(form.participationInfo?.birthDate)
   if (birthIso) pi.birthDate = birthIso
 
@@ -243,9 +227,7 @@ function buildApiPayload() {
   if (medication.length) pi.medication = medication
 
   const pass = nonEmptyString(form.participationInfo?.publicTransportPass)
-  if (pass && ['AG', 'demi-tarif', 'aucun'].includes(pass)) {
-    pi.publicTransportPass = pass
-  }
+  if (pass && ['AG', 'demi-tarif', 'aucun'].includes(pass)) pi.publicTransportPass = pass
 
   const tshirtSize = nonEmptyString(form.participationInfo?.tshirtInfo?.size)
   const tshirtGender = nonEmptyString(form.participationInfo?.tshirtInfo?.gender)
@@ -255,11 +237,14 @@ function buildApiPayload() {
   if (tshirtGender && ['m', 'f'].includes(tshirtGender)) tshirt.gender = tshirtGender
   if (Object.keys(tshirt).length) pi.tshirtInfo = tshirt
 
-  // booleans
+  // ✅ booleans
   pi.isCASMember = !!form.participationInfo?.isCASMember
   pi.isHelicopterInsured = !!form.participationInfo?.isHelicopterInsured
   pi.hasPhotoConsent = !!form.participationInfo?.hasPhotoConsent
   pi.hasPaid = !!form.participationInfo?.hasPaid
+
+  // ✅ miroir au root pour filtrage backend
+  payload.hasPaid = pi.hasPaid
 
   if (Object.keys(pi).length) payload.participationInfo = pi
 
@@ -272,7 +257,9 @@ function onNext() {
   }
 
   if (step.value === 'other') {
-    emit('submit', buildApiPayload())
+    const payload = buildApiPayload()
+    console.log('FORM SUBMIT PAYLOAD:', payload) // ✅ log au moment du clic
+    emit('submit', payload)
     stepIndex.value = steps.findIndex((s) => s.key === 'confirm')
     return
   }

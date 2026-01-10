@@ -6,6 +6,7 @@ const loading = ref(false)
 const error = ref(null)
 
 const roleFilter = ref('all') // 'all' | 'enfant' | 'parent' | 'accompagnant' | 'admin'
+const paidFilter = ref('all') // 'all' | 'paid' | 'unpaid'
 const search = ref('')
 
 const users = computed(() => usersObjects.value)
@@ -15,6 +16,9 @@ async function fetchUsers() {
   error.value = null
   try {
     const role = roleFilter.value === 'all' ? null : roleFilter.value
+    const hasPaid =
+      paidFilter.value === 'paid' ? true : paidFilter.value === 'unpaid' ? false : null
+
     const list = await getUsers({ role, search: search.value || null })
     usersObjects.value = list
     return list
@@ -43,6 +47,7 @@ export const membersStore = {
   loading,
   error,
   roleFilter,
+  paidFilter,
   search,
   fetchUsers,
   updateUserById,
