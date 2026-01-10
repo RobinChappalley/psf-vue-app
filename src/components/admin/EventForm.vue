@@ -24,6 +24,18 @@ const responsibleDropdownOptions = computed(() =>
   })),
 )
 
+//gestion des dates
+function toDateInput(v) {
+  if (!v) return ''
+  // déjà bon
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return ''
+
+  return d.toISOString().slice(0, 10)
+}
+
 /**
  * Champs "superset" : on a tout, puis on affiche selon le type.
  */
@@ -31,15 +43,12 @@ const form = reactive({
   type: props.type,
 
   // commun
-  title: '',
-  description: '',
-  date: '', // YYYY-MM-DD
+  date: '',
   location: '',
 
   // training
   meetingPoint: '',
   meetingTime: '',
-  arrivalMeetingPoint: '',
   arrivalTime: '',
   distance: '',
   elevationGain: '',
@@ -64,9 +73,7 @@ watch(
   (v) => {
     if (!v) return
 
-    form.title = v.title ?? ''
-    form.description = v.remark ?? v.description ?? ''
-    form.date = v.date ?? (v.dateTime ? String(v.dateTime).slice(0, 10) : '')
+    form.date = toDateInput(v.date ?? v.dateTime)
     form.location = v.location ?? ''
 
     // training: accepter plusieurs noms (compat mock/backend)
@@ -74,14 +81,16 @@ watch(
     form.meetingTime = v.meetingTime ?? ''
 
     // ✅ arrivée: supporte returnTime (ton modèle)
-    form.arrivalMeetingPoint = v.arrivalMeetingPoint ?? v.returnPoint ?? ''
     form.arrivalTime = v.arrivalTime ?? v.returnTime ?? ''
 
     form.distance = v.distance != null ? String(v.distance) : ''
     form.elevationGain = v.elevationGain != null ? String(v.elevationGain) : ''
     form.elevationLoss = v.elevationLoss != null ? String(v.elevationLoss) : ''
 
-    form.responsiblePerson = v.responsiblePerson ?? ''
+    form.responsiblePerson =
+      typeof v.responsiblePerson === 'object' && v.responsiblePerson !== null
+        ? (v.responsiblePerson.id ?? v.responsiblePerson._id ?? '')
+        : (v.responsiblePerson ?? '')
 
     // stage
     form.startPoint = v.startPoint ?? ''
@@ -128,7 +137,6 @@ const visible = computed(() => {
 
 const canSubmit = computed(() => {
   // règles minimales (tu affines quand tu veux)
-  if (!form.title.trim()) return false
   if (!form.date) return false
 
   // pour types avec lieu
@@ -157,7 +165,6 @@ function onSubmit() {
   // payload commun
   const base = {
     type: form.type,
-    title: form.title.trim(),
     date: form.date || null,
   }
 
@@ -168,11 +175,9 @@ function onSubmit() {
       // conforme à ton modèle training (sans number -> parent l’ajoute)
       payload = {
         ...base,
-        remark: form.description.trim() || null,
         meetingPoint: form.meetingPoint.trim() || null,
         meetingTime: form.meetingTime || null,
         // champs additionnels UI
-        arrivalMeetingPoint: form.arrivalMeetingPoint.trim() || null,
         arrivalTime: form.arrivalTime || null,
         distance: toNumberOrNull(form.distance),
         elevationGain: toNumberOrNull(form.elevationGain),
@@ -243,18 +248,6 @@ const today = computed(() => {
         />
       </div>
 
-      <!-- Titre -->
-      <div class="field">
-        <label>Titre</label>
-        <input v-model.trim="form.title" type="text" placeholder="Titre" />
-      </div>
-
-      <!-- Description (training + stage) -->
-      <div v-if="visible.showDescription" class="field">
-        <label>Description</label>
-        <input v-model.trim="form.description" type="text" placeholder="Description" />
-      </div>
-
       <!-- Date -->
       <div class="field">
         <label>Date</label>
@@ -279,11 +272,6 @@ const today = computed(() => {
         <div class="field">
           <label>Heure de rendez-vous (départ)</label>
           <input v-model="form.meetingTime" type="time" />
-        </div>
-
-        <div class="field">
-          <label>Lieu de rendez-vous (arrivée)</label>
-          <input v-model.trim="form.arrivalMeetingPoint" type="text" placeholder="Gare ..." />
         </div>
 
         <div class="field">
