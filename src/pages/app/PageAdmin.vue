@@ -4,6 +4,7 @@ import { authStore } from '@/stores/auth'
 import { campsStore } from '@/stores/camps'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { getUser as apiGetUser } from '@/services/usersApi'
+import { getItems as apiGetItems } from '@/services/itemsApi'
 
 // API Camp
 import {
@@ -45,6 +46,14 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 const selectedUser = ref(null)
 const step = ref('home')
 const previousStep = ref('home')
+const isEditingItems = computed(() => step.value === 'camp-items')
+
+const availableItems = ref([])
+const loadingItems = ref(false)
+const itemsError = ref(null)
+
+const savingItems = ref(false)
+const saveItemsError = ref(null)
 
 function goHome() {
   step.value = 'home'
@@ -53,7 +62,6 @@ function goHome() {
 async function openUserDetails(u, fromStep) {
   previousStep.value = fromStep
 
-  // 🔥 évite montage avec un ancien user
   selectedUser.value = null
 
   const id = authStore.getUserId ? authStore.getUserId(u) : (u?.id ?? u?._id ?? null)
@@ -72,24 +80,23 @@ const deleteDialogOpen = ref(false)
 const deleteDialogLoading = ref(false)
 
 /* ======================================================
-   ITEMS (matériel)
-====================================================== */
-const availableItems = ref([
-  { id: 'water-bottle', name: 'Gourde' },
-  { id: 'rain-jacket', name: 'Veste de pluie' },
-  { id: 'helmet', name: 'Casque' },
-  { id: 'first-aid-kit', name: 'Trousse de secours' },
-])
-
-/* ======================================================
    CAMPS: SOURCE DE VÉRITÉ = BACKEND VIA STORE
 ====================================================== */
 const camps = campsStore.camps
-const loadingCamps = campsStore.loading
-const campsError = campsStore.error
 
 onMounted(async () => {
   await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchResponsibleUsers()])
+
+  loadingItems.value = true
+  try {
+    availableItems.value = await apiGetItems()
+  } catch (e) {
+    console.error('LOAD ITEMS ERROR:', e)
+    itemsError.value = e
+    availableItems.value = []
+  } finally {
+    loadingItems.value = false
+  }
 })
 
 /* ======================================================
@@ -138,6 +145,8 @@ const selectedCamp = ref(null)
 watch(
   currentAdminCamp,
   (camp) => {
+    if (isEditingItems.value) return
+
     const stillExists =
       camp &&
       (camps.value ?? []).some((c) => String(c.id) === String(camp.id) && c.status !== 'archived')
@@ -252,25 +261,191 @@ function openCampCreate() {
 }
 
 /* ======================================================
-   Items picker: v-model sur selectedCamp.itemsList (robuste)
+   ITEMS (matériel) + AUTO SAVE
 ====================================================== */
+let saveTimer = null
+
+function toIsoOrNull(v) {
+  if (!v) return null
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return null
+  return d.toISOString()
+}
+
+function cleanUndefined(obj) {
+  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
+}
+
+/**
+ *
+ * backend camp.itemsList peut être:
+ * - [{ item: "ObjectId", quantity: 2 }]
+ * - ou [{ item: { _id, name... }, quantity: 2 }] (si populate quelque part)
+ */
+function campItemsToPickerModel(itemsList) {
+  return (Array.isArray(itemsList) ? itemsList : [])
+    .map((x) => {
+      const raw = x?.item ?? x?.itemId // ✅ fallback itemId
+      const id = raw && typeof raw === 'object' ? (raw._id ?? raw.id) : raw
+      return {
+        item_id: id ? String(id) : '',
+        quantity: String(x?.quantity ?? 1),
+      }
+    })
+    .filter((x) => x.item_id)
+}
+
+/**
+ * picker -> backend shape
+ */
+function pickerModelToCampItems(model) {
+  return (Array.isArray(model) ? model : [])
+    .map((x) => {
+      const id = String(x?.item_id ?? '').trim()
+      return {
+        item: id,
+        quantity: Number(x?.quantity ?? 1),
+      }
+    })
+    .filter((x) => x.item)
+}
+
+function sanitizeCampItemsList(itemsList) {
+  return (Array.isArray(itemsList) ? itemsList : [])
+    .map((x) => {
+      const raw = x?.item
+      const id = raw && typeof raw === 'object' ? (raw._id ?? raw.id) : raw
+      const qty = parseInt(String(x?.quantity ?? 1), 10)
+      return {
+        item: id ? String(id) : '',
+        quantity: Number.isFinite(qty) && qty > 0 ? qty : 1,
+      }
+    })
+    .filter((x) => x.item)
+}
+
+/**
+ * ✅ Bridge v-model
+ * - picker travaille en { item_id, quantity }
+ * - selectedCamp.itemsList reste en { item, quantity } (backend)
+ */
 const activeCampItemsModel = computed({
   get() {
-    return selectedCamp.value?.itemsList ?? []
+    return campItemsToPickerModel(selectedCamp.value?.itemsList)
   },
-  set(next) {
+  set(nextPickerModel) {
     if (!selectedCamp.value) return
-    selectedCamp.value.itemsList = next
+    selectedCamp.value.itemsList = pickerModelToCampItems(nextPickerModel)
   },
 })
 
+/**
+ * Empêche l'autosave pendant la première synchro
+ */
+const itemsHydrated = ref(false)
+
+watch(
+  () => selectedCamp.value?.id,
+  (id) => {
+    itemsHydrated.value = !!id
+  },
+  { immediate: true },
+)
+
+function buildCampUpdatePayloadForItems(camp, itemsList) {
+  const payload = {
+    // 🔒 force types attendus
+    title: String(camp?.title ?? '').trim(),
+    status: String(camp?.status ?? 'draft'),
+
+    startDate: toIsoOrNull(camp?.startDate),
+    endDate: toIsoOrNull(camp?.endDate),
+
+    // souvent optionnels, mais si ton backend les valide, ils doivent être ISO
+    subStartDatetime: camp?.subStartDatetime ? toIsoOrNull(camp.subStartDatetime) : undefined,
+    subEndDatetime: camp?.subEndDatetime ? toIsoOrNull(camp.subEndDatetime) : undefined,
+
+    itemsList,
+  }
+
+  //ne jamais envoyer undefined
+  const cleaned = cleanUndefined(payload)
+
+  // si title vide -> on n'essaie même pas (sinon 400)
+  if (!cleaned.title) {
+    throw new Error('Camp invalide: title manquant (backend refuse le PUT).')
+  }
+
+  return cleaned
+}
+
+watch(
+  activeCampItemsModel,
+  () => {
+    if (!selectedCamp.value?.id) return
+    if (!itemsHydrated.value) return
+    if (!isEditingItems.value) return
+
+    if (saveTimer) clearTimeout(saveTimer)
+
+    saveTimer = setTimeout(async () => {
+      savingItems.value = true
+      saveItemsError.value = null
+
+      try {
+        const camp = selectedCamp.value
+        const id = camp.id
+
+        const itemsList = sanitizeCampItemsList(camp.itemsList)
+
+        // 🔎 debug utile
+        // console.log('SENDING itemsList:', JSON.stringify(itemsList, null, 2))
+
+        const payload = buildCampUpdatePayloadForItems(camp, itemsList)
+        await apiUpdateCamp(id, payload)
+
+        // ✅ refresh store uniquement si PUT OK
+        await campsStore.fetchCamps()
+        resyncSelectedCampById(id)
+      } catch (e) {
+        console.error('AUTO SAVE ITEMS ERROR:', e)
+        const errors = e?.data?.errors ?? []
+        console.table(errors) // ✅ lisible
+        console.log('RAW errors:', JSON.stringify(errors, null, 2)) // ✅ à copier/coller
+        saveItemsError.value = e
+      } finally {
+        savingItems.value = false
+      }
+    }, 600)
+  },
+  { deep: true },
+)
+
+/**
+ * (optionnel) bouton "enregistrer" manuel si tu le gardes
+ */
 async function onSaveCampItems() {
-  if (!selectedCamp.value) return
-  const id = selectedCamp.value.id
-  await apiUpdateCamp(id, { itemsList: selectedCamp.value.itemsList ?? [] })
-  await campsStore.fetchCamps()
-  resyncSelectedCampById(id)
-  step.value = 'camp-menu'
+  if (!selectedCamp.value?.id) return
+
+  savingItems.value = true
+  saveItemsError.value = null
+  try {
+    const camp = selectedCamp.value
+    const itemsList = sanitizeCampItemsList(camp.itemsList)
+    const payload = buildCampUpdatePayloadForItems(camp, itemsList)
+
+    await apiUpdateCamp(camp.id, payload)
+
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(camp.id)
+    step.value = 'camp-menu'
+  } catch (e) {
+    console.error('SAVE ITEMS ERROR:', e)
+    console.error('SAVE ITEMS ERROR data:', e?.data)
+    saveItemsError.value = e
+  } finally {
+    savingItems.value = false
+  }
 }
 
 /* ======================================================
@@ -892,11 +1067,14 @@ async function onUserUpdated(updatedUser) {
             </p>
 
             <CampItemsPicker
-              v-model="activeCampItemsModel"
               :items="availableItems"
-              title="Matériel"
+              v-model="activeCampItemsModel"
+              title="Matériel pour le camp"
               :defaultOpen="true"
             />
+
+            <p v-if="savingItems">Enregistrement…</p>
+            <p v-if="saveItemsError" class="error">Erreur enregistrement</p>
           </template>
 
           <template #actions>
