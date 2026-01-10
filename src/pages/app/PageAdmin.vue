@@ -393,26 +393,13 @@ function cancelDeleteCamp() {
 ====================================================== */
 const selectedEvent = ref(null) // { type: 'trainings', data: training }
 
-async function saveTrainingsToBackend() {
-  if (!selectedCamp.value) return
-  const id = selectedCamp.value.id
-  await apiUpdateCamp(id, { trainings: selectedCamp.value.trainings ?? [] })
-  await campsStore.fetchCamps()
-  resyncSelectedCampById(id)
-}
-
 async function onCreateCampEvent(payload) {
   if (!selectedCamp.value) return
   if (payload.type !== 'trainings') return
 
   const campId = selectedCamp.value.id
 
-  const maxNumber =
-    (selectedCamp.value.trainings ?? []).reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0
-  const nextNumber = maxNumber + 1
-
   const apiPayload = {
-    number: nextNumber,
     date: payload.date,
     trainGoingTime: payload.trainGoingTime ?? null,
     trainReturnTime: payload.trainReturnTime ?? null,
@@ -422,9 +409,9 @@ async function onCreateCampEvent(payload) {
     distance: payload.distance ?? null,
     elevationGain: payload.elevationGain ?? null,
     elevationLoss: payload.elevationLoss ?? null,
-    responsiblePerson: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? null,
-    remark: payload.remark ?? null,
+    responsiblePersonId: payload.responsiblePerson ?? null,
   }
+
   console.log('POST training payload:', apiPayload)
   console.log(
     'existing numbers:',
@@ -470,17 +457,18 @@ async function onUpdateCampEvent(payload) {
 
   // patch: n'envoie que ce que tu modifies
   const apiPayload = {
-    date: payload.date, // "YYYY-MM-DD"
-    trainGoingTime: payload.trainGoingTime ?? null,
-    trainReturnTime: payload.trainReturnTime ?? null,
-    meetingTime: payload.meetingTime ?? null,
-    meetingPoint: payload.meetingPoint ?? null,
-    returnTime: payload.arrivalTime ?? null, // attention: ton UI l'appelle arrivalTime
-    distance: payload.distance ?? null,
-    elevationGain: payload.elevationGain ?? null,
-    elevationLoss: payload.elevationLoss ?? null,
-    responsiblePerson: payload.responsiblePerson ?? null, // doit être un id string
-    remark: payload.remark ?? null,
+    date: payload.date ?? undefined,
+    trainGoingTime: payload.trainGoingTime ?? undefined,
+    trainReturnTime: payload.trainReturnTime ?? undefined,
+    meetingTime: payload.meetingTime ?? undefined,
+    meetingPoint: payload.meetingPoint ?? undefined,
+    returnTime: payload.arrivalTime ?? undefined,
+    distance: payload.distance ?? undefined,
+    elevationGain: payload.elevationGain ?? undefined,
+    elevationLoss: payload.elevationLoss ?? undefined,
+
+    // PUT: backend attend responsiblePerson
+    responsiblePerson: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? undefined,
   }
 
   const updatedRes = await apiUpdateTraining(campId, trainingId, apiPayload)

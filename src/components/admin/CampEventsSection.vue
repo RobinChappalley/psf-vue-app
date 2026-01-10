@@ -42,7 +42,7 @@ const visibleTrainings = computed(() => {
           v-for="t in visibleTrainings"
           :key="t.number"
           icon="boots"
-          :title="`ENTRAINEMENT ${t.number}`"
+          :title="`ENTRAINEMENT`"
           :description="t.meetingPoint"
           asButton
           @click="$emit('openTraining', t)"
