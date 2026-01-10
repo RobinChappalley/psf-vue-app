@@ -125,6 +125,15 @@ async function updateChild(childPayload) {
 
   return updated
 }
+//Fonction to refresh
+async function refreshMe() {
+  const myId = user.value?._id ?? user.value?.id
+  if (!myId) return null
+  const fresh = await apiFetch(`/users/${myId}`, { method: 'GET' })
+  user.value = fresh?.user ?? fresh
+  localStorage.setItem('user', JSON.stringify(user.value))
+  return user.value
+}
 
 /* ======================================================
    ADMIN / MOCKS (inchangés, provisoires)
@@ -164,4 +173,5 @@ export const authStore = {
   // admin / mocks
   adminUsers,
   allUsers,
+  refreshMe,
 }

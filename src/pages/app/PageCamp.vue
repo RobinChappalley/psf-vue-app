@@ -7,6 +7,7 @@ import { authStore } from '@/stores/auth'
 import { campsStore } from '@/stores/camps'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
+import { getUser, updateUser } from '@/services/usersApi'
 
 // -------------------------------------------------
 // Charger les camps (lazy) via store
@@ -22,6 +23,8 @@ const camps = computed(() => campsStore.camps.value)
 // -------------------------------------------------
 const camp = computed(() => getCurrentCamp(camps.value, 'home'))
 const hasCamp = computed(() => !!camp.value)
+const campSignupLoading = ref(false)
+const campSignupError = ref('')
 
 // -------------------------------------------------
 // Navigation interne
@@ -127,21 +130,37 @@ const signupLoading = ref(false)
 const signupError = ref('')
 
 const buildSignupPeople = () => {
-  const list = (children.value || []).map((c) => ({
-    key: `child-${c.id ?? c._id}`,
-    id: c.id ?? c._id,
-    firstname: c.firstname,
-    selected: false,
-    kind: 'child',
-  }))
+  const campId = camp.value?.id ?? camp.value?._id
+
+  const list = (children.value || []).map((c) => {
+    const cid = c.id ?? c._id
+    const already = campId
+      ? (Array.isArray(c.camps) ? c.camps.map(String) : []).includes(String(campId))
+      : false
+
+    return {
+      key: `child-${cid}`,
+      id: cid,
+      firstname: c.firstname,
+      selected: already, // ✅ pré-sélection
+      kind: 'child',
+    }
+  })
 
   if (isStaff.value && currentUser.value) {
     const uid = currentUser.value.id ?? currentUser.value._id
+    const already = campId
+      ? (Array.isArray(currentUser.value.camps)
+          ? currentUser.value.camps.map(String)
+          : []
+        ).includes(String(campId))
+      : false
+
     list.unshift({
       key: `user-${uid}`,
       id: uid,
       firstname: currentUser.value.firstname || 'Moi',
-      selected: false,
+      selected: already, // ✅ pré-sélection
       kind: 'user',
     })
   }
@@ -177,10 +196,45 @@ const addChild = () => {
   openCreateChildFlow()
 }
 
-const continueSignup = () => {
+const continueSignup = async () => {
   if (selectedPeople.value.length === 0) return
-  console.log('Continuer avec', selectedPeople.value)
-  step.value = 'confirm'
+  if (!camp.value) return
+
+  const campId = camp.value.id ?? camp.value._id
+  if (!campId) {
+    campSignupError.value = 'Camp invalide (id manquant).'
+    return
+  }
+
+  campSignupError.value = ''
+  campSignupLoading.value = true
+
+  try {
+    await Promise.all(
+      selectedPeople.value.map(async (p) => {
+        const u = await getUser(p.id)
+
+        const existing = Array.isArray(u.camps) ? u.camps.map(String) : []
+        const next = Array.from(new Set([...existing, String(campId)]))
+
+        const updated = await updateUser(p.id, { camps: next })
+        console.log('updated user camps:', updated.id, updated.camps)
+      }),
+    )
+    const myId = currentUser.value?.id ?? currentUser.value?._id
+    if (myId) {
+      const freshMe = await getUser(myId)
+      console.log('fresh me camps:', freshMe.camps)
+    }
+
+    await authStore.refreshMe()
+    step.value = 'confirm'
+  } catch (e) {
+    console.error('CAMP SIGNUP ERROR:', e)
+    campSignupError.value = e?.data?.message || e?.message || "Impossible d'inscrire au camp."
+  } finally {
+    campSignupLoading.value = false
+  }
 }
 </script>
 
@@ -298,10 +352,10 @@ const continueSignup = () => {
           variant="primary"
           size="md"
           :block="true"
-          :disabled="selectedPeople.length === 0"
+          :disabled="selectedPeople.length === 0 || campSignupLoading"
           @click="continueSignup"
         >
-          Continuer
+          {{ campSignupLoading ? 'Inscription…' : 'Continuer' }}
         </BaseButton>
       </section>
     </template>

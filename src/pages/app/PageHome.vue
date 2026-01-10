@@ -12,9 +12,11 @@ import EventCard from '@/components/events/EventCard.vue'
 // --------------------
 // Charger les camps (lazy, sans App.vue)
 // --------------------
-onMounted(() => {
-  // pas besoin d'await : on peut s'appuyer sur loading/error si tu veux afficher un message
+onMounted(async () => {
   campsStore.ensureCampsLoaded()
+  if (authStore.isAuthenticated.value) {
+    await authStore.refreshMe()
+  }
 })
 
 // --------------------
@@ -42,24 +44,23 @@ const events = computed(() => {
   const camp = currentCamp.value
 
   // savoir si l'utilisateur est inscrit au camp
-  const campRegistered = isRegisteredToEvent({
-    user: user.value,
-    camp,
-    event: { type: 'camp' },
-    usersById: usersById.value,
-  })
+  const campId = String(camp.id ?? camp._id ?? '')
+  const userCampIds = (user.value?.camps || []).map(String)
+  const campRegistered = campId && userCampIds.includes(campId)
 
   const baseEvents = []
 
   // 1) camp
   baseEvents.push({
-    id: camp.id ?? camp._id, // sécurité (normalement id existe déjà via normalize)
+    id: camp.id ?? camp._id,
     type: 'camp',
     name: camp.title,
     'start-date': camp.startDate,
     'end-date': camp.endDate,
     'subscription-deadline-date-time': camp.subEndDatetime,
     location: '',
+    subscribable: true,
+    userStatus: campRegistered ? 'registered' : 'none',
   })
 
   // 2) trainings : visibles SEULEMENT si inscrit au camp
