@@ -52,3 +52,6 @@ export async function deleteUser(id) {
 export function getAdminUsers() {
   return apiFetch('/users?role=admin', { method: 'GET' })
 }
+export function getAccompagnants() {
+  return apiFetch('/users?role=accompagnant', { method: 'GET' })
+}

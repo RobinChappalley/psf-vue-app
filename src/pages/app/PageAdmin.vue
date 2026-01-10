@@ -12,7 +12,7 @@ import {
   deleteCamp as apiDeleteCamp,
 } from '@/services/campsApi'
 
-//API trainings
+// API trainings
 import {
   createTraining as apiCreateTraining,
   updateTraining as apiUpdateTraining,
@@ -49,6 +49,7 @@ const previousStep = ref('home')
 function goHome() {
   step.value = 'home'
 }
+
 async function openUserDetails(u, fromStep) {
   previousStep.value = fromStep
 
@@ -88,18 +89,48 @@ const loadingCamps = campsStore.loading
 const campsError = campsStore.error
 
 onMounted(async () => {
-  await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchAdminUsers()])
+  await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchResponsibleUsers()])
 })
 
 /* ======================================================
-   ADMIN users options (responsables)
+   RESPONSABLES (admins + accompagnants)
 ====================================================== */
 const responsibleOptions = computed(() =>
-  (authStore.adminUsers.value ?? []).map((u) => ({
+  (authStore.responsibleUsers.value ?? []).map((u) => ({
     value: u.id ?? u._id,
     label: `${u.firstname} ${u.lastname}`,
   })),
 )
+
+// Dictionnaire id -> user (pour afficher le nom au lieu de l'id)
+const usersById = computed(() => {
+  const list = authStore.responsibleUsers?.value ?? []
+  const map = new Map()
+  list.forEach((u) => {
+    const id = u?.id ?? u?._id
+    if (id) map.set(String(id), u)
+  })
+  return map
+})
+
+function displayUserNameById(id) {
+  if (!id) return ''
+  const u = usersById.value.get(String(id))
+  if (!u) return String(id) // fallback: affiche l'id si pas trouvé
+  const name = `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim()
+  return name || String(id)
+}
+
+// Helper robuste si selon les endpoints tu reçois responsiblePersonId ou responsiblePerson
+function getResponsibleId(ev) {
+  return (
+    ev?.responsiblePersonId ??
+    ev?.responsiblePerson ??
+    ev?.responsiblePerson?._id ??
+    ev?.responsiblePerson?.id ??
+    null
+  )
+}
 
 /* ======================================================
    CAMPS computed
@@ -149,7 +180,7 @@ function mapCampFormToApi(payload) {
     endDate: dateOnlyToIsoStart(payload?.endDate),
   }
 
-  //n'ajoute ces champs que s'ils existent (pas null)
+  // n'ajoute ces champs que s'ils existent (pas null)
   if (payload?.subscriptionStartDate) {
     out.subStartDatetime = dateOnlyToIsoStart(payload.subscriptionStartDate)
   }
@@ -308,7 +339,7 @@ async function onUpdateCamp(payload) {
     console.error('UPDATE CAMP ERROR:', e)
     console.error('message:', e?.message)
     console.error('status:', e?.status)
-    console.error('data:', e?.data) // <-- important
+    console.error('data:', e?.data)
     alert(e?.message ?? 'Erreur update camp')
   }
 }
@@ -409,14 +440,9 @@ async function onCreateCampEvent(payload) {
     distance: payload.distance ?? null,
     elevationGain: payload.elevationGain ?? null,
     elevationLoss: payload.elevationLoss ?? null,
-    responsiblePersonId: payload.responsiblePerson ?? null,
+    // ✅ unifié
+    responsiblePersonId: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? null,
   }
-
-  console.log('POST training payload:', apiPayload)
-  console.log(
-    'existing numbers:',
-    (selectedCamp.value.trainings ?? []).map((t) => t.number),
-  )
 
   try {
     const created = await apiCreateTraining(campId, apiPayload)
@@ -467,8 +493,8 @@ async function onUpdateCampEvent(payload) {
     elevationGain: payload.elevationGain ?? undefined,
     elevationLoss: payload.elevationLoss ?? undefined,
 
-    // PUT: backend attend responsiblePerson
-    responsiblePerson: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? undefined,
+    // ✅ unifié: même champ qu'en POST
+    responsiblePersonId: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? undefined,
   }
 
   const updatedRes = await apiUpdateTraining(campId, trainingId, apiPayload)
@@ -486,6 +512,7 @@ async function onUpdateCampEvent(payload) {
 
   step.value = 'camp-events'
 }
+
 async function onDeleteCampEvent() {
   if (!selectedCamp.value || !selectedEvent.value) return
   if (selectedEvent.value.type !== 'trainings') return
@@ -540,7 +567,8 @@ function onUserDeleted(deletedId) {
   }
   step.value = 'members'
 }
-//User : refresh quand on a fait une modification sur un user
+
+// User : refresh quand on a fait une modification sur un user
 async function onUserUpdated(updatedUser) {
   try {
     if (!updatedUser) return
@@ -965,7 +993,11 @@ async function onUserUpdated(updatedUser) {
       </header>
 
       <section class="section">
-        <EventDetailsPanel v-if="selectedArchiveEvent" :event="selectedArchiveEvent" />
+        <EventDetailsPanel
+          v-if="selectedArchiveEvent"
+          :event="selectedArchiveEvent"
+          :display-user-name="displayUserNameById"
+        />
       </section>
     </template>
   </div>

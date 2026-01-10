@@ -5,6 +5,7 @@ import { getChildrenByParent, createChildApi, updateUserApi } from '@/services/c
 import {
   updateUser as updateUserFromUsersApi,
   getAdminUsers as getAdminUsersApi,
+  getUsers as getUsersApi, // ✅ pour récupérer les accompagnants
 } from '@/services/usersApi'
 
 /* ======================================================
@@ -51,9 +52,8 @@ async function login(email, password) {
   user.value = normalizeUser(data.user)
   persistAuth()
 
-  // 🔥 optionnel mais pratique : charger les admins dès le login
-  // (si tu préfères le faire seulement dans PageAdmin, enlève cette ligne)
-  await fetchAdminUsers().catch(() => {})
+  // ✅ charge admins + accompagnants (responsables possibles)
+  await fetchResponsibleUsers().catch(() => {})
 
   return user.value
 }
@@ -66,8 +66,9 @@ function logout() {
   localStorage.removeItem('token')
   localStorage.removeItem('user')
 
-  // reset admin cache
+  // reset caches
   adminUsersObjects.value = []
+  responsibleUsersObjects.value = []
   allUsersObjects.value = []
 }
 
@@ -202,13 +203,11 @@ async function updateChild(childPayload) {
 }
 
 /* ======================================================
-   ADMIN (BACKEND)
+   ADMIN / RESPONSABLES (BACKEND)
 ====================================================== */
 
-// ✅ liste des admins = source de vérité
+// ✅ liste des admins = source de vérité (si tu l’utilises ailleurs)
 const adminUsersObjects = ref([])
-
-// ton PageAdmin fait authStore.adminUsers.value → OK
 const adminUsers = computed(() => adminUsersObjects.value)
 
 async function fetchAdminUsers() {
@@ -218,7 +217,6 @@ async function fetchAdminUsers() {
   }
 
   const res = await getAdminUsersApi()
-  // selon backend : res.users ou res.data ou directement []
   const raw = res?.users ?? res?.data ?? res
   const arr = Array.isArray(raw) ? raw : []
 
@@ -226,9 +224,44 @@ async function fetchAdminUsers() {
   return adminUsersObjects.value
 }
 
+// ✅ responsables possibles = admins + accompagnants
+const responsibleUsersObjects = ref([])
+const responsibleUsers = computed(() => responsibleUsersObjects.value)
+
+async function fetchResponsibleUsers() {
+  if (!token.value) {
+    responsibleUsersObjects.value = []
+    return []
+  }
+
+  // 2 requêtes en parallèle
+  const [adminsRes, accompagnantsRes] = await Promise.all([
+    getAdminUsersApi(),
+    getUsersApi({ role: 'accompagnant' }),
+  ])
+
+  const adminsRaw = adminsRes?.users ?? adminsRes?.data ?? adminsRes
+  const admins = Array.isArray(adminsRaw) ? adminsRaw : []
+
+  const accompagnants = Array.isArray(accompagnantsRes) ? accompagnantsRes : []
+
+  // merge + normalize + dédoublonnage
+  const map = new Map()
+  ;[...admins, ...accompagnants].map(normalizeUser).forEach((u) => {
+    const id = u?.id ?? u?._id
+    if (id) map.set(String(id), u)
+  })
+
+  responsibleUsersObjects.value = [...map.values()]
+
+  // (optionnel) garde adminUsers synchronisé
+  adminUsersObjects.value = admins.map(normalizeUser)
+
+  return responsibleUsersObjects.value
+}
+
 /* ======================================================
    (Optionnel) allUsers si tu en as besoin plus tard
-   -> ici je mets un cache vide, tu pourras brancher sur une route GET /users
 ====================================================== */
 const allUsersObjects = ref([])
 const allUsers = computed(() => allUsersObjects.value)
@@ -244,6 +277,9 @@ export const authStore = {
   login,
   logout,
   hasAnyRole,
+
+  // helpers
+  getUserId,
 
   // me
   refreshMe,
@@ -262,6 +298,11 @@ export const authStore = {
   adminUsers,
   adminUsersObjects,
   fetchAdminUsers,
+
+  // responsables (admins + accompagnants)
+  responsibleUsers,
+  responsibleUsersObjects,
+  fetchResponsibleUsers,
 
   // all users (placeholder)
   allUsers,

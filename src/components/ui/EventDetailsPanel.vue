@@ -7,6 +7,10 @@ const props = defineProps({
   // objet normalisé venant de tes archives:
   // { type: 'camp'|'training'|'information-evening'|'generalMeeting'|'fundraisings'|'stages', data: {...}, __campTitle: '...' }
   event: { type: Object, required: true },
+
+  // ✅ fonction passée depuis AdminPage
+  // ex: (id) => "Prénom Nom" (ou fallback id)
+  displayUserName: { type: Function, required: false },
 })
 
 function yesNo(v) {
@@ -57,6 +61,35 @@ function fmtParticipants(participants) {
   return participants.map(String).join(', ')
 }
 
+/* ======================================================
+   RESPONSABLE — helpers
+====================================================== */
+function getResponsibleId(d) {
+  // selon ce que renvoie ton backend / normalizer:
+  // - responsiblePersonId (recommandé)
+  // - responsiblePerson (ancien)
+  // - populate: { responsiblePersonId: { _id, firstname, lastname } }
+  return (
+    d?.responsiblePersonId ??
+    d?.responsiblePerson ??
+    d?.responsiblePersonId?._id ??
+    d?.responsiblePersonId?.id ??
+    d?.responsiblePerson?._id ??
+    d?.responsiblePerson?.id ??
+    null
+  )
+}
+
+function fmtResponsible(d) {
+  const rid = getResponsibleId(d)
+
+  // si on a une fonction de mapping (AdminPage), on l'utilise
+  if (props.displayUserName && rid) return props.displayUserName(rid)
+
+  // fallback: affiche ce qu’on a (id ou déjà un nom)
+  return fmt(rid ?? d?.responsiblePerson ?? d?.responsiblePersonId)
+}
+
 // titre basé sur getTypeEvent (déjà cohérent avec tes cards)
 const title = computed(() => {
   const meta = getTypeEvent({ type: props.event?.type, data: props.event?.data })
@@ -102,7 +135,10 @@ const rows = computed(() => {
       { label: 'Distance', value: d.distance !== undefined ? `${d.distance} km` : '—' },
       { label: 'D+ (m)', value: fmt(d.elevationGain) },
       { label: 'D- (m)', value: fmt(d.elevationLoss) },
-      { label: 'Responsable', value: fmt(d.responsiblePerson) },
+
+      // ✅ ICI: responsable affiché en nom si possible
+      { label: 'Responsable', value: fmtResponsible(d) },
+
       { label: 'Matériel (entrainement)', value: fmtItems(d['items-list']) },
       { label: 'Remarque', value: fmt(d.remark) },
     ])
@@ -119,7 +155,6 @@ const rows = computed(() => {
 
   // --- AG ---
   if (type === 'generalMeeting') {
-    // ton exemple montre "items": { email, nbOfParticipants } (probablement participants)
     const p = d.items
     const participants = p ? `${p.email ?? '—'} (${p.nbOfParticipants ?? '—'})` : '—'
 
