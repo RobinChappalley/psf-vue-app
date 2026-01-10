@@ -7,13 +7,11 @@ const props = defineProps({
   // objet normalisé venant de tes archives:
   // { type: 'camp'|'training'|'information-evening'|'generalMeeting'|'fundraisings'|'stages', data: {...}, __campTitle: '...' }
   event: { type: Object, required: true },
-})
 
-function yesNo(v) {
-  if (v === true) return 'oui'
-  if (v === false) return 'non'
-  return '—'
-}
+  // ✅ fonction passée depuis AdminPage
+  // ex: (id) => "Prénom Nom" (ou fallback id)
+  displayUserName: { type: Function, required: false },
+})
 
 function fmt(value) {
   if (value === null || value === undefined || value === '') return '—'
@@ -55,6 +53,33 @@ function fmtParticipants(participants) {
   }
   // fundraisings: ["id", "id"]
   return participants.map(String).join(', ')
+}
+
+/* ======================================================
+   RESPONSABLE — helpers
+====================================================== */
+function getResponsibleId(d) {
+  // Standard backend: responsiblePerson (id)
+  // Supporte aussi: responsiblePersonId (legacy) et populate (objet user)
+  return (
+    d?.responsiblePerson ??
+    d?.responsiblePerson?._id ??
+    d?.responsiblePerson?.id ??
+    d?.responsiblePersonId ??
+    d?.responsiblePersonId?._id ??
+    d?.responsiblePersonId?.id ??
+    null
+  )
+}
+
+function fmtResponsible(d) {
+  const rid = getResponsibleId(d)
+
+  // si on a une fonction de mapping (AdminPage), on l'utilise
+  if (props.displayUserName && rid) return props.displayUserName(rid)
+
+  // fallback: affiche ce qu’on a (id ou déjà un nom)
+  return fmt(rid ?? d?.responsiblePerson ?? d?.responsiblePersonId)
 }
 
 // titre basé sur getTypeEvent (déjà cohérent avec tes cards)
@@ -102,7 +127,10 @@ const rows = computed(() => {
       { label: 'Distance', value: d.distance !== undefined ? `${d.distance} km` : '—' },
       { label: 'D+ (m)', value: fmt(d.elevationGain) },
       { label: 'D- (m)', value: fmt(d.elevationLoss) },
-      { label: 'Responsable', value: fmt(d.responsiblePerson) },
+
+      // ✅ ICI: responsable affiché en nom si possible
+      { label: 'Responsable', value: fmtResponsible(d) },
+
       { label: 'Matériel (entrainement)', value: fmtItems(d['items-list']) },
       { label: 'Remarque', value: fmt(d.remark) },
     ])
@@ -119,7 +147,6 @@ const rows = computed(() => {
 
   // --- AG ---
   if (type === 'generalMeeting') {
-    // ton exemple montre "items": { email, nbOfParticipants } (probablement participants)
     const p = d.items
     const participants = p ? `${p.email ?? '—'} (${p.nbOfParticipants ?? '—'})` : '—'
 
