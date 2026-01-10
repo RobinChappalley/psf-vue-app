@@ -30,24 +30,22 @@ export async function apiFetch(path, options = {}) {
 
   // tente de parser en JSON, sinon texte
   const contentType = res.headers.get('content-type') || ''
-  const data = contentType.includes('application/json')
-    ? await res.json().catch(() => null)
-    : await res.text().catch(() => null)
+  const isJson = contentType.includes('application/json')
+  const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null)
 
   if (!res.ok) {
-    if (res.status === 401) {
-      // token expiré / invalide
-      localStorage.removeItem('token')
-      localStorage.removeItem('user')
-    }
-
     const msg =
-      (data && typeof data === 'object' && data.message) || `Request failed (${res.status})`
+      (data && (data.message || data.error)) ||
+      (typeof data === 'string' && data) ||
+      `Request failed (${res.status})`
+
     const err = new Error(msg)
     err.status = res.status
     err.data = data
     throw err
   }
+
+  return data
 
   return data
 }

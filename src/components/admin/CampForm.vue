@@ -2,16 +2,22 @@
 import { computed, reactive, ref, watch } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 
+/* ======================================================
+   EMITS & PROPS
+====================================================== */
 const emit = defineEmits(['submit'])
 
 const props = defineProps({
   mode: { type: String, default: 'create' }, // "create" | "edit"
   initialValues: { type: Object, default: null },
 
-  // ex: { fileName: "trace.gpx", url: "..." } ou { fileName: "trace.gpx" }
+  // ex: { fileName: "trace.gpx", url: "..." }
   existingGpx: { type: Object, default: null },
 })
 
+/* ======================================================
+   FORM STATE
+====================================================== */
 const form = reactive({
   name: '',
   startDate: '',
@@ -20,33 +26,39 @@ const form = reactive({
   subscriptionDeadline: '',
 })
 
+/* ======================================================
+   GPX STATE
+====================================================== */
 const gpxFile = ref(null)
 const fileInputKey = ref(0)
+const removeExistingGpx = ref(false)
 
 function resetFileInput() {
   fileInputKey.value += 1
 }
 
-// true = l’admin a demandé de supprimer le GPX existant
-const removeExistingGpx = ref(false)
-
+/* ======================================================
+   HELPERS
+====================================================== */
 function isoToDate(iso) {
   if (!iso) return ''
-  return String(iso).slice(0, 10)
+  return String(iso).slice(0, 10) // YYYY-MM-DD
 }
 
+/* ======================================================
+   INIT FORM FROM initialValues (EDIT MODE)
+====================================================== */
 watch(
   () => props.initialValues,
   (camp) => {
     if (!camp) return
 
     form.name = camp.title ?? camp.name ?? ''
-    form.startDate = camp.startDate ?? ''
-    form.endDate = camp.endDate ?? ''
-    form.subscriptionStartDate = isoToDate(camp.subStartDatetime)
-    form.subscriptionDeadline = isoToDate(camp.subEndDatetime)
+    form.startDate = isoToDate(camp.startDate)
+    form.endDate = isoToDate(camp.endDate)
+    form.subscriptionStartDate = isoToDate(camp.subStartDatetime ?? camp.subscriptionStartDate)
+    form.subscriptionDeadline = isoToDate(camp.subEndDatetime ?? camp.subscriptionDeadline)
 
-    // reset GPX UI
     gpxFile.value = null
     removeExistingGpx.value = false
     resetFileInput()
@@ -54,6 +66,9 @@ watch(
   { immediate: true },
 )
 
+/* ======================================================
+   GPX HANDLERS
+====================================================== */
 function onPickGpx(e) {
   gpxFile.value = e.target.files?.[0] ?? null
   if (gpxFile.value) removeExistingGpx.value = false
@@ -70,46 +85,44 @@ function requestRemoveExistingGpx() {
   resetFileInput()
 }
 
-const canSubmit = computed(() => form.name.trim().length > 0)
+/* ======================================================
+   SUBMIT
+====================================================== */
+const canSubmit = computed(() => form.name.trim().length > 0 && !!form.startDate && !!form.endDate)
 
 function onSubmit() {
   if (!canSubmit.value) return
 
-  // base payload
   const payload = {
     name: form.name.trim(),
-    'start-date': form.startDate || null,
-    'end-date': form.endDate || null,
-    'subscription-start-date': form.subscriptionStartDate || null,
-    'subscription-deadline': form.subscriptionDeadline || null,
+    startDate: form.startDate,
+    endDate: form.endDate,
+    subscriptionStartDate: form.subscriptionStartDate || null,
+    subscriptionDeadline: form.subscriptionDeadline || null,
   }
 
-  // ---- gestion GPX (3 états) ----
-
-  // 1) remplacement
+  // ---- GPX (3 états) ----
   if (gpxFile.value) {
-    payload['GPS-track'] = { file: gpxFile.value }
+    payload.gpsTrack = { file: gpxFile.value }
+  } else if (props.mode === 'edit' && props.existingGpx && removeExistingGpx.value) {
+    payload.gpsTrack = null
   }
-  // 2) suppression (edit uniquement, et seulement si un existant)
-  else if (props.mode === 'edit' && props.existingGpx && removeExistingGpx.value) {
-    payload['GPS-track'] = null
-  }
-  // 3) sinon: ne rien mettre => pas de changement côté backend
-  // (donc pas de clé 'GPS-track')
 
   emit('submit', payload)
 }
 
-//S'assurer que la date sélectionnée ne soit pas dans le passé
+/* ======================================================
+   TODAY (min date)
+====================================================== */
 const today = computed(() => {
   const d = new Date()
-  return d.toISOString().slice(0, 10) // YYYY-MM-DD
+  return d.toISOString().slice(0, 10)
 })
 </script>
 
 <template>
   <section class="wrap">
-    <h2>{{ props.mode === 'edit' ? 'Modifier le camp' : "Création d'un nouveau camp" }}</h2>
+    <h2>{{ mode === 'edit' ? 'Modifier le camp' : "Création d'un nouveau camp" }}</h2>
 
     <form class="card" @submit.prevent="onSubmit">
       <!-- Titre -->
@@ -126,82 +139,49 @@ const today = computed(() => {
 
       <!-- Date de début -->
       <div class="field">
-        <label for="startDate">Date de début</label>
-        <div class="input-wrap">
-          <input id="startDate" v-model="form.startDate" type="date" :min="today" />
-        </div>
+        <label for="startDate">Date de début *</label>
+        <input id="startDate" v-model="form.startDate" type="date" :min="today" required />
       </div>
 
       <!-- Date de fin -->
       <div class="field">
-        <label for="endDate">Date de fin</label>
-        <div class="input-wrap">
-          <input id="endDate" v-model="form.endDate" type="date" :min="today" />
-        </div>
+        <label for="endDate">Date de fin *</label>
+        <input id="endDate" v-model="form.endDate" type="date" :min="today" required />
       </div>
 
       <!-- Début inscription -->
       <div class="field">
         <label for="subStart">Date de début d’inscription</label>
-        <div class="input-wrap">
-          <input id="subStart" v-model="form.subscriptionStartDate" type="date" :min="today" />
-        </div>
+        <input id="subStart" v-model="form.subscriptionStartDate" type="date" :min="today" />
       </div>
 
       <!-- Deadline inscription -->
       <div class="field">
         <label for="subEnd">Date limite d’inscription</label>
-        <div class="input-wrap">
-          <input id="subEnd" v-model="form.subscriptionDeadline" type="date" :min="today" />
-        </div>
+        <input id="subEnd" v-model="form.subscriptionDeadline" type="date" :min="today" />
       </div>
 
       <!-- GPX -->
       <div class="field">
         <label>GPX du tracé</label>
 
-        <!-- Etat: GPX existant (edit) -->
+        <!-- GPX existant -->
         <div
           v-if="mode === 'edit' && existingGpx && !removeExistingGpx && !gpxFile"
           class="gpx-existing"
         >
           <p class="file-name">
-            GPX actuel : <strong>{{ existingGpx.fileName ?? 'aucun fichier' }}</strong>
+            GPX actuel :
+            <strong>{{ existingGpx.fileName ?? 'aucun fichier' }}</strong>
           </p>
 
-          <div class="gpx-actions">
-            <BaseButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              @click="requestRemoveExistingGpx"
-            >
-              Retirer le GPX
-            </BaseButton>
-          </div>
+          <BaseButton type="button" variant="secondary" size="sm" @click="requestRemoveExistingGpx">
+            Retirer le GPX
+          </BaseButton>
         </div>
 
-        <!-- Etat: suppression demandée -->
-        <div v-else-if="mode === 'edit' && existingGpx && removeExistingGpx" class="gpx-removed">
-          <p class="file-name">Le GPX est supprimé</p>
-
-          <div class="gpx-actions">
-            <label class="upload">
-              <input
-                :key="fileInputKey"
-                class="upload-input"
-                type="file"
-                accept=".gpx"
-                @change="onPickGpx"
-              />
-              <span class="upload-btn" aria-hidden="true">＋</span>
-              <span class="upload-text">Ajouter un nouveau fichier</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Etat: aucun existant OU create -->
-        <div v-else class="gpx-new">
+        <!-- GPX supprimé -->
+        <div v-else-if="mode === 'edit' && existingGpx && removeExistingGpx">
           <label class="upload">
             <input
               :key="fileInputKey"
@@ -210,93 +190,75 @@ const today = computed(() => {
               accept=".gpx"
               @change="onPickGpx"
             />
-            <span class="upload-btn" aria-hidden="true">＋</span>
+            <span class="upload-btn">＋</span>
+            <span class="upload-text">Ajouter un nouveau fichier</span>
+          </label>
+        </div>
+
+        <!-- Aucun GPX -->
+        <div v-else>
+          <label class="upload">
+            <input
+              :key="fileInputKey"
+              class="upload-input"
+              type="file"
+              accept=".gpx"
+              @change="onPickGpx"
+            />
+            <span class="upload-btn">＋</span>
             <span class="upload-text">Ajouter un fichier</span>
           </label>
         </div>
 
-        <!-- Etat: nouveau fichier sélectionné -->
+        <!-- Nouveau GPX sélectionné -->
         <div v-if="gpxFile" class="gpx-picked">
           <p class="file-name">
             Nouveau fichier : <strong>{{ gpxFile.name }}</strong>
           </p>
           <BaseButton type="button" variant="secondary" size="sm" @click="clearPickedGpx">
-            Retirer le nouveau fichier
+            Retirer le fichier
           </BaseButton>
         </div>
       </div>
 
       <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
-        {{ props.mode === 'edit' ? 'Enregistrer' : 'Valider' }}
+        {{ mode === 'edit' ? 'Enregistrer' : 'Créer le camp' }}
       </BaseButton>
     </form>
   </section>
 </template>
 
 <style scoped>
-/* --- Layout page --- */
 .wrap {
   width: 100%;
-  box-sizing: border-box;
 }
 
-/* --- Card (le form) --- */
 .card {
   background: var(--c-surface);
   padding: var(--sp-3);
-  box-sizing: border-box;
   border-radius: var(--r-input);
 }
 
-/* --- Fields --- */
 .field {
   margin-bottom: var(--sp-2);
 }
 
 label {
   display: block;
-  font-family: var(--font-body);
-  font-size: var(--fs-caption);
-  line-height: 1.2;
   margin-bottom: 0.35rem;
-  color: var(--c-text);
 }
 
 input {
   width: 100%;
-  box-sizing: border-box;
-  font-family: var(--font-body);
-  font-size: var(--fs-body);
   padding: 0.65rem 0.75rem;
   border-radius: var(--r-input);
   border: 1px solid var(--c-border);
-  background: var(--c-bg);
-  color: var(--c-text);
-  outline: none;
 }
 
-input::placeholder {
-  color: var(--c-border);
-}
-
-input[type='date'] {
-  color: var(--c-border);
-}
-input[type='date']:valid {
-  color: var(--c-text);
-}
-
-.input-wrap input[type='date'] {
-  padding-right: 0.5rem;
-}
-
-/* upload */
 .upload {
   display: inline-flex;
-  align-items: center;
   gap: 0.75rem;
   cursor: pointer;
-  user-select: none;
 }
 
 .upload-input {
@@ -312,32 +274,12 @@ input[type='date']:valid {
   place-items: center;
 }
 
-.upload-text {
-  font-size: var(--fs-caption);
-}
-
 .file-name {
-  margin: 0.5rem 0 0;
-  font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
-}
-
-.placeholder {
-  margin: 0;
-  font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
-}
-.gpx-actions {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  flex-wrap: wrap;
   margin-top: 0.5rem;
+  font-size: var(--fs-caption);
 }
 
 .gpx-picked {
   margin-top: 0.5rem;
-  display: grid;
-  gap: 0.5rem;
 }
 </style>

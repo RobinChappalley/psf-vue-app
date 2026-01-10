@@ -117,17 +117,18 @@ const anotherPublishedCamp = computed(() =>
    Helpers
 ====================================================== */
 function mapCampFormToApi(payload) {
+  const title = String(payload?.name ?? '').trim()
+
   return {
-    title: payload.name,
-    startDate: payload['start-date'] ?? null,
-    endDate: payload['end-date'] ?? null,
-    subStartDatetime: payload['subscription-start-date']
-      ? `${payload['subscription-start-date']}T00:00:00Z`
+    title,
+    startDate: dateOnlyToIsoStart(payload?.startDate),
+    endDate: dateOnlyToIsoStart(payload?.endDate),
+    subStartDatetime: payload?.subscriptionStartDate
+      ? dateOnlyToIsoStart(payload.subscriptionStartDate)
       : null,
-    subEndDatetime: payload['subscription-deadline']
-      ? `${payload['subscription-deadline']}T23:59:59Z`
+    subEndDatetime: payload?.subscriptionDeadline
+      ? dateOnlyToIsoEnd(payload.subscriptionDeadline)
       : null,
-    // ⚠️ GPX: à gérer via FormData / upload route si ton backend le supporte.
   }
 }
 
@@ -172,10 +173,14 @@ const selectedCampForForm = computed(() => {
   }
 })
 
-function toDateOnlyOrNull(v) {
-  // garantit que ce que tu envoies au backend reste "YYYY-MM-DD"
-  // (ou null) pour startDate/endDate
-  return v ? String(v).slice(0, 10) : null
+function dateOnlyToIsoStart(v) {
+  if (!v) return null
+  return `${String(v).slice(0, 10)}T00:00:00.000Z`
+}
+
+function dateOnlyToIsoEnd(v) {
+  if (!v) return null
+  return `${String(v).slice(0, 10)}T23:59:59.999Z`
 }
 
 /* ======================================================
@@ -223,17 +228,24 @@ async function onCreateCamp(payload) {
     return
   }
 
+  // ✅ LOG ce que le form renvoie
+  console.log('CampForm submit payload =', payload)
+
   try {
     const apiPayload = mapCampFormToApi(payload)
-    apiPayload.status = 'draft'
-    apiPayload.itemsList = []
-    apiPayload.trainings = []
-    apiPayload.fundraisings = []
-    apiPayload.stages = []
-    apiPayload.infoEvening = null
-    apiPayload.generalMeeting = null
 
-    const created = await apiCreateCamp(apiPayload)
+    // ⚠️ pour isoler l’erreur 400, envoie MINIMAL comme dans tes tests
+    const minimal = {
+      title: apiPayload.title,
+      startDate: apiPayload.startDate,
+      endDate: apiPayload.endDate,
+    }
+    console.log('POST /camps body =', minimal)
+
+    console.log('POST /camps body =', minimal)
+    console.log('Auth token =', authStore.token.value)
+
+    const created = await apiCreateCamp(minimal)
 
     await campsStore.fetchCamps()
     selectedCamp.value =
@@ -241,7 +253,10 @@ async function onCreateCamp(payload) {
 
     step.value = 'camp-menu'
   } catch (e) {
-    console.error(e)
+    console.error('CREATE CAMP ERROR:', e)
+    console.error('message:', e?.message)
+    console.error('status:', e?.status)
+    console.error('data:', e?.data)
     alert(e?.message ?? 'Erreur création camp')
   }
 }
