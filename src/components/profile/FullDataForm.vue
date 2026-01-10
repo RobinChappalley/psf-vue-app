@@ -10,8 +10,6 @@ const props = defineProps({
 const emit = defineEmits(['submit', 'close'])
 
 function cloneUser(u) {
-  // structuredClone est parfait si dispo (Vite/modern browsers ok)
-  // fallback simple si besoin
   try {
     return structuredClone(u)
   } catch {
@@ -19,24 +17,39 @@ function cloneUser(u) {
   }
 }
 
-// Form state (copie modifiable)
+/**
+ * ✅ Helpers dates
+ * - HTML <input type="date"> attend "YYYY-MM-DD"
+ * - backend renvoie souvent ISO ("YYYY-MM-DDTHH:mm:ss.sssZ")
+ */
+function isoToYmd(v) {
+  if (!v) return ''
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toISOString().slice(0, 10)
+}
+
+function ymdToIso(dateStr) {
+  if (!dateStr) return undefined
+  // force minuit UTC pour éviter les décalages timezone
+  const d = new Date(`${dateStr}T00:00:00.000Z`)
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString()
+}
+
 const form = reactive(cloneUser(props.user))
 
-// Re-hydrate si user change (relogin, refresh, etc.)
 watch(
   () => props.user,
   (u) => {
     const fresh = cloneUser(u)
-    // On remplace proprement sans perdre la réactivité
     Object.keys(form).forEach((k) => delete form[k])
     Object.assign(form, fresh)
     ensureAddress()
     ensureParticipationInfo()
   },
-  { deep: true },
+  { deep: true, immediate: true },
 )
 
-// Steps
 const steps = [
   { key: 'general', label: 'Général' },
   { key: 'medical', label: 'Médical' },
@@ -62,40 +75,28 @@ const currentTitle = computed(() => {
   }
 })
 
-// ✅ Validation state
-const errors = reactive({
-  firstname: '',
-  lastname: '',
-})
+const errors = reactive({ firstname: '', lastname: '' })
 
 function validateGeneralStep() {
   errors.firstname = ''
   errors.lastname = ''
-
   const fn = String(form.firstname ?? '').trim()
   const ln = String(form.lastname ?? '').trim()
-
   if (!fn) errors.firstname = 'Le prénom est obligatoire.'
   if (!ln) errors.lastname = 'Le nom est obligatoire.'
-
   return !errors.firstname && !errors.lastname
 }
 
-// Helpers (tags)
 const allergyDraft = ref('')
 const medDraft = ref('')
 
 function ensureAddress() {
-  if (!form.address) {
-    form.address = { street: '', city: '', postalCode: '', country: '' }
-    return
-  }
+  if (!form.address) form.address = { street: '', city: '', postalCode: '', country: '' }
   form.address.street ??= ''
   form.address.city ??= ''
   form.address.country ??= ''
-  if (form.address.postalCode === null || form.address.postalCode === undefined) {
+  if (form.address.postalCode === null || form.address.postalCode === undefined)
     form.address.postalCode = ''
-  }
 }
 
 function ensureParticipationInfo() {
@@ -114,7 +115,6 @@ function ensureParticipationInfo() {
       hasPhotoConsent: false,
       hasPaid: false,
     }
-    return
   }
 
   form.participationInfo.birthDate ??= ''
@@ -131,9 +131,12 @@ function ensureParticipationInfo() {
   form.participationInfo.isHelicopterInsured ??= false
   form.participationInfo.hasPhotoConsent ??= false
   form.participationInfo.hasPaid ??= false
+
+  // ✅ Normalisation ISO -> YMD pour les inputs type="date"
+  form.participationInfo.birthDate = isoToYmd(form.participationInfo.birthDate)
+  form.participationInfo.idExpireDate = isoToYmd(form.participationInfo.idExpireDate)
 }
 
-// IMPORTANT : on appelle dès le départ pour éviter un crash au rendu
 ensureAddress()
 ensureParticipationInfo()
 
@@ -167,16 +170,109 @@ function goToStep(i) {
   stepIndex.value = Math.max(0, Math.min(i, steps.length - 1))
 }
 
-// Quand on valide une étape
+const isChild = computed(() => (props.user?.role || []).includes('enfant'))
+
+function nonEmptyString(v) {
+  const s = String(v ?? '').trim()
+  return s ? s : undefined
+}
+
+/**
+ * ✅ Payload backend-compatible:
+ * - supprime champs vides
+ * - convertit postalCode en number
+ * - convertit dates YMD -> ISO
+ * - supprime objets vides
+ */
+function buildApiPayload() {
+  const payload = {}
+
+  // champs principaux
+  payload.firstname = nonEmptyString(form.firstname)
+  payload.lastname = nonEmptyString(form.lastname)
+
+  // role / parent si présents dans le form
+  if (Array.isArray(form.role) && form.role.length) payload.role = form.role
+  if (form.parent) payload.parent = form.parent
+
+  // email (si pas enfant) + uniquement si rempli
+  if (!isChild.value) {
+    const email = nonEmptyString(form.email)
+    if (email) payload.email = email
+  }
+
+  // address: seulement si au moins 1 champ est rempli
+  const street = nonEmptyString(form.address?.street)
+  const city = nonEmptyString(form.address?.city)
+  const country = nonEmptyString(form.address?.country)
+
+  let postalCode
+  const pcRaw = nonEmptyString(form.address?.postalCode)
+  if (pcRaw) {
+    const n = Number(pcRaw)
+    if (!Number.isNaN(n)) postalCode = n
+  }
+
+  const address = {}
+  if (street) address.street = street
+  if (city) address.city = city
+  if (country) address.country = country
+  if (postalCode !== undefined) address.postalCode = postalCode
+  if (Object.keys(address).length) payload.address = address
+
+  // participationInfo
+  const pi = {}
+
+  // dates: YMD -> ISO
+  const birthIso = ymdToIso(form.participationInfo?.birthDate)
+  if (birthIso) pi.birthDate = birthIso
+
+  const idExpireIso = ymdToIso(form.participationInfo?.idExpireDate)
+  if (idExpireIso) pi.idExpireDate = idExpireIso
+
+  const insNum = nonEmptyString(form.participationInfo?.insuranceNumber)
+  if (insNum) pi.insuranceNumber = insNum
+
+  const insName = nonEmptyString(form.participationInfo?.insuranceName)
+  if (insName) pi.insuranceName = insName
+
+  const allergies = (form.participationInfo?.allergies || []).map((a) => a.trim()).filter(Boolean)
+  if (allergies.length) pi.allergies = allergies
+
+  const medication = (form.participationInfo?.medication || []).map((m) => m.trim()).filter(Boolean)
+  if (medication.length) pi.medication = medication
+
+  const pass = nonEmptyString(form.participationInfo?.publicTransportPass)
+  if (pass && ['AG', 'demi-tarif', 'aucun'].includes(pass)) {
+    pi.publicTransportPass = pass
+  }
+
+  const tshirtSize = nonEmptyString(form.participationInfo?.tshirtInfo?.size)
+  const tshirtGender = nonEmptyString(form.participationInfo?.tshirtInfo?.gender)
+  const tshirt = {}
+  if (tshirtSize && ['xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl'].includes(tshirtSize))
+    tshirt.size = tshirtSize
+  if (tshirtGender && ['m', 'f'].includes(tshirtGender)) tshirt.gender = tshirtGender
+  if (Object.keys(tshirt).length) pi.tshirtInfo = tshirt
+
+  // booleans
+  pi.isCASMember = !!form.participationInfo?.isCASMember
+  pi.isHelicopterInsured = !!form.participationInfo?.isHelicopterInsured
+  pi.hasPhotoConsent = !!form.participationInfo?.hasPhotoConsent
+  pi.hasPaid = !!form.participationInfo?.hasPaid
+
+  if (Object.keys(pi).length) payload.participationInfo = pi
+
+  return payload
+}
+
 function onNext() {
-  // Validation à la sortie de l'étape "general"
   if (step.value === 'general') {
     if (!validateGeneralStep()) return
   }
 
-  // Si on est sur "other" → submit + confirmation
   if (step.value === 'other') {
-    emit('submit', cloneUser(form))
+    emit('submit', buildApiPayload())
     stepIndex.value = steps.findIndex((s) => s.key === 'confirm')
     return
   }
@@ -185,11 +281,8 @@ function onNext() {
 }
 
 function finish() {
-  // Retourner au début du wizard ou fermer
   emit('close')
 }
-//Si c'est un enfant, on ne veut pas afficher le champ d'email
-const isChild = computed(() => (props.user?.role || []).includes('child'))
 </script>
 
 <template>

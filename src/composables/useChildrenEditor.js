@@ -32,16 +32,15 @@ export function useChildrenEditor() {
     selectedChild.value = authStore.createEmptyChild(parentId)
   }
 
-  function submitChild(payload) {
-    // ⚠️ IMPORTANT : ne pas "fermer" ici si tu veux afficher la confirmation de FullDataForm
+  async function submitChild(payload) {
     if (isCreatingChild.value) {
-      const created = authStore.createChild(payload)
+      const created = await authStore.createChild(payload)
       selectedChild.value = created
       isCreatingChild.value = false
       return created
     }
 
-    const updated = authStore.updateChild(payload)
+    const updated = await authStore.updateChild(payload)
     if (updated) selectedChild.value = updated
     return updated
   }

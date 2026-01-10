@@ -1,25 +1,48 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import { apiFetch } from '@/services/apiFetch'
 
-// Mock DB : mets null pour simuler "pas de camp"
-//const camp = ref(null)
+// -----------------------------------
+// Camp public (API) format DB
+// -----------------------------------
+const camp = ref(null)
+const loading = ref(false)
+const error = ref(null)
 
-// Décommente pour simuler "camp existant"
-const camp = ref({
-  id: 'c1',
-  name: 'Camp 2026',
-  'start-date': '2026-07-12',
-  'end-date': '2026-07-31',
-  'subscription-start-date-time': '2026-05-01T08:00:00',
-  'subscription-deadline-date-time': '2026-06-15T23:59:00',
-  'GPS-track': {},
-  'items-list': [{ item_id: 'i1', quantity: 1 }],
-  'information-evening': {
-    'date-time': '2026-06-16T18:30:00',
-    location: 'Neuchâtel',
-    participants: [],
-  },
+function toTime(x) {
+  const t = new Date(x).getTime()
+  return Number.isNaN(t) ? null : t
+}
+
+onMounted(async () => {
+  loading.value = true
+  error.value = null
+  camp.value = null
+
+  try {
+    const data = await apiFetch('/camps', { method: 'GET' })
+    const list = Array.isArray(data) ? data : []
+
+    const now = Date.now()
+
+    // published + startDate dans le futur (ou aujourd'hui)
+    const next =
+      list
+        .filter((c) => c?.status === 'published')
+        .map((c) => ({ camp: c, start: toTime(c.startDate) }))
+        .filter((x) => x.start !== null && x.start >= now)
+        .sort((a, b) => a.start - b.start)[0]?.camp ?? null
+
+    // Normalise id si Mongo renvoie _id
+    camp.value = next ? { ...next, id: next.id ?? next._id } : null
+  } catch (e) {
+    error.value = e?.message ?? 'Erreur chargement camp'
+    camp.value = null
+    console.warn('PublicCamp: cannot load camps:', e)
+  } finally {
+    loading.value = false
+  }
 })
 
 const hasCamp = computed(() => !!camp.value)
@@ -33,16 +56,16 @@ const fmtDate = (iso) => {
 
 const campDateLabel = computed(() => {
   if (!camp.value) return ''
-  const start = fmtDate(camp.value['start-date'])
-  const end = fmtDate(camp.value['end-date'])
+  const start = fmtDate(camp.value.startDate)
+  const end = fmtDate(camp.value.endDate)
   if (!start || !end) return ''
   return `du ${start} au ${end}`
 })
 
 const subscriptionStatus = computed(() => {
   if (!camp.value) return null
-  const start = new Date(camp.value['subscription-start-date-time'])
-  const end = new Date(camp.value['subscription-deadline-date-time'])
+  const start = new Date(camp.value.subStartDatetime)
+  const end = new Date(camp.value.subEndDatetime)
   const now = new Date()
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'unknown'
@@ -53,8 +76,8 @@ const subscriptionStatus = computed(() => {
 
 const subscriptionLabel = computed(() => {
   if (!camp.value) return ''
-  const start = fmtDate(camp.value['subscription-start-date-time'])
-  const end = fmtDate(camp.value['subscription-deadline-date-time'])
+  const start = fmtDate(camp.value.subStartDatetime)
+  const end = fmtDate(camp.value.subEndDatetime)
 
   if (subscriptionStatus.value === 'soon') return `Inscriptions dès le ${start}`
   if (subscriptionStatus.value === 'open') return `Inscriptions ouvertes jusqu’au ${end}`
@@ -63,9 +86,9 @@ const subscriptionLabel = computed(() => {
 })
 
 const infoEveningLabel = computed(() => {
-  if (!camp.value?.['information-evening']?.['date-time']) return ''
-  const d = fmtDate(camp.value['information-evening']['date-time'])
-  const loc = camp.value['information-evening'].location
+  if (!camp.value?.infoEvening?.dateTime) return ''
+  const d = fmtDate(camp.value.infoEvening.dateTime)
+  const loc = camp.value.infoEvening.location
   return loc ? `${d} – ${loc}` : d
 })
 </script>
@@ -74,7 +97,7 @@ const infoEveningLabel = computed(() => {
   <!--  il y a un camp -->
   <template v-if="hasCamp">
     <section class="section intro">
-      <h1>{{ camp.name }}</h1>
+      <h1>{{ camp.title }}</h1>
       <div>
         <p v-if="campDateLabel">Cette année, le camp se déroulera {{ campDateLabel }}.</p>
         <p v-if="subscriptionLabel">{{ subscriptionLabel }}</p>
@@ -159,7 +182,6 @@ const infoEveningLabel = computed(() => {
 </template>
 
 <style scoped>
-/* tableau "Date / Âge" */
 .facts {
   margin: 0 0 var(--sp-4);
 }

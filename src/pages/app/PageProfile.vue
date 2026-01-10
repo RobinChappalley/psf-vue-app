@@ -1,32 +1,19 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { authStore } from '@/stores/auth'
+
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import AppIcone from '@/components/AppIcone.vue'
+
 import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
 import ChildrenList from '@/components/profile/ChildrenList.vue'
-import { useChildrenEditor } from '@/composables/useChildrenEditor'
 
-//Navigation retour
-function goBack() {
-  if (step.value === 'personal') return backToProfile()
-  if (step.value === 'children') return backToProfile()
-  if (step.value === 'child-edit') return closeChildEditAndBack()
-  // fallback
-  step.value = 'profile'
-}
-
-/**
- * Ton vrai modèle User (résumé)
- * {
- *  firstname, lastname, email, phoneNumber,
- *  address, role[], parent, children[], camps[], participationInfo...
- * }
- */
-//En-dessous, appelle les données stockées dans auth.js
+/* ======================================================
+   STATE / DERIVED
+====================================================== */
 const me = computed(() => authStore.user.value)
 const isParent = computed(() => authStore.hasAnyRole(['parent']))
 
@@ -43,56 +30,114 @@ const displayEmail = computed(() => {
   return me.value.email || '—'
 })
 
-//le logout se gère dans AppLayout, pour s'assurer qu'à chaque fois que l'utilisateur est sur
-//la partie privée, il est bien connecté, sinon ça le redirige sur la page de login
+// ✅ Source de vérité enfants = store (API)
+const children = computed(() => authStore.children.value)
 
-// sections internes “comme une nouvelle page”
-const step = ref('profile') // "profile" | "personal" | "children"
+// sélection enfant en cours d'édition
+const selectedChild = ref(null)
+
+// sections internes
+const step = ref('profile') // "profile" | "personal" | "children" | "child-edit"
+
+/* ======================================================
+   NAVIGATION
+====================================================== */
+function backToProfile() {
+  step.value = 'profile'
+}
+
+function closeChildEditAndBack() {
+  selectedChild.value = null
+  step.value = 'children'
+}
+
+function goBack() {
+  if (step.value === 'personal') return backToProfile()
+  if (step.value === 'children') return backToProfile()
+  if (step.value === 'child-edit') return closeChildEditAndBack()
+  step.value = 'profile'
+}
 
 function openPersonalData() {
   step.value = 'personal'
 }
 
-function openChildren() {
+async function openChildren() {
   step.value = 'children'
-}
-
-function backToProfile() {
-  step.value = 'profile'
-}
-
-//partie pour envoyer des données modifiées au backend (ici parent)
-function onSubmitPersonalData(payload) {
-  // TEMP (sans backend) : tu peux soit log, soit mettre à jour le user mock
-  // Exemple: update local store
-  authStore.user.value = {
-    ...authStore.user.value,
-    ...payload,
-    address: payload.address,
+  try {
+    await authStore.fetchChildren()
+  } catch (e) {
+    console.error(e)
   }
 }
 
-//PARTIE ENFANT
-const { children, selectedChild, openEditChild, openCreateChild, submitChild, closeChildEdit } =
-  useChildrenEditor()
+/* ======================================================
+   PROFIL (update "me")
+====================================================== */
+const saving = ref(false)
+const errorMsg = ref('')
 
+async function onSubmitPersonalData(payload) {
+  if (saving.value) return
+  saving.value = true
+  errorMsg.value = ''
+
+  try {
+    await authStore.updateMe(payload)
+    // option UX
+    // step.value = 'profile'
+  } catch (e) {
+    console.error(e)
+    errorMsg.value = e?.message ?? 'Erreur lors de la sauvegarde.'
+  } finally {
+    saving.value = false
+  }
+}
+
+/* ======================================================
+   ENFANTS (CRUD)
+====================================================== */
 function onEditChild(child) {
-  openEditChild(child)
+  selectedChild.value = child
   step.value = 'child-edit'
 }
 
 function onAddChild() {
-  openCreateChild(me.value?.id) // parentId
+  const parentId = me.value?.id ?? me.value?._id
+  selectedChild.value = authStore.createEmptyChild(parentId)
   step.value = 'child-edit'
 }
 
-function onSubmitChildData(payload) {
-  submitChild(payload)
-}
+const savingChild = ref(false)
+const childError = ref('')
 
-function closeChildEditAndBack() {
-  closeChildEdit()
-  step.value = 'children'
+async function onSubmitChildData(payload) {
+  if (savingChild.value) return
+  savingChild.value = true
+  childError.value = ''
+
+  try {
+    // si l'enfant vient de l'API il aura id/_id, sinon null (nouveau)
+    const childId = selectedChild.value?.id ?? selectedChild.value?._id
+
+    if (childId) {
+      // ✅ update enfant existant
+      await authStore.updateChild({ ...payload, id: childId })
+    } else {
+      // ✅ création enfant
+      await authStore.createChild(payload)
+    }
+
+    // ✅ resync liste enfants (au cas où)
+    await authStore.fetchChildren()
+
+    closeChildEditAndBack()
+  } catch (e) {
+    console.error(e)
+    childError.value = e?.message ?? "Erreur lors de la sauvegarde de l'enfant."
+  } finally {
+    savingChild.value = false
+  }
 }
 </script>
 
