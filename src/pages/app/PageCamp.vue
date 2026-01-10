@@ -1,38 +1,21 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
 import { authStore } from '@/stores/auth'
+import { campsStore } from '@/stores/camps'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 
 // -------------------------------------------------
-// MOCK Camps (plus tard: API)
-// Mets [] pour simuler "pas de camp publié"
+// Charger les camps (lazy) via store
 // -------------------------------------------------
-const camps = ref([
-  {
-    id: 'camp-2026',
-    title: 'Camp 2026',
-    status: 'published', // 🔑 côté app publique: on ne montrera que published
-    startDate: '2026-07-12',
-    endDate: '2026-07-31',
-    subStartDatetime: '2026-05-01T08:00:00',
-    subEndDatetime: '2026-06-15T23:59:00',
-    gpsTrack: {},
-    itemsList: [{ item_id: 'i1', quantity: 1 }],
-    infoEvening: {
-      dateTime: '2026-06-16T18:30:00',
-      location: 'Neuchâtel',
-      participants: [],
-    },
-    trainings: [],
-    fundraisings: [],
-    generalMeeting: null,
-    stages: [],
-  },
-])
+onMounted(() => {
+  campsStore.ensureCampsLoaded()
+})
+
+const camps = computed(() => campsStore.camps.value)
 
 // -------------------------------------------------
 // Camp courant (HOME => published only)
@@ -110,13 +93,15 @@ const { children, selectedChild, openCreateChild, submitChild, closeChildEdit } 
   useChildrenEditor()
 
 function openCreateChildFlow() {
-  openCreateChild(currentUser.value?.id)
+  // selon ton modèle: parfois id = _id ; on sécurise
+  const parentId = currentUser.value?.id ?? currentUser.value?._id ?? null
+  openCreateChild(parentId)
   step.value = 'child-create'
 }
 
 function onSubmitChildData(payload) {
   submitChild(payload)
-  // ✅ FullDataForm gère l’affichage de confirmation
+  // FullDataForm gère l’affichage de confirmation
 }
 
 function closeChildCreate() {
@@ -132,17 +117,18 @@ const signupPeople = ref([])
 
 const buildSignupPeople = () => {
   const list = (children.value || []).map((c) => ({
-    key: `child-${c.id}`,
-    id: c.id,
+    key: `child-${c.id ?? c._id}`,
+    id: c.id ?? c._id,
     firstname: c.firstname,
     selected: false,
     kind: 'child',
   }))
 
   if (isStaff.value && currentUser.value) {
+    const uid = currentUser.value.id ?? currentUser.value._id
     list.unshift({
-      key: `user-${currentUser.value.id}`,
-      id: currentUser.value.id,
+      key: `user-${uid}`,
+      id: uid,
       firstname: currentUser.value.firstname || 'Moi',
       selected: false,
       kind: 'user',
