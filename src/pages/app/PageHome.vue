@@ -1,32 +1,20 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, onMounted } from 'vue'
 import { authStore } from '@/stores/auth'
+import { campsStore } from '@/stores/camps'
 import { useEventsFeed } from '@/composables/useEventsFeed'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { isRegisteredToEvent } from '@/composables/eventRegistration'
-import { listCamps } from '@/services/campsApi'
 
 import EventsBlock from '@/components/events/EventsBlock.vue'
 import EventCard from '@/components/events/EventCard.vue'
 
 // --------------------
-// CAMPS depuis API
+// Charger les camps (lazy, sans App.vue)
 // --------------------
-const camps = ref([])
-const campsLoading = ref(false)
-const campsError = ref(null)
-
-onMounted(async () => {
-  campsLoading.value = true
-  campsError.value = null
-  try {
-    camps.value = await listCamps()
-  } catch (e) {
-    campsError.value = e?.message ?? 'Erreur chargement camps'
-    console.error('❌ /camps failed', e)
-  } finally {
-    campsLoading.value = false
-  }
+onMounted(() => {
+  // pas besoin d'await : on peut s'appuyer sur loading/error si tu veux afficher un message
+  campsStore.ensureCampsLoaded()
 })
 
 // --------------------
@@ -35,6 +23,11 @@ onMounted(async () => {
 const user = computed(() => authStore.user.value)
 const firstname = computed(() => user.value?.firstname || '')
 
+const camps = computed(() => campsStore.camps.value)
+const campsLoading = computed(() => campsStore.loading.value)
+const campsError = computed(() => campsStore.error.value)
+
+// Home = n'affiche que le camp "courant" (souvent published) selon ta logique dans getCurrentCamp
 const currentCamp = computed(() => getCurrentCamp(camps.value, 'home'))
 
 // lookup usersById (pour parent -> enfants plus tard)
@@ -48,6 +41,7 @@ const events = computed(() => {
 
   const camp = currentCamp.value
 
+  // savoir si l'utilisateur est inscrit au camp
   const campRegistered = isRegisteredToEvent({
     user: user.value,
     camp,
@@ -59,7 +53,7 @@ const events = computed(() => {
 
   // 1) camp
   baseEvents.push({
-    id: camp.id ?? camp._id, // ✅ au cas où (normalement listCamps normalize déjà)
+    id: camp.id ?? camp._id, // sécurité (normalement id existe déjà via normalize)
     type: 'camp',
     name: camp.title,
     'start-date': camp.startDate,
@@ -68,16 +62,16 @@ const events = computed(() => {
     location: '',
   })
 
-  // 2) trainings (seulement si inscrit au camp)
+  // 2) trainings : visibles SEULEMENT si inscrit au camp
   if (campRegistered) {
     for (const t of camp.trainings || []) {
       baseEvents.push({
-        id: t.id ?? t._id, // ✅ mongo
+        id: t.id ?? t._id, // mongo
         type: 'training',
         name: 'Entraînement',
         'start-date': t.date,
         'end-date': t.date,
-        'subscription-deadline-date-time': null,
+        'subscription-deadline-date-time': null, // pas inscriptible
         location: t.meetingPoint || '',
         userStatus: 'registered',
         subscribable: false,
@@ -88,14 +82,14 @@ const events = computed(() => {
   // 3) fundraisings
   for (const f of camp.fundraisings || []) {
     baseEvents.push({
-      id: f.id ?? f._id, // ✅ mongo
+      id: f.id ?? f._id, // mongo
       type: 'fundraising',
       name: 'Vente de pâtisserie',
       'start-date': f.dateTime,
       'end-date': f.dateTime,
       'subscription-deadline-date-time': camp.subEndDatetime,
       location: f.location || '',
-      'users-id': f.usersId || [],
+      'users-id': f.usersId || f.participants || [], // selon ton backend (tu as "participants" dans ton seeder)
       subscribable: true,
     })
   }
@@ -115,6 +109,7 @@ const events = computed(() => {
     })
   }
 
+  // userStatus pour chaque event
   return baseEvents.map((e) => {
     if (e.userStatus) return e
 
@@ -133,7 +128,7 @@ const events = computed(() => {
 })
 
 // --------------------
-// useEventsFeed (inchangé)
+// useEventsFeed : split registered vs open-to-subscribe
 // --------------------
 const { upcomingRegistered, openToSubscribe } = useEventsFeed({ events })
 </script>
@@ -143,7 +138,7 @@ const { upcomingRegistered, openToSubscribe } = useEventsFeed({ events })
     <h1>BONJOUR {{ firstname }} !</h1>
     <p>Voici les évènements à venir</p>
 
-    <!-- ✅ Optionnel: feedback -->
+    <!-- Optionnel: feedback -->
     <p v-if="campsLoading">Chargement des camps…</p>
     <p v-else-if="campsError" style="color: red">Erreur: {{ campsError }}</p>
   </section>
