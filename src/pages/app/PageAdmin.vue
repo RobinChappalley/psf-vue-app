@@ -123,17 +123,21 @@ const anotherPublishedCamp = computed(() =>
 function mapCampFormToApi(payload) {
   const title = String(payload?.name ?? '').trim()
 
-  return {
+  const out = {
     title,
     startDate: dateOnlyToIsoStart(payload?.startDate),
     endDate: dateOnlyToIsoStart(payload?.endDate),
-    subStartDatetime: payload?.subscriptionStartDate
-      ? dateOnlyToIsoStart(payload.subscriptionStartDate)
-      : null,
-    subEndDatetime: payload?.subscriptionDeadline
-      ? dateOnlyToIsoEnd(payload.subscriptionDeadline)
-      : null,
   }
+
+  //n'ajoute ces champs que s'ils existent (pas null)
+  if (payload?.subscriptionStartDate) {
+    out.subStartDatetime = dateOnlyToIsoStart(payload.subscriptionStartDate)
+  }
+  if (payload?.subscriptionDeadline) {
+    out.subEndDatetime = dateOnlyToIsoEnd(payload.subscriptionDeadline)
+  }
+
+  return out
 }
 
 function resyncSelectedCampById(id) {
@@ -228,9 +232,6 @@ async function onCreateCamp(payload) {
     return
   }
 
-  // ✅ LOG ce que le form renvoie
-  console.log('CampForm submit payload =', payload)
-
   try {
     const apiPayload = mapCampFormToApi(payload)
 
@@ -240,10 +241,6 @@ async function onCreateCamp(payload) {
       startDate: apiPayload.startDate,
       endDate: apiPayload.endDate,
     }
-    console.log('POST /camps body =', minimal)
-
-    console.log('POST /camps body =', minimal)
-    console.log('Auth token =', authStore.token.value)
 
     const created = await apiCreateCamp(minimal)
 
@@ -271,16 +268,16 @@ async function onUpdateCamp(payload) {
     const id = selectedCamp.value.id
     const apiPayload = mapCampFormToApi(payload)
 
-    if ('gpsTrack' in payload && payload.gpsTrack === null) {
-      apiPayload.gpsTrack = null
-    }
-
     await apiUpdateCamp(id, apiPayload)
+
     await campsStore.fetchCamps()
     resyncSelectedCampById(id)
     step.value = 'camp-menu'
   } catch (e) {
-    console.error(e)
+    console.error('UPDATE CAMP ERROR:', e)
+    console.error('message:', e?.message)
+    console.error('status:', e?.status)
+    console.error('data:', e?.data) // <-- important
     alert(e?.message ?? 'Erreur update camp')
   }
 }
