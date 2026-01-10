@@ -2,7 +2,10 @@
 import { ref, computed } from 'vue'
 import { apiFetch } from '@/services/apiFetch'
 import { getChildrenByParent, createChildApi, updateUserApi } from '@/services/children'
-import { updateUser as updateUserFromUsersApi } from '@/services/usersApi'
+import {
+  updateUser as updateUserFromUsersApi,
+  getAdminUsers as getAdminUsersApi,
+} from '@/services/usersApi'
 
 /* ======================================================
    AUTH STATE
@@ -27,6 +30,14 @@ function persistAuth() {
   else localStorage.removeItem('user')
 }
 
+function normalizeUser(u) {
+  if (!u || typeof u !== 'object') return u
+  return {
+    ...u,
+    id: u.id ?? u._id,
+  }
+}
+
 /* ======================================================
    LOGIN / LOGOUT
 ====================================================== */
@@ -37,8 +48,12 @@ async function login(email, password) {
   })
 
   token.value = data.token
-  user.value = data.user
+  user.value = normalizeUser(data.user)
   persistAuth()
+
+  // 🔥 optionnel mais pratique : charger les admins dès le login
+  // (si tu préfères le faire seulement dans PageAdmin, enlève cette ligne)
+  await fetchAdminUsers().catch(() => {})
 
   return user.value
 }
@@ -50,6 +65,10 @@ function logout() {
   // localStorage
   localStorage.removeItem('token')
   localStorage.removeItem('user')
+
+  // reset admin cache
+  adminUsersObjects.value = []
+  allUsersObjects.value = []
 }
 
 function hasAnyRole(roles) {
@@ -65,8 +84,7 @@ async function refreshMe() {
   if (!myId) return null
 
   const fresh = await apiFetch(`/users/${myId}`, { method: 'GET' })
-  // selon backend: {user: {...}} ou directement l'objet
-  user.value = fresh?.user ?? fresh
+  user.value = normalizeUser(fresh?.user ?? fresh)
   persistAuth()
 
   return user.value
@@ -80,10 +98,7 @@ async function updateMe(payload) {
   const myId = getUserId(user.value)
   if (!myId) throw new Error('Not authenticated')
 
-  // Tu peux utiliser usersApi.updateUser (PUT /users/:id)
   await updateUserFromUsersApi(myId, payload)
-
-  // Source de vérité => on resync depuis le backend
   await refreshMe()
 
   return user.value
@@ -96,9 +111,6 @@ async function updateMe(payload) {
 async function updateUserById(id, payload) {
   if (!id) throw new Error('Missing user id')
 
-  // Tu peux choisir l'une des deux selon ton code existant :
-  // - updateUserFromUsersApi (usersApi.js)
-  // - updateUserApi (services/children) si ça pointe sur le même endpoint
   const updated = await updateUserFromUsersApi(id, payload)
 
   const myId = getUserId(user.value)
@@ -160,11 +172,10 @@ async function createChild(childPayload) {
     ...childPayload,
     firstname,
     lastname,
-    parent: parentId, // ✅ on envoie bien "parent"
+    parent: parentId,
     role: ['enfant'],
   }
 
-  // ✅ si le form envoie "parentId", on le vire (mais on garde parent)
   delete payload.parentId
 
   const created = await createChildApi(payload)
@@ -178,13 +189,10 @@ async function updateChild(childPayload) {
   const id = getUserId(childPayload)
   if (!id) throw new Error('Missing child id')
 
-  // childPayload peut être un patch (recommandé)
   const payload = { ...childPayload }
   delete payload.id
   delete payload._id
 
-  // Ici tu utilisais updateUserApi depuis services/children.
-  // Si ça fait bien PUT /users/:id, c'est OK.
   const updated = await updateUserApi(id, payload)
 
   const pid = getUserId(user.value)
@@ -194,19 +202,36 @@ async function updateChild(childPayload) {
 }
 
 /* ======================================================
-   ADMIN / MOCKS (inchangés, provisoires)
+   ADMIN (BACKEND)
 ====================================================== */
-// ⚠️ Garde si tu as encore des mocks ailleurs.
-// Ces variables doivent exister quelque part, sinon supprime ce bloc.
-const adminUsers = computed(() => {
-  return Object.values(MOCK_USERS || {}).filter((u) => u.role?.includes('admin'))
-})
 
-const allUsers = computed(() => {
-  const adults = Object.values(MOCK_USERS || {})
-  const kids = Object.values(MOCK_CHILDREN || {})
-  return [...adults, ...kids]
-})
+// ✅ liste des admins = source de vérité
+const adminUsersObjects = ref([])
+
+// ton PageAdmin fait authStore.adminUsers.value → OK
+const adminUsers = computed(() => adminUsersObjects.value)
+
+async function fetchAdminUsers() {
+  if (!token.value) {
+    adminUsersObjects.value = []
+    return []
+  }
+
+  const res = await getAdminUsersApi()
+  // selon backend : res.users ou res.data ou directement []
+  const raw = res?.users ?? res?.data ?? res
+  const arr = Array.isArray(raw) ? raw : []
+
+  adminUsersObjects.value = arr.map(normalizeUser)
+  return adminUsersObjects.value
+}
+
+/* ======================================================
+   (Optionnel) allUsers si tu en as besoin plus tard
+   -> ici je mets un cache vide, tu pourras brancher sur une route GET /users
+====================================================== */
+const allUsersObjects = ref([])
+const allUsers = computed(() => allUsersObjects.value)
 
 /* ======================================================
    EXPORT
@@ -233,7 +258,12 @@ export const authStore = {
   createChild,
   updateChild,
 
-  // admin / mocks
+  // admin (API)
   adminUsers,
+  adminUsersObjects,
+  fetchAdminUsers,
+
+  // all users (placeholder)
   allUsers,
+  allUsersObjects,
 }

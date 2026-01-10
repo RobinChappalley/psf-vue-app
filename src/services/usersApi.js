@@ -17,3 +17,7 @@ export async function updateUser(id, payload) {
   const data = await apiFetch(`/users/${id}`, { method: 'PUT', body: payload })
   return normalizeUser(data?.user ?? data)
 }
+
+export function getAdminUsers() {
+  return apiFetch('/users?role=admin', { method: 'GET' })
+}
