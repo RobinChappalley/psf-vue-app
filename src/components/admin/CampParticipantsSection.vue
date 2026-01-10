@@ -99,8 +99,8 @@ function openUser(u) {
         @click="openUser(u)"
       >
         <template #right>
-          <span class="pill" :class="u.hasPaid === true ? 'paid' : 'pending'">
-            {{ u.hasPaid === true ? 'A payé' : 'en attente' }}
+          <span class="pill" :class="u.participationInfo?.hasPaid === true ? 'paid' : 'pending'">
+            {{ u.participationInfo?.hasPaid === true ? 'A payé' : 'en attente' }}
           </span>
         </template>
       </DashboardCard>
