@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { authStore } from '@/stores/auth'
 import { campsStore } from '@/stores/camps'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
+import { getUser as apiGetUser } from '@/services/usersApi'
 
 // API Camp
 import {
@@ -48,10 +49,21 @@ const previousStep = ref('home')
 function goHome() {
   step.value = 'home'
 }
-
-function openUserDetails(u, fromStep) {
-  selectedUser.value = u
+async function openUserDetails(u, fromStep) {
   previousStep.value = fromStep
+
+  // 🔥 évite montage avec un ancien user
+  selectedUser.value = null
+
+  const id = authStore.getUserId ? authStore.getUserId(u) : (u?.id ?? u?._id ?? null)
+
+  try {
+    selectedUser.value = id ? await apiGetUser(id) : u
+  } catch (e) {
+    console.error('GET USER ERROR:', e)
+    selectedUser.value = u
+  }
+
   step.value = fromStep === 'members' ? 'user-management' : 'user-details'
 }
 
@@ -540,6 +552,28 @@ function onUserDeleted(deletedId) {
   }
   step.value = 'members'
 }
+//User : refresh quand on a fait une modification sur un user
+async function onUserUpdated(updatedUser) {
+  try {
+    if (!updatedUser) return
+
+    // refresh panneau détails
+    selectedUser.value = updatedUser
+
+    // si l'utilisateur modifié = moi, refresh mon profil
+    const my = authStore.user?.value ?? null
+    const myId = authStore.getUserId ? authStore.getUserId(my) : (my?.id ?? my?._id ?? null)
+    const updatedId = authStore.getUserId
+      ? authStore.getUserId(updatedUser)
+      : (updatedUser?.id ?? updatedUser?._id ?? null)
+
+    if (myId && updatedId && String(myId) === String(updatedId)) {
+      await authStore.refreshMe().catch(() => {})
+    }
+  } catch (e) {
+    console.error('onUserUpdated ERROR:', e)
+  }
+}
 </script>
 
 <template>
@@ -897,7 +931,13 @@ function onUserDeleted(deletedId) {
       </header>
 
       <section class="section">
-        <UserManagement v-if="selectedUser" :user="selectedUser" @deleted="onUserDeleted" />
+        <UserManagement
+          v-if="selectedUser"
+          :key="selectedUser.id ?? selectedUser._id"
+          :user="selectedUser"
+          @updated="onUserUpdated"
+          @deleted="onUserDeleted"
+        />
       </section>
     </template>
 
