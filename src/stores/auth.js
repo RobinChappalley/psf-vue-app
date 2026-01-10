@@ -1,8 +1,26 @@
-// src/stores/auth.js
+import { apiFetch } from '@/services/apiFetch'
 import { ref, computed } from 'vue'
 
-const token = ref(null)
-const user = ref(null)
+// Partie API réelle
+//Variables
+const token = ref(localStorage.getItem('token'))
+const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+
+//Login
+async function login(email, password) {
+  const data = await apiFetch('/login', {
+    method: 'POST',
+    body: { email, password },
+  })
+
+  token.value = data.token
+  user.value = data.user
+
+  localStorage.setItem('token', token.value)
+  localStorage.setItem('user', JSON.stringify(user.value))
+
+  return data.user
+}
 
 // --- MOCK USERS (temporaire) ---
 // Alignés sur ton vrai modèle (lastname, phoneNumber, etc.)
@@ -123,15 +141,6 @@ const isAuthenticated = computed(() => !!token.value && !!user.value)
 function hasAnyRole(roles) {
   const current = user.value?.role || []
   return roles.some((r) => current.includes(r))
-}
-
-/**
- * TEMP: simuler une connexion sans backend
- * role: "parent" | "accompagnant" | "admin"
- */
-function mockLogin(role = 'parent') {
-  user.value = MOCK_USERS[role] || MOCK_USERS.parent
-  token.value = 'mock-jwt-token'
 }
 
 /** Déconnexion */
@@ -315,7 +324,6 @@ export const authStore = {
   user,
   isAuthenticated,
   hasAnyRole,
-  mockLogin,
   logout,
   childrenObjects,
   createEmptyChild,
@@ -325,4 +333,5 @@ export const authStore = {
   allUsers,
   setUserRoles,
   deleteUser,
+  login,
 }

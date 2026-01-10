@@ -1,10 +1,25 @@
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import EventsBlock from '@/components/events/EventsBlock.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
+import { authStore } from '@/stores/auth'
+
+const router = useRouter()
 
 const email = ref('')
 const password = ref('')
+const error = ref('')
+
+async function onSubmit() {
+  error.value = ''
+  try {
+    await authStore.login(email.value, password.value)
+    router.push({ name: 'app.home' })
+  } catch (e) {
+    error.value = e?.message || 'Erreur de connexion'
+  }
+}
 </script>
 
 <template>
@@ -12,7 +27,7 @@ const password = ref('')
     <h1>Connexion</h1>
     <!-- Block (réutilise EventsBlock) -->
     <EventsBlock title="" :has-items="true" class="login-block">
-      <form class="form" @submit.prevent>
+      <form class="form" @submit.prevent="onSubmit">
         <label class="label" for="email">Email</label>
         <input
           id="email"
