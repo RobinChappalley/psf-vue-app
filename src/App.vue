@@ -1,36 +1,17 @@
 <script setup>
 import { onMounted } from 'vue'
+import { apiFetch } from '@/services/apiFetch'
 
 onMounted(async () => {
-  // 1) LOGIN
-  const loginRes = await fetch('http://localhost:2001/login', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      email: 'jane.dupont@example.com',
-      password: 'test1234',
-    }),
-  })
-
-  const loginData = await loginRes.json()
-  console.log('LOGIN STATUS:', loginRes.status)
-  console.log('LOGIN DATA:', loginData)
-
-  if (!loginRes.ok) return
-
-  const token = loginData.token
-  const userId = loginData.user.id
-
-  // 2) CALL PROTECTED ENDPOINT
-  const userRes = await fetch(`http://localhost:2001/users/${userId}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  })
-
-  const userData = await userRes.json()
-  console.log('GET USER STATUS:', userRes.status)
-  console.log('GET USER DATA:', userData)
+  try {
+    const data = await apiFetch('/login', {
+      method: 'POST',
+      body: { email: 'jane.dupont@example.com', password: 'test1234' },
+    })
+    console.log('apiFetch login OK:', data)
+  } catch (e) {
+    console.log('apiFetch login ERROR:', e.status, e.message, e.data)
+  }
 })
 </script>
 
