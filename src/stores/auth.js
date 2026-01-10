@@ -46,7 +46,10 @@ async function login(email, password) {
 function logout() {
   user.value = null
   token.value = null
-  persistAuth()
+
+  // localStorage
+  localStorage.removeItem('token')
+  localStorage.removeItem('user')
 }
 
 function hasAnyRole(roles) {
