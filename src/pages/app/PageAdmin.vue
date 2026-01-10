@@ -28,6 +28,7 @@ import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
 import MemberSection from '@/components/admin/MemberSection.vue'
 import UserManagement from '@/components/admin/UserManagement.vue'
 import CampItemsPicker from '@/components/admin/CampItemsPicker.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
 /* ======================================================
    UI STATE
@@ -45,6 +46,9 @@ function openUserDetails(u, fromStep) {
   previousStep.value = fromStep
   step.value = fromStep === 'members' ? 'user-management' : 'user-details'
 }
+
+const deleteDialogOpen = ref(false)
+const deleteDialogLoading = ref(false)
 
 /* ======================================================
    ITEMS (matériel)
@@ -162,14 +166,10 @@ const selectedCampForForm = computed(() => {
 
   return {
     ...selectedCamp.value,
-
-    // champs utilisés par <input type="date">
     startDate: toDateInputValue(selectedCamp.value.startDate),
     endDate: toDateInputValue(selectedCamp.value.endDate),
-
-    // si CampForm utilise ces clés
-    'subscription-start-date': toDateInputValue(selectedCamp.value.subStartDatetime),
-    'subscription-deadline': toDateInputValue(selectedCamp.value.subEndDatetime),
+    subscriptionStartDate: toDateInputValue(selectedCamp.value.subStartDatetime),
+    subscriptionDeadline: toDateInputValue(selectedCamp.value.subEndDatetime),
   }
 })
 
@@ -271,7 +271,7 @@ async function onUpdateCamp(payload) {
     const id = selectedCamp.value.id
     const apiPayload = mapCampFormToApi(payload)
 
-    if ('GPS-track' in payload && payload['GPS-track'] === null) {
+    if ('gpsTrack' in payload && payload.gpsTrack === null) {
       apiPayload.gpsTrack = null
     }
 
@@ -330,12 +330,15 @@ async function archiveCamp() {
 /* ======================================================
    DELETE camp (DELETE /camps/:id)
 ====================================================== */
-async function deleteCamp() {
+function requestDeleteCamp() {
+  if (!selectedCamp.value) return
+  deleteDialogOpen.value = true
+}
+
+async function confirmDeleteCamp() {
   if (!selectedCamp.value) return
 
-  const ok = confirm(`Supprimer définitivement "${selectedCamp.value.title}" ?`)
-  if (!ok) return
-
+  deleteDialogLoading.value = true
   try {
     const id = selectedCamp.value.id
     await apiDeleteCamp(id)
@@ -344,10 +347,17 @@ async function deleteCamp() {
     selectedCamp.value = null
     selectedEvent.value = null
     step.value = 'events'
+    deleteDialogOpen.value = false
   } catch (e) {
     console.error(e)
     alert(e?.message ?? 'Erreur suppression camp')
+  } finally {
+    deleteDialogLoading.value = false
   }
+}
+
+function cancelDeleteCamp() {
+  deleteDialogOpen.value = false
 }
 
 /* ======================================================
@@ -634,9 +644,27 @@ function onUserDeleted(deletedId) {
             Archiver le camp
           </BaseButton>
 
-          <BaseButton type="button" variant="tertiary" size="md" :block="true" @click="deleteCamp">
+          <BaseButton
+            type="button"
+            variant="tertiary"
+            size="md"
+            :block="true"
+            @click="requestDeleteCamp"
+          >
             Supprimer le camp
           </BaseButton>
+          <ConfirmDialog
+            :open="deleteDialogOpen"
+            title="Supprimer le camp"
+            :message="`Supprimer définitivement « ${selectedCamp?.title ?? 'ce camp'} » ? Cette action est irréversible.`"
+            confirm-text="Supprimer"
+            cancel-text="Annuler"
+            :dangerous="true"
+            :loading="deleteDialogLoading"
+            @confirm="confirmDeleteCamp"
+            @cancel="cancelDeleteCamp"
+            @close="cancelDeleteCamp"
+          />
         </div>
       </section>
     </template>
