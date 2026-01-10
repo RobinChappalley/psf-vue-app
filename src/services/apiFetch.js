@@ -30,8 +30,17 @@ export async function apiFetch(path, options = {}) {
 
   // tente de parser en JSON, sinon texte
   const contentType = res.headers.get('content-type') || ''
-  const isJson = contentType.includes('application/json')
-  const data = isJson ? await res.json().catch(() => null) : await res.text().catch(() => null)
+  const rawText = await res.text().catch(() => '')
+
+  let data = rawText
+  if (contentType.includes('application/json')) {
+    try {
+      data = rawText ? JSON.parse(rawText) : null
+    } catch {
+      // JSON invalide => on garde le texte brut
+      data = rawText
+    }
+  }
 
   if (!res.ok) {
     const msg =
@@ -44,8 +53,6 @@ export async function apiFetch(path, options = {}) {
     err.data = data
     throw err
   }
-
-  return data
 
   return data
 }

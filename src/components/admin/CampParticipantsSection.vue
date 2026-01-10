@@ -1,9 +1,9 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { authStore } from '@/stores/auth'
+import { computed, ref, watch } from 'vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import PaymentChips from '@/components/ui/PaymentChips.vue'
 import DashboardCard from '@/components/admin/DashboardCard.vue'
+import { getUsers } from '@/services/usersApi'
 
 const props = defineProps({
   camp: { type: Object, required: true },
@@ -11,23 +11,60 @@ const props = defineProps({
 
 const emit = defineEmits(['openUser'])
 
-const filter = ref('all')
+const filter = ref('all') // 'all' | 'paid' | 'pending'
+const loading = ref(false)
+const error = ref(null)
+const users = ref([])
 
 const campId = computed(() => String(props.camp?.id ?? ''))
 
-const campUsers = computed(() => {
-  if (!campId.value) return []
-  const all = authStore.allUsers.value ?? []
-  return all.filter((u) => Array.isArray(u.camps) && u.camps.includes(campId.value))
+const hasPaidParam = computed(() => {
+  if (filter.value === 'paid') return true
+  if (filter.value === 'pending') return false
+  return null
 })
 
-const visibleUsers = computed(() => {
-  if (filter.value === 'paid')
-    return campUsers.value.filter((u) => u.participationInfo?.hasPaid === true)
-  if (filter.value === 'pending')
-    return campUsers.value.filter((u) => u.participationInfo?.hasPaid !== true)
-  return campUsers.value
-})
+async function fetchUsers() {
+  if (!campId.value) {
+    users.value = []
+    console.log('campId', campId.value, 'filter', filter.value, 'hasPaidParam', hasPaidParam.value)
+
+    return
+  }
+
+  loading.value = true
+  error.value = null
+
+  try {
+    users.value = await getUsers({
+      campId: campId.value,
+      hasPaid: hasPaidParam.value, // true | false | null
+    })
+  } catch (e) {
+    console.error('FETCH CAMP USERS ERROR:', e)
+    error.value = e
+    users.value = []
+  } finally {
+    loading.value = false
+  }
+  console.log(
+    'hasPaid fields:',
+    users.value.map((u) => ({
+      id: u.id,
+      hasPaid: u.hasPaid,
+      participationHasPaid: u.participationInfo?.hasPaid,
+      type: typeof u.hasPaid,
+    })),
+  )
+}
+
+watch(
+  () => [campId.value, filter.value],
+  () => fetchUsers(),
+  { immediate: true },
+)
+
+const visibleUsers = computed(() => users.value ?? [])
 
 function openUser(u) {
   emit('openUser', u)
@@ -37,14 +74,22 @@ function openUser(u) {
 <template>
   <AdminPanel
     title="INSCRIPTIONS AU CAMP"
-    :is-empty="visibleUsers.length === 0"
+    :is-empty="!loading && visibleUsers.length === 0"
     empty-text="Aucune inscription pour le moment"
   >
     <template #tools>
       <PaymentChips v-model="filter" />
     </template>
 
-    <template v-if="visibleUsers.length">
+    <template v-if="loading">
+      <p class="hint">Chargement…</p>
+    </template>
+
+    <template v-else-if="error">
+      <p class="hint">Erreur lors du chargement des inscriptions.</p>
+    </template>
+
+    <template v-else-if="visibleUsers.length">
       <DashboardCard
         v-for="u in visibleUsers"
         :key="u.id"

@@ -2,8 +2,10 @@
 import { computed, ref, watch } from 'vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
-import { updateUserRole, deleteUser } from '@/api/users'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
+
+// ✅ on utilise tes services existants (apiFetch + JWT)
+import { updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from '@/services/usersApi'
 
 const showDelete = ref(false)
 const deleting = ref(false)
@@ -26,17 +28,20 @@ const roleOptions = [
   { key: 'admin', label: 'Admin' },
   { key: 'accompagnant', label: 'Accompagnant' },
   { key: 'parent', label: 'Parent' },
-  { key: 'child', label: 'Enfant' },
+  { key: 'enfant', label: 'Enfant' },
 ]
+
+// ✅ id robuste (supporte id ou _id)
+const userId = computed(() => props.user?.id ?? props.user?._id ?? null)
 
 // draft des rôles
 const selectedRole = ref('')
 
 /* reset quand l’utilisateur change */
 watch(
-  () => props.user,
-  (u) => {
-    selectedRole.value = (u?.role ?? [])[0] ?? ''
+  () => userId.value,
+  () => {
+    selectedRole.value = (props.user?.role ?? [])[0] ?? ''
     mode.value = 'view'
   },
   { immediate: true },
@@ -120,21 +125,32 @@ const rows = computed(() => {
 ========================= */
 
 function openRoleEdit() {
-  selectedRole.value = (props.user.role ?? [])[0] ?? ''
+  selectedRole.value = (props.user?.role ?? [])[0] ?? ''
   mode.value = 'role'
 }
 
 function cancelRoleEdit() {
-  selectedRole.value = (props.user.role ?? [])[0] ?? ''
+  selectedRole.value = (props.user?.role ?? [])[0] ?? ''
   mode.value = 'view'
 }
 
 async function confirmRoleEdit() {
-  if (!selectedRole.value) return
+  try {
+    if (!selectedRole.value) return
+    if (!userId.value) throw new Error('Missing user id')
 
-  const updated = await updateUserRole(props.user.id, [selectedRole.value])
-  emit('updated', updated)
-  mode.value = 'view'
+    const updated = await apiUpdateUser(userId.value, { role: [selectedRole.value] })
+    emit('updated', updated)
+    mode.value = 'view'
+  } catch (e) {
+    console.error('confirmRoleEdit ERROR:', e)
+    // optionnel : tu peux afficher un message UI
+  }
+}
+
+function openDeleteDialog() {
+  deleteError.value = ''
+  showDelete.value = true
 }
 
 async function removeUser() {
@@ -142,19 +158,19 @@ async function removeUser() {
   deleting.value = true
 
   try {
-    await deleteUser(props.user.id, { deleteChildren: false })
+    if (!userId.value) throw new Error('Missing user id')
+
+    // ✅ delete via ton endpoint DELETE /users/:id
+    await apiDeleteUser(userId.value)
+
     showDelete.value = false
-    emit('deleted', props.user.id)
+    emit('deleted', userId.value)
   } catch (e) {
+    console.error(e)
     deleteError.value = "Impossible de supprimer l'utilisateur."
   } finally {
     deleting.value = false
   }
-}
-
-function openDeleteDialog() {
-  deleteError.value = ''
-  showDelete.value = true
 }
 </script>
 

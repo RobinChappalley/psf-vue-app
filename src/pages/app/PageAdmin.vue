@@ -3,13 +3,22 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { authStore } from '@/stores/auth'
 import { campsStore } from '@/stores/camps'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
+import { getUser as apiGetUser } from '@/services/usersApi'
 
-// API
+// API Camp
 import {
   createCamp as apiCreateCamp,
   updateCamp as apiUpdateCamp,
   deleteCamp as apiDeleteCamp,
 } from '@/services/campsApi'
+
+//API trainings
+import {
+  createTraining as apiCreateTraining,
+  updateTraining as apiUpdateTraining,
+  deleteTraining as apiDeleteTraining,
+  getTrainings as apiGetTrainings,
+} from '@/services/trainingsApi'
 
 // Components
 import DashboardCard from '@/components/admin/DashboardCard.vue'
@@ -40,10 +49,21 @@ const previousStep = ref('home')
 function goHome() {
   step.value = 'home'
 }
-
-function openUserDetails(u, fromStep) {
-  selectedUser.value = u
+async function openUserDetails(u, fromStep) {
   previousStep.value = fromStep
+
+  // 🔥 évite montage avec un ancien user
+  selectedUser.value = null
+
+  const id = authStore.getUserId ? authStore.getUserId(u) : (u?.id ?? u?._id ?? null)
+
+  try {
+    selectedUser.value = id ? await apiGetUser(id) : u
+  } catch (e) {
+    console.error('GET USER ERROR:', e)
+    selectedUser.value = u
+  }
+
   step.value = fromStep === 'members' ? 'user-management' : 'user-details'
 }
 
@@ -68,7 +88,7 @@ const loadingCamps = campsStore.loading
 const campsError = campsStore.error
 
 onMounted(async () => {
-  await campsStore.ensureCampsLoaded()
+  await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchAdminUsers()])
 })
 
 /* ======================================================
@@ -146,6 +166,10 @@ function resyncSelectedCampById(id) {
     (camps.value ?? []).find((c) => String(c.id) === String(id)) ?? selectedCamp.value
 }
 
+function getTrainingId(t) {
+  return t?.id ?? t?._id ?? null
+}
+
 /* ======================================================
    Version "safe" du camp pour les <input type="date">
 ====================================================== */
@@ -190,8 +214,15 @@ function dateOnlyToIsoEnd(v) {
 /* ======================================================
    Navigation camp
 ====================================================== */
-function onOpenCamp(camp) {
+async function onOpenCamp(camp) {
   selectedCamp.value = camp
+
+  // hydrate trainings depuis l'endpoint dédié
+  const campId = camp.id
+  const res = await apiGetTrainings(campId)
+  const trainings = res?.trainings ?? res
+  selectedCamp.value.trainings = Array.isArray(trainings) ? trainings : []
+
   step.value = 'camp-menu'
 }
 
@@ -372,33 +403,51 @@ async function saveTrainingsToBackend() {
 
 async function onCreateCampEvent(payload) {
   if (!selectedCamp.value) return
+  if (payload.type !== 'trainings') return
 
-  if (payload.type === 'trainings') {
-    const nextNumber =
-      (selectedCamp.value.trainings?.reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0) + 1
+  const campId = selectedCamp.value.id
 
-    const training = {
-      number: nextNumber,
-      date: payload.date,
-      meetingTime: payload.meetingTime,
-      meetingPoint: payload.meetingPoint,
-      returnTime: payload.arrivalTime,
-      trainGoingTime: payload.trainGoingTime ?? null,
-      trainReturnTime: payload.trainReturnTime ?? null,
-      distance: payload.distance,
-      elevationGain: payload.elevationGain,
-      elevationLoss: payload.elevationLoss,
-      responsiblePerson: payload.responsiblePerson,
-      remark: payload.remark,
-      'items-list': [],
-    }
+  const maxNumber =
+    (selectedCamp.value.trainings ?? []).reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0
+  const nextNumber = maxNumber + 1
+
+  const apiPayload = {
+    number: nextNumber,
+    date: payload.date,
+    trainGoingTime: payload.trainGoingTime ?? null,
+    trainReturnTime: payload.trainReturnTime ?? null,
+    meetingTime: payload.meetingTime ?? null,
+    meetingPoint: payload.meetingPoint ?? null,
+    returnTime: payload.arrivalTime ?? null,
+    distance: payload.distance ?? null,
+    elevationGain: payload.elevationGain ?? null,
+    elevationLoss: payload.elevationLoss ?? null,
+    responsiblePerson: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? null,
+    remark: payload.remark ?? null,
+  }
+  console.log('POST training payload:', apiPayload)
+  console.log(
+    'existing numbers:',
+    (selectedCamp.value.trainings ?? []).map((t) => t.number),
+  )
+
+  try {
+    const created = await apiCreateTraining(campId, apiPayload)
+    const createdTraining = created?.training ?? created
 
     if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
-    selectedCamp.value.trainings = [...selectedCamp.value.trainings, training]
-  }
+    selectedCamp.value.trainings = [...selectedCamp.value.trainings, createdTraining]
 
-  await saveTrainingsToBackend()
-  step.value = 'camp-events'
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(campId)
+
+    step.value = 'camp-events'
+  } catch (e) {
+    console.error('CREATE TRAINING ERROR:', e)
+    console.error('status:', e?.status)
+    console.error('data:', e?.data)
+    alert(e?.message ?? 'Erreur création entraînement')
+  }
 }
 
 function onOpenTraining(training) {
@@ -408,43 +457,71 @@ function onOpenTraining(training) {
 
 async function onUpdateCampEvent(payload) {
   if (!selectedCamp.value || !selectedEvent.value) return
+  if (selectedEvent.value.type !== 'trainings') return
 
-  if (selectedEvent.value.type === 'trainings') {
-    const old = selectedEvent.value.data
-    const list = selectedCamp.value.trainings ?? []
+  const campId = selectedCamp.value.id
+  const old = selectedEvent.value.data
+  const trainingId = old?.id ?? old?._id
 
-    const updated = {
-      ...old,
-      date: payload.date ?? old.date,
-      remark: payload.remark ?? old.remark,
-      meetingPoint: payload.meetingPoint ?? old.meetingPoint,
-      meetingTime: payload.meetingTime ?? old.meetingTime,
-      returnTime: payload.arrivalTime ?? old.returnTime,
-      distance: payload.distance ?? old.distance,
-      elevationGain: payload.elevationGain ?? old.elevationGain,
-      elevationLoss: payload.elevationLoss ?? old.elevationLoss,
-      responsiblePerson: payload.responsiblePerson ?? old.responsiblePerson,
-    }
-
-    selectedCamp.value.trainings = list.map((t) => (t.number === old.number ? updated : t))
-    selectedEvent.value.data = updated
+  if (!trainingId) {
+    alert("Impossible de modifier: l'entraînement n'a pas d'id.")
+    return
   }
 
-  await saveTrainingsToBackend()
+  // patch: n'envoie que ce que tu modifies
+  const apiPayload = {
+    date: payload.date, // "YYYY-MM-DD"
+    trainGoingTime: payload.trainGoingTime ?? null,
+    trainReturnTime: payload.trainReturnTime ?? null,
+    meetingTime: payload.meetingTime ?? null,
+    meetingPoint: payload.meetingPoint ?? null,
+    returnTime: payload.arrivalTime ?? null, // attention: ton UI l'appelle arrivalTime
+    distance: payload.distance ?? null,
+    elevationGain: payload.elevationGain ?? null,
+    elevationLoss: payload.elevationLoss ?? null,
+    responsiblePerson: payload.responsiblePerson ?? null, // doit être un id string
+    remark: payload.remark ?? null,
+  }
+
+  const updatedRes = await apiUpdateTraining(campId, trainingId, apiPayload)
+  const updated = updatedRes?.training ?? updatedRes
+
+  // resync local
+  const list = selectedCamp.value.trainings ?? []
+  selectedCamp.value.trainings = list.map((t) =>
+    String(getTrainingId(t)) === String(trainingId) ? updated : t,
+  )
+  selectedEvent.value.data = updated
+
+  await campsStore.fetchCamps()
+  resyncSelectedCampById(campId)
+
   step.value = 'camp-events'
 }
-
 async function onDeleteCampEvent() {
   if (!selectedCamp.value || !selectedEvent.value) return
+  if (selectedEvent.value.type !== 'trainings') return
 
-  if (selectedEvent.value.type === 'trainings') {
-    const old = selectedEvent.value.data
-    const list = selectedCamp.value.trainings ?? []
-    selectedCamp.value.trainings = list.filter((t) => t.number !== old.number)
+  const campId = selectedCamp.value.id
+  const trainingId = selectedEvent.value.data?.id ?? selectedEvent.value.data?._id
+
+  if (!trainingId) {
+    alert("Impossible de supprimer: l'entraînement n'a pas d'id.")
+    return
   }
 
-  await saveTrainingsToBackend()
+  await apiDeleteTraining(campId, trainingId)
+
+  // resync local
+  selectedCamp.value.trainings = (selectedCamp.value.trainings ?? []).filter(
+    (t) => String(getTrainingId(t)) !== String(trainingId),
+  )
+
   selectedEvent.value = null
+
+  await campsStore.fetchCamps()
+  resyncSelectedCampById(campId)
+
   step.value = 'camp-events'
 }
 
@@ -474,6 +551,28 @@ function onUserDeleted(deletedId) {
     selectedUser.value = null
   }
   step.value = 'members'
+}
+//User : refresh quand on a fait une modification sur un user
+async function onUserUpdated(updatedUser) {
+  try {
+    if (!updatedUser) return
+
+    // refresh panneau détails
+    selectedUser.value = updatedUser
+
+    // si l'utilisateur modifié = moi, refresh mon profil
+    const my = authStore.user?.value ?? null
+    const myId = authStore.getUserId ? authStore.getUserId(my) : (my?.id ?? my?._id ?? null)
+    const updatedId = authStore.getUserId
+      ? authStore.getUserId(updatedUser)
+      : (updatedUser?.id ?? updatedUser?._id ?? null)
+
+    if (myId && updatedId && String(myId) === String(updatedId)) {
+      await authStore.refreshMe().catch(() => {})
+    }
+  } catch (e) {
+    console.error('onUserUpdated ERROR:', e)
+  }
 }
 </script>
 
@@ -832,7 +931,13 @@ function onUserDeleted(deletedId) {
       </header>
 
       <section class="section">
-        <UserManagement v-if="selectedUser" :user="selectedUser" @deleted="onUserDeleted" />
+        <UserManagement
+          v-if="selectedUser"
+          :key="selectedUser.id ?? selectedUser._id"
+          :user="selectedUser"
+          @updated="onUserUpdated"
+          @deleted="onUserDeleted"
+        />
       </section>
     </template>
 
