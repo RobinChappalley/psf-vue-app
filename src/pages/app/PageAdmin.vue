@@ -76,7 +76,6 @@ const loadingCamps = campsStore.loading
 const campsError = campsStore.error
 
 onMounted(async () => {
-  await campsStore.ensureCampsLoaded()
   await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchAdminUsers()])
 })
 
@@ -392,45 +391,51 @@ async function saveTrainingsToBackend() {
 
 async function onCreateCampEvent(payload) {
   if (!selectedCamp.value) return
-
   if (payload.type !== 'trainings') return
 
   const campId = selectedCamp.value.id
 
-  // ton “number” auto (optionnel si backend le gère)
-  const nextNumber =
-    (selectedCamp.value.trainings?.reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0) + 1
+  const maxNumber =
+    (selectedCamp.value.trainings ?? []).reduce((m, t) => Math.max(m, t.number ?? 0), 0) ?? 0
+  const nextNumber = maxNumber + 1
 
   const apiPayload = {
     number: nextNumber,
     date: payload.date,
-    meetingTime: payload.meetingTime,
-    meetingPoint: payload.meetingPoint,
-    returnTime: payload.arrivalTime, // ⚠️ cohérent avec ton UI
     trainGoingTime: payload.trainGoingTime ?? null,
     trainReturnTime: payload.trainReturnTime ?? null,
-    distance: payload.distance,
-    elevationGain: payload.elevationGain,
-    elevationLoss: payload.elevationLoss,
-    responsiblePerson: payload.responsiblePerson,
-    remark: payload.remark,
-    itemsList: [],
+    meetingTime: payload.meetingTime ?? null,
+    meetingPoint: payload.meetingPoint ?? null,
+    returnTime: payload.arrivalTime ?? null,
+    distance: payload.distance ?? null,
+    elevationGain: payload.elevationGain ?? null,
+    elevationLoss: payload.elevationLoss ?? null,
+    responsiblePerson: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? null,
+    remark: payload.remark ?? null,
   }
+  console.log('POST training payload:', apiPayload)
+  console.log(
+    'existing numbers:',
+    (selectedCamp.value.trainings ?? []).map((t) => t.number),
+  )
 
-  const created = await apiCreateTraining(campId, apiPayload)
+  try {
+    const created = await apiCreateTraining(campId, apiPayload)
+    const createdTraining = created?.training ?? created
 
-  // Selon backend: {training: {...}} ou directement l'objet
-  const createdTraining = created?.training ?? created
+    if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
+    selectedCamp.value.trainings = [...selectedCamp.value.trainings, createdTraining]
 
-  // resync local
-  if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
-  selectedCamp.value.trainings = [...selectedCamp.value.trainings, createdTraining]
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(campId)
 
-  // si tu veux une source de vérité béton:
-  await campsStore.fetchCamps()
-  resyncSelectedCampById(campId)
-
-  step.value = 'camp-events'
+    step.value = 'camp-events'
+  } catch (e) {
+    console.error('CREATE TRAINING ERROR:', e)
+    console.error('status:', e?.status)
+    console.error('data:', e?.data)
+    alert(e?.message ?? 'Erreur création entraînement')
+  }
 }
 
 function onOpenTraining(training) {
@@ -453,15 +458,17 @@ async function onUpdateCampEvent(payload) {
 
   // patch: n'envoie que ce que tu modifies
   const apiPayload = {
-    date: payload.date,
-    remark: payload.remark,
-    meetingPoint: payload.meetingPoint,
-    meetingTime: payload.meetingTime,
-    returnTime: payload.arrivalTime,
-    distance: payload.distance,
-    elevationGain: payload.elevationGain,
-    elevationLoss: payload.elevationLoss,
-    responsiblePerson: payload.responsiblePerson,
+    date: payload.date, // "YYYY-MM-DD"
+    trainGoingTime: payload.trainGoingTime ?? null,
+    trainReturnTime: payload.trainReturnTime ?? null,
+    meetingTime: payload.meetingTime ?? null,
+    meetingPoint: payload.meetingPoint ?? null,
+    returnTime: payload.arrivalTime ?? null, // attention: ton UI l'appelle arrivalTime
+    distance: payload.distance ?? null,
+    elevationGain: payload.elevationGain ?? null,
+    elevationLoss: payload.elevationLoss ?? null,
+    responsiblePerson: payload.responsiblePerson ?? null, // doit être un id string
+    remark: payload.remark ?? null,
   }
 
   const updatedRes = await apiUpdateTraining(campId, trainingId, apiPayload)
