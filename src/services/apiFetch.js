@@ -35,6 +35,12 @@ export async function apiFetch(path, options = {}) {
     : await res.text().catch(() => null)
 
   if (!res.ok) {
+    if (res.status === 401) {
+      // token expiré / invalide
+      localStorage.removeItem('token')
+      localStorage.removeItem('user')
+    }
+
     const msg =
       (data && typeof data === 'object' && data.message) || `Request failed (${res.status})`
     const err = new Error(msg)
