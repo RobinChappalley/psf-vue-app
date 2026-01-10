@@ -1,7 +1,17 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { authStore } from '@/stores/auth'
+import { campsStore } from '@/stores/camps'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
+
+// API
+import {
+  createCamp as apiCreateCamp,
+  updateCamp as apiUpdateCamp,
+  deleteCamp as apiDeleteCamp,
+} from '@/services/campsApi'
+
+// Components
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import CampForm from '@/components/admin/CampForm.vue'
@@ -13,14 +23,36 @@ import EventForm from '@/components/admin/EventForm.vue'
 import CampParticipantsSection from '@/components/admin/CampParticipantsSection.vue'
 import UserDetailsPanel from '@/components/admin/UserDetailsPanel.vue'
 import CampArchivesSection from '@/components/admin/CampArchivesSection.vue'
-import { mockArchivedCamps } from '@/assets/mocks/camps'
 import CampArchiveEventSection from '@/components/admin/CampArchiveEventSection.vue'
 import EventDetailsPanel from '@/components/ui/EventDetailsPanel.vue'
 import MemberSection from '@/components/admin/MemberSection.vue'
 import UserManagement from '@/components/admin/UserManagement.vue'
 import CampItemsPicker from '@/components/admin/CampItemsPicker.vue'
+import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
-// Items disponibles
+/* ======================================================
+   UI STATE
+====================================================== */
+const selectedUser = ref(null)
+const step = ref('home')
+const previousStep = ref('home')
+
+function goHome() {
+  step.value = 'home'
+}
+
+function openUserDetails(u, fromStep) {
+  selectedUser.value = u
+  previousStep.value = fromStep
+  step.value = fromStep === 'members' ? 'user-management' : 'user-details'
+}
+
+const deleteDialogOpen = ref(false)
+const deleteDialogLoading = ref(false)
+
+/* ======================================================
+   ITEMS (matériel)
+====================================================== */
 const availableItems = ref([
   { id: 'water-bottle', name: 'Gourde' },
   { id: 'rain-jacket', name: 'Veste de pluie' },
@@ -28,93 +60,136 @@ const availableItems = ref([
   { id: 'first-aid-kit', name: 'Trousse de secours' },
 ])
 
-const selectedUser = ref(null)
-const step = ref('home')
-const previousStep = ref('home')
+/* ======================================================
+   CAMPS: SOURCE DE VÉRITÉ = BACKEND VIA STORE
+====================================================== */
+const camps = campsStore.camps
+const loadingCamps = campsStore.loading
+const campsError = campsStore.error
 
-//navigation
-function openUserDetails(u, fromStep) {
-  selectedUser.value = u
-  previousStep.value = fromStep
+onMounted(async () => {
+  await campsStore.ensureCampsLoaded()
+})
 
-  if (fromStep === 'members') {
-    step.value = 'user-management'
-  } else {
-    step.value = 'user-details'
-  }
-}
-
-////début des trucs
-function goHome() {
-  step.value = 'home'
-}
-const camps = ref([])
-camps.value = [...mockArchivedCamps]
-
-// Admin users options
+/* ======================================================
+   ADMIN users options (responsables)
+====================================================== */
 const responsibleOptions = computed(() =>
-  authStore.adminUsers.value.map((u) => ({
-    value: u.id,
+  (authStore.adminUsers.value ?? []).map((u) => ({
+    value: u.id ?? u._id,
     label: `${u.firstname} ${u.lastname}`,
   })),
 )
 
-// Camps visibles dans "events" (non archivés)
+/* ======================================================
+   CAMPS computed
+====================================================== */
 const activeCamps = computed(() => (camps.value ?? []).filter((c) => c.status !== 'archived'))
 const hasCamps = computed(() => activeCamps.value.length > 0)
 
-// Camp "courant" dans l'admin: draft > published
 const currentAdminCamp = computed(() => getCurrentCamp(activeCamps.value, 'admin'))
-
-// Camp actif = celui retourné par getCurrentCamp (draft > published)
 const activeCamp = computed(() => currentAdminCamp.value)
 
-// v-model pour CampItemsPicker -> activeCamp.itemsList
-const activeCampItemsModel = computed({
-  get() {
-    return activeCamp.value?.itemsList ?? []
-  },
-  set(next) {
-    if (!activeCamp.value) return
-    activeCamp.value.itemsList = next
-  },
-})
-
-// (mock) action d'enregistrement
-function onSaveCampItems() {
-  if (!activeCamp.value) return
-  console.log('SAVE camp items', activeCamp.value.id, activeCamp.value.itemsList)
-  // plus tard: appel API PUT/PATCH
-  step.value = 'camp-menu'
-}
-
-// Camp sélectionné dans l’UI (menu camp, events etc.)
+/* ======================================================
+   Selected camp (menu camp, events, etc.)
+====================================================== */
 const selectedCamp = ref(null)
 
-// Initialiser selectedCamp automatiquement sur le camp courant (draft/published)
 watch(
   currentAdminCamp,
   (camp) => {
-    // si le camp sélectionné n’existe plus (supprimé/archivé), ou n’est pas set => on resync
     const stillExists =
-      camp && (camps.value ?? []).some((c) => c.id === camp.id && c.status !== 'archived')
+      camp &&
+      (camps.value ?? []).some((c) => String(c.id) === String(camp.id) && c.status !== 'archived')
 
     if (!selectedCamp.value || !stillExists) {
-      selectedCamp.value = camp
+      selectedCamp.value = camp ?? null
     }
   },
   { immediate: true },
 )
 
-// Helpers statut
 const campStatus = computed(() => selectedCamp.value?.status ?? 'draft')
+
 const anotherPublishedCamp = computed(() =>
-  (camps.value ?? []).find((c) => c.status === 'published' && c.id !== selectedCamp.value?.id),
+  (camps.value ?? []).find(
+    (c) => c.status === 'published' && String(c.id) !== String(selectedCamp.value?.id),
+  ),
 )
 
-/**
- * Navigation camp
- */
+/* ======================================================
+   Helpers
+====================================================== */
+function mapCampFormToApi(payload) {
+  const title = String(payload?.name ?? '').trim()
+
+  const out = {
+    title,
+    startDate: dateOnlyToIsoStart(payload?.startDate),
+    endDate: dateOnlyToIsoStart(payload?.endDate),
+  }
+
+  //n'ajoute ces champs que s'ils existent (pas null)
+  if (payload?.subscriptionStartDate) {
+    out.subStartDatetime = dateOnlyToIsoStart(payload.subscriptionStartDate)
+  }
+  if (payload?.subscriptionDeadline) {
+    out.subEndDatetime = dateOnlyToIsoEnd(payload.subscriptionDeadline)
+  }
+
+  return out
+}
+
+function resyncSelectedCampById(id) {
+  if (!id) return
+  selectedCamp.value =
+    (camps.value ?? []).find((c) => String(c.id) === String(id)) ?? selectedCamp.value
+}
+
+/* ======================================================
+   Version "safe" du camp pour les <input type="date">
+====================================================== */
+function toDateInputValue(v) {
+  if (!v) return null
+
+  // déjà au bon format YYYY-MM-DD
+  if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+
+  const d = new Date(v)
+  if (Number.isNaN(d.getTime())) return null
+
+  // IMPORTANT : UTC → YYYY-MM-DD
+  const yyyy = d.getUTCFullYear()
+  const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
+  const dd = String(d.getUTCDate()).padStart(2, '0')
+  return `${yyyy}-${mm}-${dd}`
+}
+
+const selectedCampForForm = computed(() => {
+  if (!selectedCamp.value) return null
+
+  return {
+    ...selectedCamp.value,
+    startDate: toDateInputValue(selectedCamp.value.startDate),
+    endDate: toDateInputValue(selectedCamp.value.endDate),
+    subscriptionStartDate: toDateInputValue(selectedCamp.value.subStartDatetime),
+    subscriptionDeadline: toDateInputValue(selectedCamp.value.subEndDatetime),
+  }
+})
+
+function dateOnlyToIsoStart(v) {
+  if (!v) return null
+  return `${String(v).slice(0, 10)}T00:00:00.000Z`
+}
+
+function dateOnlyToIsoEnd(v) {
+  if (!v) return null
+  return `${String(v).slice(0, 10)}T23:59:59.999Z`
+}
+
+/* ======================================================
+   Navigation camp
+====================================================== */
 function onOpenCamp(camp) {
   selectedCamp.value = camp
   step.value = 'camp-menu'
@@ -125,58 +200,92 @@ function openCampCreate() {
   step.value = 'camp-create'
 }
 
-/**
- * Actions statut
- */
+/* ======================================================
+   Items picker: v-model sur selectedCamp.itemsList (robuste)
+====================================================== */
+const activeCampItemsModel = computed({
+  get() {
+    return selectedCamp.value?.itemsList ?? []
+  },
+  set(next) {
+    if (!selectedCamp.value) return
+    selectedCamp.value.itemsList = next
+  },
+})
 
-function onCreateCamp(payload) {
-  console.log('payload create camp', payload)
+async function onSaveCampItems() {
+  if (!selectedCamp.value) return
+  const id = selectedCamp.value.id
+  await apiUpdateCamp(id, { itemsList: selectedCamp.value.itemsList ?? [] })
+  await campsStore.fetchCamps()
+  resyncSelectedCampById(id)
+  step.value = 'camp-menu'
+}
 
-  // sécurité (cohérente avec ton UX)
+/* ======================================================
+   CREATE camp (POST /camps)
+====================================================== */
+async function onCreateCamp(payload) {
   if (hasCamps.value) {
     alert("Un camp est déjà actif. Archivez-le avant d'en créer un nouveau.")
     step.value = 'events'
     return
   }
 
-  const newCamp = {
-    id: `camp-${Date.now()}`, // temporaire, remplacé par l’ID backend plus tard
-    title: payload.name,
-    status: 'draft',
+  try {
+    const apiPayload = mapCampFormToApi(payload)
 
-    startDate: payload['start-date'] ?? null,
-    endDate: payload['end-date'] ?? null,
+    // ⚠️ pour isoler l’erreur 400, envoie MINIMAL comme dans tes tests
+    const minimal = {
+      title: apiPayload.title,
+      startDate: apiPayload.startDate,
+      endDate: apiPayload.endDate,
+    }
 
-    subStartDatetime: payload['subscription-start-date']
-      ? `${payload['subscription-start-date']}T00:00:00Z`
-      : null,
+    const created = await apiCreateCamp(minimal)
 
-    subEndDatetime: payload['subscription-deadline']
-      ? `${payload['subscription-deadline']}T23:59:59Z`
-      : null,
+    await campsStore.fetchCamps()
+    selectedCamp.value =
+      (camps.value ?? []).find((c) => String(c.id) === String(created.id)) ?? created
 
-    gpsTrack: (() => {
-      const file = payload?.['GPS-track']?.file
-      return file ? { fileName: file.name } : {}
-    })(),
-
-    itemsList: [],
-    infoEvening: null,
-    trainings: [],
-    fundraisings: [],
-    generalMeeting: null,
-    stages: [],
+    step.value = 'camp-menu'
+  } catch (e) {
+    console.error('CREATE CAMP ERROR:', e)
+    console.error('message:', e?.message)
+    console.error('status:', e?.status)
+    console.error('data:', e?.data)
+    alert(e?.message ?? 'Erreur création camp')
   }
-
-  // ajout à la liste
-  camps.value = [...camps.value, newCamp]
-
-  // sélection + navigation
-  selectedCamp.value = newCamp
-  step.value = 'camp-menu'
 }
 
-function publishCamp() {
+/* ======================================================
+   UPDATE camp (PUT /camps/:id)
+====================================================== */
+async function onUpdateCamp(payload) {
+  if (!selectedCamp.value) return
+
+  try {
+    const id = selectedCamp.value.id
+    const apiPayload = mapCampFormToApi(payload)
+
+    await apiUpdateCamp(id, apiPayload)
+
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(id)
+    step.value = 'camp-menu'
+  } catch (e) {
+    console.error('UPDATE CAMP ERROR:', e)
+    console.error('message:', e?.message)
+    console.error('status:', e?.status)
+    console.error('data:', e?.data) // <-- important
+    alert(e?.message ?? 'Erreur update camp')
+  }
+}
+
+/* ======================================================
+   STATUS actions (publish / archive)
+====================================================== */
+async function publishCamp() {
   if (!selectedCamp.value) return
 
   if (anotherPublishedCamp.value) {
@@ -187,68 +296,81 @@ function publishCamp() {
     return
   }
 
-  selectedCamp.value.status = 'published'
-  console.log('Camp publié', selectedCamp.value)
-}
-
-function archiveCamp() {
-  if (!selectedCamp.value) return
-
-  selectedCamp.value.status = 'archived'
-  console.log('Camp archivé', selectedCamp.value)
-
-  // reset pour laisser le watch re-sélectionner si besoin
-  selectedCamp.value = null
-  step.value = 'events'
-}
-
-function deleteCamp() {
-  if (!selectedCamp.value) return
-
-  const ok = confirm(`Supprimer définitivement "${selectedCamp.value.title}" ?`)
-  if (!ok) return
-
-  camps.value = (camps.value ?? []).filter((c) => c.id !== selectedCamp.value.id)
-  selectedCamp.value = null
-
-  console.log('Camp supprimé')
-  step.value = 'events'
-}
-
-/**
- * Update camp (mock)
- */
-function onUpdateCamp(payload) {
-  if (!selectedCamp.value) return
-
-  selectedCamp.value.title = payload.name
-  selectedCamp.value.startDate = payload['start-date']
-  selectedCamp.value.endDate = payload['end-date']
-
-  selectedCamp.value.subStartDatetime = payload['subscription-start-date']
-    ? `${payload['subscription-start-date']}T00:00:00Z`
-    : null
-
-  selectedCamp.value.subEndDatetime = payload['subscription-deadline']
-    ? `${payload['subscription-deadline']}T23:59:59Z`
-    : null
-
-  if ('GPS-track' in payload) {
-    if (payload['GPS-track'] === null) {
-      selectedCamp.value.gpsTrack = {}
-    } else {
-      const file = payload['GPS-track']?.file
-      selectedCamp.value.gpsTrack = file ? { fileName: file.name } : {}
-    }
+  try {
+    const id = selectedCamp.value.id
+    await apiUpdateCamp(id, { status: 'published' })
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(id)
+  } catch (e) {
+    console.error(e)
+    alert(e?.message ?? 'Erreur publication camp')
   }
-
-  step.value = 'camp-menu'
 }
 
-/**
- * Create camp event (mock)
- */
-function onCreateCampEvent(payload) {
+async function archiveCamp() {
+  if (!selectedCamp.value) return
+
+  try {
+    const id = selectedCamp.value.id
+    await apiUpdateCamp(id, { status: 'archived' })
+    await campsStore.fetchCamps()
+
+    selectedCamp.value = null
+    selectedEvent.value = null
+    step.value = 'events'
+  } catch (e) {
+    console.error(e)
+    alert(e?.message ?? 'Erreur archivage camp')
+  }
+}
+
+/* ======================================================
+   DELETE camp (DELETE /camps/:id)
+====================================================== */
+function requestDeleteCamp() {
+  if (!selectedCamp.value) return
+  deleteDialogOpen.value = true
+}
+
+async function confirmDeleteCamp() {
+  if (!selectedCamp.value) return
+
+  deleteDialogLoading.value = true
+  try {
+    const id = selectedCamp.value.id
+    await apiDeleteCamp(id)
+    await campsStore.fetchCamps()
+
+    selectedCamp.value = null
+    selectedEvent.value = null
+    step.value = 'events'
+    deleteDialogOpen.value = false
+  } catch (e) {
+    console.error(e)
+    alert(e?.message ?? 'Erreur suppression camp')
+  } finally {
+    deleteDialogLoading.value = false
+  }
+}
+
+function cancelDeleteCamp() {
+  deleteDialogOpen.value = false
+}
+
+/* ======================================================
+   EVENTS (trainings) — persist auto
+====================================================== */
+const selectedEvent = ref(null) // { type: 'trainings', data: training }
+
+async function saveTrainingsToBackend() {
+  if (!selectedCamp.value) return
+  const id = selectedCamp.value.id
+  await apiUpdateCamp(id, { trainings: selectedCamp.value.trainings ?? [] })
+  await campsStore.fetchCamps()
+  resyncSelectedCampById(id)
+}
+
+async function onCreateCampEvent(payload) {
   if (!selectedCamp.value) return
 
   if (payload.type === 'trainings') {
@@ -275,20 +397,16 @@ function onCreateCampEvent(payload) {
     selectedCamp.value.trainings = [...selectedCamp.value.trainings, training]
   }
 
+  await saveTrainingsToBackend()
   step.value = 'camp-events'
 }
-
-/**
- * Edit camp event (trainings v1)
- */
-const selectedEvent = ref(null) // { type: 'trainings', data: training }
 
 function onOpenTraining(training) {
   selectedEvent.value = { type: 'trainings', data: training }
   step.value = 'camp-event-edit'
 }
 
-function onUpdateCampEvent(payload) {
+async function onUpdateCampEvent(payload) {
   if (!selectedCamp.value || !selectedEvent.value) return
 
   if (selectedEvent.value.type === 'trainings') {
@@ -312,10 +430,11 @@ function onUpdateCampEvent(payload) {
     selectedEvent.value.data = updated
   }
 
+  await saveTrainingsToBackend()
   step.value = 'camp-events'
 }
 
-function onDeleteCampEvent() {
+async function onDeleteCampEvent() {
   if (!selectedCamp.value || !selectedEvent.value) return
 
   if (selectedEvent.value.type === 'trainings') {
@@ -324,11 +443,14 @@ function onDeleteCampEvent() {
     selectedCamp.value.trainings = list.filter((t) => t.number !== old.number)
   }
 
+  await saveTrainingsToBackend()
   selectedEvent.value = null
   step.value = 'camp-events'
 }
 
-//Archive section
+/* ======================================================
+   ARCHIVES
+====================================================== */
 const archiveYear = ref(null)
 const archiveYearCamps = ref([])
 const selectedArchiveEvent = ref(null)
@@ -344,14 +466,13 @@ function onOpenArchiveEvent(ev) {
   step.value = 'archive-event-details'
 }
 
-//User
+/* ======================================================
+   USER delete callback
+====================================================== */
 function onUserDeleted(deletedId) {
-  // optionnel: si tu veux être sûr
   if (selectedUser.value && String(selectedUser.value.id) === String(deletedId)) {
     selectedUser.value = null
   }
-
-  // revenir à la liste
   step.value = 'members'
 }
 </script>
@@ -520,9 +641,27 @@ function onUserDeleted(deletedId) {
             Archiver le camp
           </BaseButton>
 
-          <BaseButton type="button" variant="tertiary" size="md" :block="true" @click="deleteCamp">
+          <BaseButton
+            type="button"
+            variant="tertiary"
+            size="md"
+            :block="true"
+            @click="requestDeleteCamp"
+          >
             Supprimer le camp
           </BaseButton>
+          <ConfirmDialog
+            :open="deleteDialogOpen"
+            title="Supprimer le camp"
+            :message="`Supprimer définitivement « ${selectedCamp?.title ?? 'ce camp'} » ? Cette action est irréversible.`"
+            confirm-text="Supprimer"
+            cancel-text="Annuler"
+            :dangerous="true"
+            :loading="deleteDialogLoading"
+            @confirm="confirmDeleteCamp"
+            @cancel="cancelDeleteCamp"
+            @close="cancelDeleteCamp"
+          />
         </div>
       </section>
     </template>
@@ -553,7 +692,7 @@ function onUserDeleted(deletedId) {
       <section class="section">
         <CampForm
           mode="edit"
-          :initial-values="selectedCamp"
+          :initial-values="selectedCampForForm"
           :existing-gpx="selectedCamp?.gpsTrack ?? null"
           @submit="onUpdateCamp"
         />
