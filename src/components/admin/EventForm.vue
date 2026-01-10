@@ -87,10 +87,19 @@ watch(
     form.elevationGain = v.elevationGain != null ? String(v.elevationGain) : ''
     form.elevationLoss = v.elevationLoss != null ? String(v.elevationLoss) : ''
 
+    const rawResp =
+      v.responsiblePerson ??
+      v.responsiblePersonId ??
+      v.responsiblePerson?._id ??
+      v.responsiblePerson?.id ??
+      v.responsiblePersonId?._id ??
+      v.responsiblePersonId?.id ??
+      ''
+
     form.responsiblePerson =
-      typeof v.responsiblePerson === 'object' && v.responsiblePerson !== null
-        ? (v.responsiblePerson.id ?? v.responsiblePerson._id ?? '')
-        : (v.responsiblePerson ?? '')
+      typeof rawResp === 'object' && rawResp !== null
+        ? (rawResp.id ?? rawResp._id ?? '')
+        : (rawResp ?? '')
 
     // stage
     form.startPoint = v.startPoint ?? ''
@@ -98,6 +107,11 @@ watch(
   },
   { immediate: true },
 )
+function onPickResponsible(v) {
+  // EventDropdown peut renvoyer un id (string) OU un objet { key, ... }
+  form.responsiblePerson =
+    typeof v === 'object' && v !== null ? (v.key ?? v.value ?? v.id ?? v._id ?? '') : (v ?? '')
+}
 
 /** Quels champs afficher ? */
 const visible = computed(() => {
@@ -244,7 +258,7 @@ const today = computed(() => {
         <EventDropdown
           :model-value="form.type"
           :options="typeOptions"
-          @update:modelValue="$emit('update:type', $event)"
+          @update:modelValue="onPickResponsible"
         />
       </div>
 

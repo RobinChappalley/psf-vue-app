@@ -121,17 +121,6 @@ function displayUserNameById(id) {
   return name || String(id)
 }
 
-// Helper robuste si selon les endpoints tu reçois responsiblePersonId ou responsiblePerson
-function getResponsibleId(ev) {
-  return (
-    ev?.responsiblePersonId ??
-    ev?.responsiblePerson ??
-    ev?.responsiblePerson?._id ??
-    ev?.responsiblePerson?.id ??
-    null
-  )
-}
-
 /* ======================================================
    CAMPS computed
 ====================================================== */
@@ -440,8 +429,9 @@ async function onCreateCampEvent(payload) {
     distance: payload.distance ?? null,
     elevationGain: payload.elevationGain ?? null,
     elevationLoss: payload.elevationLoss ?? null,
-    // ✅ unifié
-    responsiblePersonId: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? null,
+
+    // ✅ BACKEND CREATE attend responsiblePersonId
+    responsiblePersonId: payload.responsiblePerson ?? null,
   }
 
   try {
@@ -481,7 +471,6 @@ async function onUpdateCampEvent(payload) {
     return
   }
 
-  // patch: n'envoie que ce que tu modifies
   const apiPayload = {
     date: payload.date ?? undefined,
     trainGoingTime: payload.trainGoingTime ?? undefined,
@@ -493,14 +482,13 @@ async function onUpdateCampEvent(payload) {
     elevationGain: payload.elevationGain ?? undefined,
     elevationLoss: payload.elevationLoss ?? undefined,
 
-    // ✅ unifié: même champ qu'en POST
-    responsiblePersonId: payload.responsiblePerson?.value ?? payload.responsiblePerson ?? undefined,
+    // ✅ BACKEND UPDATE attend responsiblePerson
+    responsiblePerson: payload.responsiblePerson ?? undefined,
   }
 
   const updatedRes = await apiUpdateTraining(campId, trainingId, apiPayload)
   const updated = updatedRes?.training ?? updatedRes
 
-  // resync local
   const list = selectedCamp.value.trainings ?? []
   selectedCamp.value.trainings = list.map((t) =>
     String(getTrainingId(t)) === String(trainingId) ? updated : t,

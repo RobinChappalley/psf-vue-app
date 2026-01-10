@@ -13,12 +13,6 @@ const props = defineProps({
   displayUserName: { type: Function, required: false },
 })
 
-function yesNo(v) {
-  if (v === true) return 'oui'
-  if (v === false) return 'non'
-  return '—'
-}
-
 function fmt(value) {
   if (value === null || value === undefined || value === '') return '—'
   if (Array.isArray(value)) return value.length ? value.join(', ') : '—'
@@ -65,17 +59,15 @@ function fmtParticipants(participants) {
    RESPONSABLE — helpers
 ====================================================== */
 function getResponsibleId(d) {
-  // selon ce que renvoie ton backend / normalizer:
-  // - responsiblePersonId (recommandé)
-  // - responsiblePerson (ancien)
-  // - populate: { responsiblePersonId: { _id, firstname, lastname } }
+  // Standard backend: responsiblePerson (id)
+  // Supporte aussi: responsiblePersonId (legacy) et populate (objet user)
   return (
-    d?.responsiblePersonId ??
     d?.responsiblePerson ??
-    d?.responsiblePersonId?._id ??
-    d?.responsiblePersonId?.id ??
     d?.responsiblePerson?._id ??
     d?.responsiblePerson?.id ??
+    d?.responsiblePersonId ??
+    d?.responsiblePersonId?._id ??
+    d?.responsiblePersonId?.id ??
     null
   )
 }
