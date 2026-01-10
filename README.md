@@ -1,17 +1,65 @@
 # psf-vue-app
 
-## Production
+Application frontend Vue.js 3 avec Vite.
 
-1. Copier l'exemple du .env de production:
+## Prérequis
+
+- Node.js `^20.19.0` ou `>=22.12.0`
+- npm
+
+## Installation
+
+1. Cloner le repository :
 
 ```bash
-cp .env.prod.example .env.prod
+git clone https://github.com/RobinChappalley/psf-vue-app
+cd psf-vue-app
 ```
 
-2. Changer les placeholders par les vraies valeurs
-
-3. Pour intégrer directement les variables d'environnement créées au point 2 , il faut utiliser la commande suivante :
+2. Installer les dépendances :
 
 ```bash
-docker-compose --env-file .env.prod -f docker-compose.prod.yaml up --build
+npm install
 ```
+
+## Lancer le projet
+
+### Mode développement
+
+Lance un serveur de développement avec hot-reload :
+
+```bash
+npm run dev
+```
+
+L'application sera accessible sur `http://localhost:5173` (par défaut).
+
+### Build de production
+
+Compile et minifie les fichiers pour la production :
+
+```bash
+npm run build
+```
+
+### Prévisualiser le build
+
+Permet de tester le build de production localement :
+
+```bash
+npm run preview
+```
+
+## Formatage du code
+
+Le projet utilise Prettier pour le formatage :
+
+```bash
+npm run format
+```
+
+## Stack technique
+
+- [Vue.js 3](https://vuejs.org/)
+- [Vue Router](https://router.vuejs.org/)
+- [Vite](https://vitejs.dev/)
