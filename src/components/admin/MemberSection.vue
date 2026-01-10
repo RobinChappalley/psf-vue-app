@@ -1,19 +1,27 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { authStore } from '@/stores/auth'
+import { computed, onMounted, ref, watch } from 'vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import RoleDropdown from '@/components/ui/RoleDropdown.vue'
+import { membersStore } from '@/stores/members'
 
 const emit = defineEmits(['openUser'])
 
-// --- state UI ---
-const search = ref('')
-const selectedRole = ref('all') // all | admin | parent | accompagnant | child
+const roleModel = computed({
+  get: () => membersStore.roleFilter.value,
+  set: (v) => (membersStore.roleFilter.value = v),
+})
+const searchModel = computed({
+  get: () => membersStore.search.value,
+  set: (v) => (membersStore.search.value = v),
+})
+
+// tri local (pas besoin de le mettre dans le store)
 const sortDir = ref('az') // az | za
 
-// --- data ---
-const users = computed(() => authStore.allUsers.value ?? [])
+function toggleSort() {
+  sortDir.value = sortDir.value === 'az' ? 'za' : 'az'
+}
 
 function userTitle(u) {
   return `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim() || '(Sans nom)'
@@ -21,13 +29,12 @@ function userTitle(u) {
 
 function roleLabel(u) {
   const roles = u?.role ?? []
-  // affichage plus joli (optionnel)
   return roles
     .map((r) => {
       if (r === 'admin') return 'Admin'
       if (r === 'parent') return 'Parent'
       if (r === 'accompagnant') return 'Accompagnant'
-      if (r === 'child') return 'Enfant'
+      if (r === 'enfant') return 'Enfant'
       return r
     })
     .join(', ')
@@ -38,63 +45,81 @@ const roleOptions = [
   { value: 'admin', label: 'Admins' },
   { value: 'parent', label: 'Parents' },
   { value: 'accompagnant', label: 'Accompagnants' },
-  { value: 'child', label: 'Enfants' },
+  { value: 'enfant', label: 'Enfants' },
 ]
 
-// --- filtering + sorting ---
+// data backend (store)
+const users = computed(() => membersStore.users.value ?? [])
+const loading = computed(() => membersStore.loading.value)
+const error = computed(() => membersStore.error.value)
+
+// fetch initial
+onMounted(() => {
+  membersStore.fetchUsers().catch(() => {})
+})
+
+// debounce fetch quand search/role changent
+let t = null
+watch([membersStore.search, membersStore.roleFilter], () => {
+  if (t) clearTimeout(t)
+  t = setTimeout(() => {
+    membersStore.fetchUsers().catch(() => {})
+  }, 250)
+})
+
+// tri local seulement
 const filteredUsers = computed(() => {
-  const q = search.value.trim().toLowerCase()
-  const role = selectedRole.value
+  const q = (searchModel.value ?? '').trim().toLowerCase()
 
-  // 1) filtre texte + rôle
-  let list = users.value.filter((u) => {
-    const roles = u?.role ?? []
-    const matchRole = role === 'all' ? true : roles.includes(role)
+  let list = Array.isArray(users.value) ? users.value.slice() : []
 
-    const haystack = [u.firstname, u.lastname].filter(Boolean).join(' ').toLowerCase()
+  // 🔎 filtre texte (prénom/nom)
+  if (q) {
+    list = list.filter((u) => {
+      const haystack = [u.firstname, u.lastname].filter(Boolean).join(' ').toLowerCase()
+      return haystack.includes(q)
+    })
+  }
 
-    const matchSearch = !q ? true : haystack.includes(q)
-    return matchRole && matchSearch
-  })
-
-  // 2) tri A-Z / Z-A
-  list = list.slice().sort((a, b) => {
+  // ↕️ tri A-Z / Z-A
+  return list.sort((a, b) => {
     const an = `${a.lastname ?? ''} ${a.firstname ?? ''}`.trim().toLowerCase()
     const bn = `${b.lastname ?? ''} ${b.firstname ?? ''}`.trim().toLowerCase()
     return sortDir.value === 'az' ? an.localeCompare(bn) : bn.localeCompare(an)
   })
-
-  return list
 })
 </script>
 
 <template>
   <AdminPanel
     title="MEMBRES"
-    :is-empty="filteredUsers.length === 0"
-    empty-text="Aucun membre ne correspond à votre recherche"
+    :is-empty="!loading && filteredUsers.length === 0"
+    :empty-text="
+      error
+        ? 'Erreur lors du chargement des membres'
+        : 'Aucun membre ne correspond à votre recherche'
+    "
   >
     <!-- TOOLS -->
     <template #tools>
       <div class="tools">
         <input
-          v-model="search"
+          v-model="searchModel"
           type="search"
           class="control search"
           placeholder="Rechercher (nom ou prénom...)"
         />
 
         <div class="row">
-          <RoleDropdown v-model="selectedRole" :options="roleOptions" />
+          <RoleDropdown v-model="roleModel" :options="roleOptions" />
 
-          <button
-            type="button"
-            class="control btn"
-            @click="sortDir = sortDir === 'az' ? 'za' : 'az'"
-          >
+          <button type="button" class="control btn" @click="toggleSort">
             Nom ({{ sortDir === 'az' ? 'A-Z' : 'Z-A' }})
           </button>
         </div>
+
+        <p v-if="loading" class="hint">Chargement…</p>
+        <p v-else-if="error" class="hint error">{{ error.message ?? 'Erreur inconnue' }}</p>
       </div>
     </template>
 
@@ -109,7 +134,6 @@ const filteredUsers = computed(() => {
       @click="emit('openUser', u)"
     />
 
-    <!-- HINT (optionnel) -->
     <template #hint> Total : {{ filteredUsers.length }} membre(s) </template>
   </AdminPanel>
 </template>
@@ -122,11 +146,10 @@ const filteredUsers = computed(() => {
 
 .row {
   display: grid;
-  grid-template-columns: 1fr 1fr; /* 2 champs égaux */
+  grid-template-columns: 1fr 1fr;
   gap: var(--sp-2);
 }
 
-/* Style commun (select + button + search) */
 .control {
   height: 44px;
   width: 100%;
@@ -139,7 +162,6 @@ const filteredUsers = computed(() => {
   font: inherit;
 }
 
-/* Bouton tri */
 .btn {
   cursor: pointer;
   text-align: center;
@@ -148,56 +170,17 @@ const filteredUsers = computed(() => {
   opacity: 0.85;
 }
 
-/* Search (si tu la gardes) */
 .search {
   padding: 0 14px;
 }
 
-/* Select custom chevron */
-.select-wrap {
-  position: relative;
+.hint {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 
-.select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  padding-right: 42px; /* place pour le chevron */
-}
-
-/* Chevron en CSS */
-.select-wrap::after {
-  content: '';
-  position: absolute;
-  right: 16px;
-  top: 50%;
-  width: 8px;
-  height: 8px;
-  border-right: 2px solid currentColor;
-  border-bottom: 2px solid currentColor;
-  transform: translateY(-60%) rotate(45deg);
-  pointer-events: none;
-  opacity: 0.65;
-}
-
-.search,
-.select,
-.sort {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 0.6rem 0.75rem;
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-input);
-  background: var(--c-bg);
-  color: inherit;
-}
-
-.sort {
-  cursor: pointer;
-  text-align: center;
-}
-
-.sort:active {
-  opacity: 0.85;
+.error {
+  opacity: 1;
 }
 </style>
