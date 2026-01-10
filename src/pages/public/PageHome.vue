@@ -1,25 +1,68 @@
 <script setup>
+import { ref, computed, onMounted } from 'vue'
 import HomeHero from '@/components/home/HomeHero.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import PeopleBubble from '@/components/home/PeopleBubble.vue'
 import BaseCard from '@/components/home/BaseCard.vue'
-import { useEventsFeed } from '@/composables/useEventsFeed'
 import CampHighlight from '@/components/events/CampHighlight.vue'
+import { apiFetch } from '@/services/apiFetch'
 
 const people = ['Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin']
-const { nextOpenCamp } = useEventsFeed({
-  initialEvents: [
-    // pour tester
-    {
-      id: 'c1',
-      type: 'camp',
-      name: 'Camp 2026',
-      userStatus: 'none',
-      'start-date': '2026-07-12',
-      'end-date': '2026-07-31',
-      'subscription-deadline-date-time': '2026-06-15T23:59:00',
-    },
-  ],
+
+// --- Camp public (API) ---
+const loadingCamp = ref(false)
+const campError = ref(null)
+const campEvent = ref(null)
+
+function toTime(x) {
+  const t = new Date(x).getTime()
+  return Number.isNaN(t) ? null : t
+}
+
+function campToEvent(camp) {
+  if (!camp) return null
+  return {
+    id: camp.id ?? camp._id,
+    type: 'camp',
+    name: camp.title,
+    userStatus: 'none',
+    'start-date': camp.startDate,
+    'end-date': camp.endDate,
+    'subscription-deadline-date-time': camp.subEndDatetime,
+  }
+}
+
+onMounted(async () => {
+  loadingCamp.value = true
+  campError.value = null
+  campEvent.value = null
+
+  try {
+    const data = await apiFetch('/camps', { method: 'GET' })
+    const list = Array.isArray(data) ? data : []
+
+    const now = Date.now()
+
+    // seulement published + startDate dans le futur (ou aujourd'hui)
+    const candidates = list
+      .filter((c) => c?.status === 'published')
+      .map((c) => ({ camp: c, start: toTime(c.startDate) }))
+      .filter((x) => x.start !== null && x.start >= now)
+      .sort((a, b) => a.start - b.start)
+      .map((x) => x.camp)
+
+    const next = candidates[0] || null
+    campEvent.value = campToEvent(next)
+
+    // Debug (tu peux enlever)
+    // console.log('PublicHome next published future camp:', next)
+  } catch (e) {
+    campError.value = e?.message ?? 'Erreur chargement camp'
+    campEvent.value = null
+    console.warn('PublicHome: cannot load camps:', e)
+  } finally {
+    loadingCamp.value = false
+  }
 })
 </script>
 
@@ -46,8 +89,8 @@ const { nextOpenCamp } = useEventsFeed({
       <PeopleBubble v-for="(name, index) in people" :key="index" :name="name" />
     </div>
   </section>
-  <section v-if="nextOpenCamp">
-    <CampHighlight :event="nextOpenCamp" />
+  <section v-if="campEvent">
+    <CampHighlight :event="campEvent" />
   </section>
 
   <section class="section whythisapp">
