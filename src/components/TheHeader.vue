@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import AppIcone from '@/components/AppIcone.vue'
+import ThePushSubscribe from './ThePushSubscribe.vue'
 
 const router = useRouter()
 
@@ -16,6 +17,8 @@ function goToLogin() {
 <template>
   <header class="app-header">
     <img src="/src/assets/img/psf-logo.svg" alt="Pieds Sans Frontières" class="logo" />
+
+    <ThePushSubscribe />
 
     <button v-if="!isAuthed" class="login-btn" @click="goToLogin" aria-label="Se connecter">
       <AppIcone name="profile" />
