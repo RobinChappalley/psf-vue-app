@@ -1,6 +1,7 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { authStore } from '@/stores/auth'
+import { hikesStore } from '@/stores/hikes'
 
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -44,15 +45,34 @@ const displayEmail = computed(() => {
   return me.value.email || '—'
 })
 
-const displayHikesCount = computed(() => {
-  if (!me.value) return ''
+// Compte les hikes de l'utilisateur connecté
+const userHikesCount = computed(() => {
+  if (!me.value) return 0
+  const myId = me.value.id ?? me.value._id
+  if (!myId) return 0
 
-  const count = me.value.hikesCount || 0
+  return hikesStore.hikes.value.filter((hike) => {
+    const hikeUserId = hike.user?.id ?? hike.user?._id ?? hike.user
+    return String(hikeUserId) === String(myId)
+  }).length
+})
+
+const displayHikesCount = computed(() => {
+  const count = userHikesCount.value
 
   if (count === 0) return '0 randonnée publiée'
   if (count === 1) return '1 randonnée publiée'
 
   return `${count} randonnées publiées`
+})
+
+// Charger les hikes au montage pour le compteur
+onMounted(async () => {
+  try {
+    await hikesStore.ensureHikesLoaded()
+  } catch (e) {
+    // Silently fail - le compteur restera à 0
+  }
 })
 
 //Source de vérité enfants = store (API)
