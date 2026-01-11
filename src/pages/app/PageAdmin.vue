@@ -22,6 +22,7 @@ import {
 
 //API items
 import { getItems as apiGetItems } from '@/services/itemsApi'
+import { getCampItems, addCampItem, deleteCampItem } from '@/services/campItemsApi'
 
 // Components
 import DashboardCard from '@/components/admin/DashboardCard.vue'
@@ -274,6 +275,74 @@ async function fetchAvailableItems() {
     availableItems.value = []
   } finally {
     itemsLoading.value = false
+  }
+}
+
+const activeCampItemsModel = computed({
+  get() {
+    const list = selectedCamp.value?.itemsList ?? []
+    return (Array.isArray(list) ? list : [])
+      .map((x) => ({
+        item_id: String(x?.item?._id ?? x?.item ?? x?.item_id ?? ''),
+      }))
+      .filter((x) => x.item_id)
+  },
+  set(next) {
+    if (!selectedCamp.value) return
+    const ids = (Array.isArray(next) ? next : [])
+      .map((x) => String(x?.item_id ?? ''))
+      .filter(Boolean)
+
+    // on garde le shape backend local (quantity forcée à 1)
+    selectedCamp.value.itemsList = ids.map((id) => ({
+      item: id,
+      quantity: 1,
+    }))
+  },
+})
+
+async function onSaveCampItems() {
+  try {
+    if (!selectedCamp.value) throw new Error('selectedCamp is null')
+    const campId = selectedCamp.value.id ?? selectedCamp.value._id
+    if (!campId) throw new Error('campId missing on selectedCamp')
+
+    // ids désirés (ce que l’UI veut)
+    const desiredIds = new Set(
+      (selectedCamp.value.itemsList ?? [])
+        .map((x) => String(x?.item?._id ?? x?.item ?? x?.item_id ?? ''))
+        .filter(Boolean),
+    )
+
+    // ids actuels (DB)
+    const current = await getCampItems(campId)
+    const currentList = Array.isArray(current) ? current : (current?.itemsList ?? current)
+
+    const currentIds = new Set(
+      (Array.isArray(currentList) ? currentList : [])
+        .map((x) => String(x?.item?._id ?? x?.item ?? x?.item_id ?? ''))
+        .filter(Boolean),
+    )
+
+    const toAdd = [...desiredIds].filter((id) => !currentIds.has(id))
+    const toRemove = [...currentIds].filter((id) => !desiredIds.has(id))
+
+    console.log('[camp items] desiredIds:', [...desiredIds])
+    console.log('[camp items] currentIds:', [...currentIds])
+    console.log('[camp items] toAdd:', toAdd)
+    console.log('[camp items] toRemove:', toRemove)
+
+    // Apply
+    await Promise.all([
+      ...toAdd.map((itemId) => addCampItem(campId, itemId)),
+      ...toRemove.map((itemId) => deleteCampItem(campId, itemId)),
+    ])
+
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(campId)
+  } catch (e) {
+    console.error('onSaveCampItems ERROR:', e)
+    alert(e?.message ?? 'Erreur enregistrement matériel')
   }
 }
 
@@ -896,23 +965,13 @@ async function onUserUpdated(updatedUser) {
             </p>
 
             <CampItemsPicker
-              v-model="activeCampItemsModel"
               :items="availableItems"
-              title="Matériel"
+              v-model="activeCampItemsModel"
+              title="Matériel pour le camp"
               :defaultOpen="true"
             />
-          </template>
 
-          <template #actions>
-            <BaseButton
-              variant="primary"
-              size="md"
-              :block="true"
-              :disabled="!activeCamp"
-              @click="onSaveCampItems"
-            >
-              Enregistrer
-            </BaseButton>
+            <BaseButton @click="onSaveCampItems"> Enregistrer le matériel </BaseButton>
           </template>
         </AdminPanel>
       </section>
