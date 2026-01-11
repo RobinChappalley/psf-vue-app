@@ -58,7 +58,14 @@ function onFileChange(e) {
 
 async function submitForm() {
   try {
+    const userId = authStore.getUserId(authStore.user.value)
+    if (!userId) {
+      console.error('Utilisateur non connecté')
+      return
+    }
+
     const formData = new FormData()
+    formData.append('user', userId)
     formData.append('content', form.description)
     if (form.imageFile) {
       formData.append('image', form.imageFile)
