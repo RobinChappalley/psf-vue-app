@@ -2,7 +2,9 @@ import { apiFetch } from '@/services/apiFetch'
 
 function normalizeUser(u) {
   if (!u || typeof u !== 'object') return u
-  return { ...u, id: u.id ?? u._id }
+  const derivedHasPaid =
+    u.hasPaid ?? u.participationHasPaid ?? u.participationInfo?.hasPaid ?? false
+  return { ...u, id: u.id ?? u._id, hasPaid: derivedHasPaid }
 }
 
 function normalizeUsersResponse(res) {
