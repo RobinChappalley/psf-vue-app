@@ -4,7 +4,6 @@ import { authStore } from '@/stores/auth'
 import { campsStore } from '@/stores/camps'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { getUser as apiGetUser } from '@/services/usersApi'
-import { getItems as apiGetItems } from '@/services/itemsApi'
 
 // API Camp
 import {
@@ -260,9 +259,7 @@ function openCampCreate() {
 /* ======================================================
    ITEMS (matériel) + AUTO SAVE
 ====================================================== */
-const availableItems = ref([])
 const itemsLoading = ref(false)
-const itemsError = ref(null)
 
 async function fetchAvailableItems() {
   itemsLoading.value = true
