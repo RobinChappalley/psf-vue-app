@@ -33,7 +33,6 @@ function hydrateFromUser(u) {
   form.address.country = u?.address?.country ?? ''
 }
 
-// init + si user change
 watch(
   () => props.user,
   (u) => hydrateFromUser(u),
@@ -150,7 +149,6 @@ function onSubmit() {
 </template>
 
 <style scoped>
-/* --- Layout page --- */
 .wrap {
   padding: var(--sp-3);
   width: 100%;
@@ -164,13 +162,11 @@ function onSubmit() {
   color: var(--c-text);
 }
 
-/* --- Card (le form) --- */
 .card {
   background: var(--c-surface);
   padding: var(--sp-3);
 }
 
-/* --- Fields --- */
 .field {
   margin-bottom: var(--sp-2);
 }
@@ -181,7 +177,7 @@ label {
   font-size: var(--fs-caption);
   line-height: 1.2;
   margin-bottom: 0.35rem;
-  color: rgba(38, 38, 24, 0.75); /* basé sur --c-text */
+  color: var(--c-bg-dark);
 }
 
 input {
@@ -201,12 +197,12 @@ input {
 }
 
 input::placeholder {
-  color: rgba(38, 38, 24, 0.45);
+  color: var(--nav-inactive);
 }
 
 input:focus {
   border-color: var(--c-info);
-  box-shadow: 0 0 0 3px rgba(143, 167, 195, 0.25); /* basé sur --c-info */
+  box-shadow: 0 0 0 3px var(--c-info);
 }
 
 /* --- Grid postal code + city --- */

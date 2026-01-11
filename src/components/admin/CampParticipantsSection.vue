@@ -11,7 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(['openUser'])
 
-const filter = ref('all') // 'all' | 'paid' | 'pending'
+const filter = ref('all')
 const loading = ref(false)
 const error = ref(null)
 const users = ref([])
@@ -27,7 +27,6 @@ const hasPaidParam = computed(() => {
 async function fetchUsers() {
   if (!campId.value) {
     users.value = []
-    console.log('campId', campId.value, 'filter', filter.value, 'hasPaidParam', hasPaidParam.value)
 
     return
   }
@@ -38,24 +37,14 @@ async function fetchUsers() {
   try {
     users.value = await getUsers({
       campId: campId.value,
-      hasPaid: hasPaidParam.value, // true | false | null
+      hasPaid: hasPaidParam.value,
     })
   } catch (e) {
-    console.error('FETCH CAMP USERS ERROR:', e)
     error.value = e
     users.value = []
   } finally {
     loading.value = false
   }
-  console.log(
-    'hasPaid fields:',
-    users.value.map((u) => ({
-      id: u.id,
-      hasPaid: u.hasPaid,
-      participationHasPaid: u.participationInfo?.hasPaid,
-      type: typeof u.hasPaid,
-    })),
-  )
 }
 
 watch(

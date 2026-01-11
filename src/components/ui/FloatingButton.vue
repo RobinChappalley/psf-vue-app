@@ -3,10 +3,10 @@ import { computed } from 'vue'
 import AppIcone from '@/components/AppIcone.vue'
 
 const props = defineProps({
-  variant: { type: String, default: 'primary' }, // primary | secondary | tertiary
-  size: { type: String, default: 'md' }, // sm | md | lg
+  variant: { type: String, default: 'primary' },
+  size: { type: String, default: 'md' },
   icon: { type: String, required: true },
-  as: { type: String, default: 'button' }, // button | link
+  as: { type: String, default: 'button' },
   to: { type: Object, default: null },
   type: { type: String, default: 'button' },
   disabled: { type: Boolean, default: false },
@@ -28,18 +28,18 @@ const classes = computed(() => ['fab', `fab--${props.variant}`, `fab--${props.si
 <style scoped>
 .fab {
   position: fixed;
-  bottom: 80px; /* au-dessus de la navbar (ajuste selon la hauteur de la navbar) */
+  bottom: 80px;
   right: 1.5rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px var(--shadow-sm);
   transition:
     transform 0.12s ease,
     opacity 0.12s ease;
-  z-index: 1000; /* toujours au-dessus de la page */
+  z-index: 1000;
 }
 
 /* Tailles */

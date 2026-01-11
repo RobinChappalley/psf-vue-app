@@ -43,13 +43,10 @@ const goToEvent = () => {
     return
   }
 
-  // 🔜 Plus tard: popup / modal selon type
+  //Plus tard: popup / modal selon type
   console.log('Popup info à faire plus tard pour:', props.event.type, props.event)
 }
 
-// ✅ rendre la card cliquable au clic (et accessible clavier)
-// - on ouvre les détails si inscrit + camp
-// - sinon, même comportement que le bouton
 function onCardClick() {
   // évite d’ouvrir si l’event n’a pas de date par ex.
   goToEvent()
@@ -63,7 +60,7 @@ function onKeydown(e) {
 }
 
 const cardClickable = computed(() => {
-  // tu peux mettre true pour tous, mais là on met cliquable si :
+  // on met cliquable si :
   // - camp inscrit (details)
   // - ou camp non inscrit (inscription page)
   return props.event.type === 'camp'
@@ -118,12 +115,11 @@ const cardClickable = computed(() => {
   margin-bottom: 1rem;
 }
 
-/* mini calendrier */
 .date {
   width: 56px;
   overflow: hidden;
   border-radius: var(--r-input);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--c-border);
   text-align: center;
 }
 

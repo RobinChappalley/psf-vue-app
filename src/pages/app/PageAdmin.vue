@@ -72,7 +72,6 @@ async function openUserDetails(u, fromStep) {
   try {
     selectedUser.value = id ? await apiGetUser(id) : u
   } catch (e) {
-    console.error('GET USER ERROR:', e)
     selectedUser.value = u
   }
 
@@ -275,7 +274,6 @@ async function fetchAvailableItems() {
       }))
       .filter((it) => it.id)
   } catch (e) {
-    console.error('GET ITEMS ERROR:', e)
     itemsError.value = e?.message ?? 'Erreur chargement items'
     availableItems.value = []
   } finally {
@@ -293,7 +291,7 @@ const activeCampItemsModel = computed({
       .filter((x) => x.item_id)
   },
   set(next) {
-    // ✅ IMPORTANT : next est le paramètre du setter
+    // IMPORTANT : next est le paramètre du setter
     if (!selectedCamp.value) return
 
     const cleanIds = (Array.isArray(next) ? next : [])
@@ -386,7 +384,6 @@ async function onSaveCampItems() {
     await campsStore.fetchCamps()
     resyncSelectedCampById(campId)
   } catch (e) {
-    console.error('onSaveCampItems ERROR:', e)
     alert(e?.message ?? 'Erreur enregistrement matériel')
   }
 }
@@ -419,10 +416,6 @@ async function onCreateCamp(payload) {
 
     step.value = 'camp-menu'
   } catch (e) {
-    console.error('CREATE CAMP ERROR:', e)
-    console.error('message:', e?.message)
-    console.error('status:', e?.status)
-    console.error('data:', e?.data)
     alert(e?.message ?? 'Erreur création camp')
   }
 }
@@ -443,10 +436,6 @@ async function onUpdateCamp(payload) {
     resyncSelectedCampById(id)
     step.value = 'camp-menu'
   } catch (e) {
-    console.error('UPDATE CAMP ERROR:', e)
-    console.error('message:', e?.message)
-    console.error('status:', e?.status)
-    console.error('data:', e?.data)
     alert(e?.message ?? 'Erreur update camp')
   }
 }
@@ -471,7 +460,6 @@ async function publishCamp() {
     await campsStore.fetchCamps()
     resyncSelectedCampById(id)
   } catch (e) {
-    console.error(e)
     alert(e?.message ?? 'Erreur publication camp')
   }
 }
@@ -488,7 +476,6 @@ async function archiveCamp() {
     selectedEvent.value = null
     step.value = 'events'
   } catch (e) {
-    console.error(e)
     alert(e?.message ?? 'Erreur archivage camp')
   }
 }
@@ -515,7 +502,6 @@ async function confirmDeleteCamp() {
     step.value = 'events'
     deleteDialogOpen.value = false
   } catch (e) {
-    console.error(e)
     alert(e?.message ?? 'Erreur suppression camp')
   } finally {
     deleteDialogLoading.value = false
@@ -551,12 +537,9 @@ async function onCreateCampEvent(payload) {
     await campsStore.fetchCamps()
     resyncSelectedCampById(campId)
 
-    // ✅ retour écran admin comme avant
+    // retour écran admin comme avant
     step.value = 'camp-events'
   } catch (e) {
-    console.error('CREATE TRAINING (GPX) ERROR:', e)
-    console.error('status:', e?.status)
-    console.error('data:', e?.data)
     alert(e?.message ?? 'Erreur création entraînement (GPX)')
   }
 }
@@ -590,7 +573,7 @@ async function onUpdateCampEvent(payload) {
     elevationGain: payload.elevationGain ?? undefined,
     elevationLoss: payload.elevationLoss ?? undefined,
 
-    // ✅ BACKEND UPDATE attend responsiblePerson
+    // BACKEND UPDATE attend responsiblePerson
     responsiblePerson: payload.responsiblePerson ?? undefined,
   }
 
@@ -682,9 +665,7 @@ async function onUserUpdated(updatedUser) {
     if (myId && updatedId && String(myId) === String(updatedId)) {
       await authStore.refreshMe().catch(() => {})
     }
-  } catch (e) {
-    console.error('onUserUpdated ERROR:', e)
-  }
+  } catch (e) {}
 }
 </script>
 
@@ -1116,7 +1097,7 @@ async function onUserUpdated(updatedUser) {
 .empty {
   margin: 0 0 var(--sp-3);
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--c-bg-dark);
 }
 
 .events-list {
@@ -1128,7 +1109,7 @@ async function onUserUpdated(updatedUser) {
 .hint {
   margin: 0.75rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--c-bg-dark);
 }
 
 .camp-panel {

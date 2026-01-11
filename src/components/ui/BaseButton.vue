@@ -2,15 +2,13 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  variant: { type: String, default: 'primary' }, // primary | secondary | tertiary
-  as: { type: String, default: 'button' }, // button | link
+  variant: { type: String, default: 'primary' },
+  as: { type: String, default: 'button' },
   to: { type: Object, default: null },
   type: { type: String, default: 'button' },
   disabled: { type: Boolean, default: false },
-
-  // ✅ nouveaux
-  size: { type: String, default: 'md' }, // sm | md | lg
-  block: { type: Boolean, default: false }, // full width
+  size: { type: String, default: 'md' },
+  block: { type: Boolean, default: false },
 })
 
 const classes = computed(() => [
@@ -51,7 +49,6 @@ const classes = computed(() => [
     opacity 120ms ease;
 }
 
-/* ✅ tailles (c’est ça qui uniformise partout) */
 .btn--sm {
   font-size: 0.875rem;
   padding: 0.5rem 0.75rem;
@@ -67,12 +64,10 @@ const classes = computed(() => [
   padding: 1rem 1.25rem;
 }
 
-/* ✅ full width */
 .btn--block {
   width: 100%;
 }
 
-/* Active / Disabled */
 .btn:active {
   transform: scale(0.98);
 }
@@ -82,7 +77,6 @@ const classes = computed(() => [
   cursor: not-allowed;
 }
 
-/* Variants */
 .btn--primary {
   background: var(--c-primary);
   color: var(--c-bg);

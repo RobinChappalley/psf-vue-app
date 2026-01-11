@@ -6,7 +6,7 @@ const props = defineProps({
   placeholder: { type: String, default: 'Tous les rôles' },
   options: {
     type: Array,
-    default: () => [], // [{ value, label }]
+    default: () => [],
   },
 })
 
@@ -117,7 +117,6 @@ onBeforeUnmount(() => {
   opacity: 0.6;
 }
 
-/* ✅ le menu absolute sort du flux (et z-index élevé) */
 .menu {
   position: absolute;
   left: 0;

@@ -24,6 +24,7 @@ function onKeydown(e) {
       <div class="bottom-sheet">
         <div class="header">
           <h3 class="title">{{ title }}</h3>
+
           <!-- Bouton fermeture via BaseButton -->
           <BaseButton variant="tertiary" size="sm" @click="emit('close')">✕</BaseButton>
         </div>
@@ -37,31 +38,28 @@ function onKeydown(e) {
 </template>
 
 <style scoped>
-/* Overlay semi-transparent */
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--c-bg-dark);
   display: grid;
-  place-items: end; /* bottom */
-  z-index: 1500; /* plus haut que le FloatingButton */
+  place-items: end;
+  z-index: 1500;
 }
 
-/* Bottom sheet pleine largeur */
 .bottom-sheet {
   width: 100%;
   height: auto;
   background: var(--c-bg);
   border-top-left-radius: var(--r-card);
   border-top-right-radius: var(--r-card);
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -4px 12px var(--shadow-sm);
   padding: 2rem 2rem 6rem 2rem;
   display: grid;
   gap: 1rem;
   animation: slideUp 0.3s ease;
 }
 
-/* Header avec titre et bouton */
 .header {
   display: flex;
   justify-content: space-between;
@@ -73,7 +71,6 @@ function onKeydown(e) {
   font-size: var(--fs-body);
 }
 
-/* Contenu scrollable si nécessaire */
 .content {
   max-height: 60vh;
   overflow-y: auto;

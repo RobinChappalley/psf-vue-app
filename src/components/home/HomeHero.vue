@@ -38,7 +38,6 @@ import BaseButton from '@/components/ui/BaseButton.vue'
   background-repeat: no-repeat;
 }
 
-/* voile sombre pour lisibilité */
 .overlay {
   min-height: 100vh;
   display: flex;

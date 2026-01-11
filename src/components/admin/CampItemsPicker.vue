@@ -124,12 +124,12 @@ const isOpen = ref(props.defaultOpen)
 
 .meta {
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--nav-inactive);
 }
 
 .chev {
   font-size: 1rem;
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--nav-inactive);
 }
 
 .panel {
@@ -172,26 +172,10 @@ const isOpen = ref(props.defaultOpen)
   align-items: center;
 }
 
-.qty-label {
-  font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
-}
-
-.qty {
-  width: 90px;
-  font-family: var(--font-body);
-  font-size: var(--fs-body);
-  padding: 0.45rem 0.55rem;
-  border-radius: var(--r-input);
-  border: 1px solid var(--c-border);
-  background: var(--c-bg);
-  color: var(--c-text);
-}
-
 .empty,
 .hint {
   margin: 0.5rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--nav-inactive);
 }
 </style>

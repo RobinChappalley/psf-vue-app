@@ -22,7 +22,7 @@ defineEmits(['click'])
       <p class="desc">{{ description }}</p>
     </div>
 
-    <!-- ✅ nouveau : zone droite -->
+    <!-- zone droite -->
     <div v-if="$slots.right" class="right">
       <slot name="right" />
     </div>
@@ -38,7 +38,7 @@ defineEmits(['click'])
       <p class="desc">{{ description }}</p>
     </div>
 
-    <!-- ✅ nouveau : zone droite -->
+    <!--zone droite -->
     <div v-if="$slots.right" class="right">
       <slot name="right" />
     </div>
@@ -93,7 +93,6 @@ button.card {
   overflow: hidden;
 }
 
-/* ✅ colonne droite */
 .right {
   display: flex;
   justify-content: flex-end;

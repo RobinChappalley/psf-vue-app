@@ -103,15 +103,13 @@ function openCreateChildFlow() {
   step.value = 'child-create'
 }
 
-const childCreateError = ref('')
-
 async function onSubmitChildData(payload) {
   await submitChild(payload)
 
-  // ✅ recharge depuis l’API (garanti à jour)
+  // recharge depuis l’API (garanti à jour)
   await authStore.fetchChildren()
 
-  // ✅ retour à la liste + rebuild
+  // retour à la liste + rebuild
   step.value = 'signup'
   signupPeople.value = buildSignupPeople()
 }
@@ -143,7 +141,7 @@ const buildSignupPeople = () => {
       key: `child-${cid}`,
       id: cid,
       firstname: c.firstname,
-      selected: already, // ✅ pré-sélection
+      selected: already,
       kind: 'child',
     }
   })
@@ -161,7 +159,7 @@ const buildSignupPeople = () => {
       key: `user-${uid}`,
       id: uid,
       firstname: currentUser.value.firstname || 'Moi',
-      selected: already, // ✅ pré-sélection
+      selected: already,
       kind: 'user',
     })
   }
@@ -169,7 +167,6 @@ const buildSignupPeople = () => {
   return list
 }
 
-// ✅ charge les enfants avant d'afficher l'écran signup
 const openSignup = async () => {
   signupError.value = ''
   signupLoading.value = true
@@ -219,19 +216,16 @@ const continueSignup = async () => {
         const next = Array.from(new Set([...existing, String(campId)]))
 
         const updated = await updateUser(p.id, { camps: next })
-        console.log('updated user camps:', updated.id, updated.camps)
       }),
     )
     const myId = currentUser.value?.id ?? currentUser.value?._id
     if (myId) {
       const freshMe = await getUser(myId)
-      console.log('fresh me camps:', freshMe.camps)
     }
 
     await authStore.refreshMe()
     step.value = 'confirm'
   } catch (e) {
-    console.error('CAMP SIGNUP ERROR:', e)
     campSignupError.value = e?.data?.message || e?.message || "Impossible d'inscrire au camp."
   } finally {
     campSignupLoading.value = false
@@ -367,7 +361,7 @@ const campId = computed(() => camp.value?.id ?? camp.value?._id ?? null)
       </section>
     </template>
 
-    <!-- ✅ NOUVEL ÉCRAN : création enfant -->
+    <!-- NOUVEL ÉCRAN : création enfant -->
     <template v-else-if="step === 'child-create'">
       <section class="section signup">
         <BackButton @click="closeChildCreate" />
@@ -545,7 +539,7 @@ p + p {
   height: 1.25rem;
   border-radius: 999px;
   background: var(--c-bg);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--c-border);
   transition: all 0.2s ease;
 }
 

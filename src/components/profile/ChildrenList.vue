@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 
 const props = defineProps({
-  // Liste d'enfants : [{ id, firstname, lastname? }]
   children: { type: Array, default: () => [] },
 })
 
@@ -43,7 +42,7 @@ const hasChildren = computed(() => (props.children?.length || 0) > 0)
   width: 100%;
   margin: 0 auto;
   padding: var(--sp-3);
-  padding-bottom: var(--sp-2); /* réduit seulement le bas */
+  padding-bottom: var(--sp-2);
   background: var(--c-surface);
   border-radius: var(--r-card);
   box-sizing: border-box;
@@ -85,7 +84,6 @@ const hasChildren = computed(() => (props.children?.length || 0) > 0)
   opacity: 0.7;
 }
 
-/* petit état vide */
 .empty {
   background: var(--c-surface);
   border-radius: var(--r-card);

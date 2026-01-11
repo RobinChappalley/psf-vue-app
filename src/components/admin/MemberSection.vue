@@ -16,7 +16,7 @@ const searchModel = computed({
   set: (v) => (membersStore.search.value = v),
 })
 
-// tri local (pas besoin de le mettre dans le store)
+// tri local
 const sortDir = ref('az') // az | za
 
 function toggleSort() {
@@ -73,7 +73,7 @@ const filteredUsers = computed(() => {
 
   let list = Array.isArray(users.value) ? users.value.slice() : []
 
-  // 🔎 filtre texte (prénom/nom)
+  // filtre texte (prénom/nom)
   if (q) {
     list = list.filter((u) => {
       const haystack = [u.firstname, u.lastname].filter(Boolean).join(' ').toLowerCase()
@@ -81,7 +81,7 @@ const filteredUsers = computed(() => {
     })
   }
 
-  // ↕️ tri A-Z / Z-A
+  // tri A-Z / Z-A
   return list.sort((a, b) => {
     const an = `${a.lastname ?? ''} ${a.firstname ?? ''}`.trim().toLowerCase()
     const bn = `${b.lastname ?? ''} ${b.firstname ?? ''}`.trim().toLowerCase()

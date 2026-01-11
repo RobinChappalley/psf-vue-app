@@ -8,7 +8,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 const emit = defineEmits(['submit'])
 
 const props = defineProps({
-  mode: { type: String, default: 'create' }, // "create" | "edit"
+  mode: { type: String, default: 'create' },
   initialValues: { type: Object, default: null },
 })
 

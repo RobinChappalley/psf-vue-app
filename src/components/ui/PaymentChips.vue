@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: String, default: 'all' }, // 'all' | 'paid' | 'pending'
+  modelValue: { type: String, default: 'all' },
 })
 const emit = defineEmits(['update:modelValue'])
 
@@ -66,7 +66,7 @@ function pick(key) {
   width: calc((100% - 0.6rem) / var(--n));
   border-radius: 999px;
   background: var(--c-border);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px var(--c-border);
 
   transform: translateX(calc(var(--i) * 100%));
   transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);

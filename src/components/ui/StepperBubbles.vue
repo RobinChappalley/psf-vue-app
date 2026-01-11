@@ -98,7 +98,7 @@ defineEmits(['go'])
   --ring: var(--c-secondary);
   --fill: var(--c-secondary);
   --num: var(--c-text);
-  --label: rgba(38, 38, 24, 0.65);
+  --label: var(--c-bg-dark);
   --line-color: rgba(38, 38, 24, 0.25);
   --line-style: solid;
 }

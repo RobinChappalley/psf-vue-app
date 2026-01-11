@@ -8,12 +8,12 @@ import EventForm from '@/components/admin/EventForm.vue'
 const props = defineProps({
   camp: { type: Object, required: true },
   allowedKeys: { type: Array, default: () => ['trainings'] }, // v1
-  responsibleOptions: { type: Array, default: () => [] }, // optionnel
+  responsibleOptions: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['submit'])
 
-const phase = ref('pick') // 'pick' | 'form'
+const phase = ref('pick')
 const selectedKey = ref('')
 
 const LABELS = {
@@ -59,7 +59,6 @@ function onUpdateType(newType) {
 }
 
 function onSubmit(payload) {
-  // payload contient { type: 'trainings', ... }
   emit('submit', payload)
 }
 </script>

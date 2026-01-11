@@ -7,19 +7,19 @@ import ConfirmDialog from '../ui/ConfirmDialog.vue'
 const emit = defineEmits(['submit', 'cancel', 'update:type', 'delete'])
 
 const props = defineProps({
-  mode: { type: String, default: 'create' }, // create | edit
-  type: { type: String, required: true }, // 'trainings' | 'stages' | 'information-evening' | 'generalMeeting' | 'fundraisings'
+  mode: { type: String, default: 'create' },
+  type: { type: String, required: true },
   initialValues: { type: Object, default: null },
   confirmDelete: { type: Boolean, default: true },
 
   // En edit: ici on passe gpsTrack du training (GeoJSON LineString), pas un fichier
   existingGpx: { type: Object, default: null },
 
-  // dropdown options (même format que ton EventDropdown)
-  typeOptions: { type: Array, default: () => [] }, // [{ key,label,enabled }]
+  // dropdown options
+  typeOptions: { type: Array, default: () => [] },
 
-  // pour dropdown responsable (training)
-  responsibleOptions: { type: Array, default: () => [] }, // [{ value,label }]
+  // pour dropdown responsable
+  responsibleOptions: { type: Array, default: () => [] },
 })
 
 const responsibleDropdownOptions = computed(() =>
@@ -204,7 +204,6 @@ const deleting = ref(false)
 function onDelete() {
   if (props.mode !== 'edit') return
 
-  // si tu veux garder l’option confirmDelete
   if (!props.confirmDelete) {
     emit('delete')
     return
@@ -217,7 +216,6 @@ function closeDeleteModal() {
 }
 
 async function confirmDelete() {
-  // Si tu veux juste émettre et laisser le parent gérer:
   closeDeleteModal()
   emit('delete')
 }
@@ -245,7 +243,7 @@ function onSubmit() {
         responsiblePerson: form.responsiblePerson || null,
       }
 
-      // ✅ GPX uniquement à la création
+      // GPX uniquement à la création
       if (props.mode === 'create' && gpxFile.value) {
         payload.gpsTrack = { file: gpxFile.value }
       }

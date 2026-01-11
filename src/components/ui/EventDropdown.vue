@@ -6,7 +6,7 @@ const props = defineProps({
   placeholder: { type: String, default: 'Choisir un évènement' },
   options: {
     type: Array,
-    default: () => [], // [{ key, label, enabled }]
+    default: () => [],
   },
 })
 
@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
 }
 
 .control .value:empty {
-  color: rgba(38, 38, 24, 0.45);
+  color: var(--c-bg-dark);
 }
 
 .chev {
@@ -145,11 +145,11 @@ onBeforeUnmount(() => {
 }
 
 .item + .item {
-  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  border-top: 1px solid var(--shadow-sm);
 }
 
 .item:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--shadow-sm);
 }
 
 .item.disabled {

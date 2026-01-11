@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import { authStore } from '@/stores/auth'
+
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 
-// ✅ on utilise tes services existants (apiFetch + JWT)
 import { updateUser as apiUpdateUser, deleteUser as apiDeleteUser } from '@/services/usersApi'
 
 const showDelete = ref(false)
@@ -21,7 +22,7 @@ const emit = defineEmits(['updated', 'deleted'])
    STATE
 ========================= */
 
-const mode = ref('view') // 'view' | 'role'
+const mode = ref('view')
 
 // rôles possibles (alignés backend)
 const roleOptions = [
@@ -31,8 +32,13 @@ const roleOptions = [
   { key: 'enfant', label: 'Enfant' },
 ]
 
-// ✅ id robuste (supporte id ou _id)
+// id robuste (supporte id ou _id)
 const userId = computed(() => props.user?.id ?? props.user?._id ?? null)
+const myId = computed(() => authStore.getUserId(authStore.user.value))
+const isSelf = computed(() => {
+  if (!userId.value || !myId.value) return false
+  return String(userId.value) === String(myId.value)
+})
 
 // draft des rôles
 const selectedRole = ref('')
@@ -142,13 +148,11 @@ async function confirmRoleEdit() {
     const updated = await apiUpdateUser(userId.value, { role: [selectedRole.value] })
     emit('updated', updated)
     mode.value = 'view'
-  } catch (e) {
-    console.error('confirmRoleEdit ERROR:', e)
-    // optionnel : tu peux afficher un message UI
-  }
+  } catch (e) {}
 }
 
 function openDeleteDialog() {
+  if (isSelf.value) return
   deleteError.value = ''
   showDelete.value = true
 }
@@ -160,13 +164,11 @@ async function removeUser() {
   try {
     if (!userId.value) throw new Error('Missing user id')
 
-    // ✅ delete via ton endpoint DELETE /users/:id
     await apiDeleteUser(userId.value)
 
     showDelete.value = false
     emit('deleted', userId.value)
   } catch (e) {
-    console.error(e)
     deleteError.value = "Impossible de supprimer l'utilisateur."
   } finally {
     deleting.value = false
@@ -175,9 +177,6 @@ async function removeUser() {
 </script>
 
 <template>
-  <!-- ========================= -->
-  <!-- MODE LECTURE -->
-  <!-- ========================= -->
   <template v-if="mode === 'view'">
     <AdminPanel :title="fullName.toUpperCase()" :is-empty="false">
       <div class="table">
@@ -194,9 +193,18 @@ async function removeUser() {
           Modifier le rôle
         </BaseButton>
 
-        <BaseButton variant="tertiary" :block="true" :disabled="deleting" @click="openDeleteDialog">
+        <BaseButton
+          variant="tertiary"
+          :block="true"
+          :disabled="deleting || isSelf"
+          @click="openDeleteDialog"
+        >
           Supprimer le membre
         </BaseButton>
+
+        <p v-if="isSelf" style="margin: 0.5rem 0 0; opacity: 0.7; font-size: 0.9em">
+          Tu ne peux pas supprimer ton propre compte.
+        </p>
       </template>
     </AdminPanel>
 
@@ -261,7 +269,6 @@ async function removeUser() {
   white-space: pre-line;
 }
 
-/* --- Role edit --- */
 .roles {
   display: grid;
   gap: 0.75rem;

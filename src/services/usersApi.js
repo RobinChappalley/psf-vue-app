@@ -42,7 +42,6 @@ export async function getUser(id) {
 }
 
 export async function updateUser(id, payload) {
-  console.log('PATCH payload sent to backend:', payload)
   const data = await apiFetch(`/users/${id}`, { method: 'PUT', body: payload })
   return normalizeUser(data?.user ?? data)
 }

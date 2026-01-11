@@ -124,6 +124,6 @@ const rows = computed(() => {
 }
 
 .value.pre {
-  white-space: pre-line; /* pour l'adresse sur plusieurs lignes */
+  white-space: pre-line;
 }
 </style>
