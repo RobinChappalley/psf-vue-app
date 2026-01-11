@@ -3,17 +3,16 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import EventsBlock from '@/components/events/EventsBlock.vue'
+import { authStore } from '@/stores/auth'
 
 const router = useRouter()
 
 // 1 = email, 2 = formulaire complet, 3 = confirmation
 const step = ref(1)
 
-// ✅ "DB" mock (plus tard: API)
-const existingUsers = ref([
-  { id: 'u1', email: 'jane.doe@example.com' },
-  { id: 'u2', email: 'robin@test.ch' },
-])
+// État pour la gestion des erreurs et du chargement
+const isLoading = ref(false)
+const errorMessage = ref('')
 
 // données du formulaire
 const form = ref({
@@ -30,19 +29,9 @@ const form = ref({
 // --- Helpers validation ---
 const normalizedEmail = computed(() => form.value.email.trim().toLowerCase())
 
-const emailExists = computed(() => {
-  if (!normalizedEmail.value) return false
-  return existingUsers.value.some(
-    (u) => (u.email || '').trim().toLowerCase() === normalizedEmail.value,
-  )
-})
-
-const canGoStep2 = computed(() => {
-  // email non vide + n'existe pas déjà
-  return !!normalizedEmail.value && !emailExists.value
-})
-
 const passwordOk = computed(() => (form.value.password || '').length >= 8)
+
+const canGoStep2 = computed(() => !!normalizedEmail.value)
 
 const isFormValid = computed(() => {
   return (
@@ -63,20 +52,50 @@ const goStep2 = () => {
   step.value = 2
 }
 
-const createAccount = () => {
+const createAccount = async () => {
   if (!isFormValid.value) return
 
-  // ✅ Simulation DB (plus tard: backend)
-  existingUsers.value.push({
-    id: String(Date.now()),
-    email: normalizedEmail.value,
-  })
+  isLoading.value = true
+  errorMessage.value = ''
 
-  step.value = 3
+  try {
+    const payload = {
+      email: normalizedEmail.value,
+      firstname: form.value.firstname.trim(),
+      lastname: form.value.lastname.trim(),
+      password: form.value.password,
+      address: {
+        street: form.value.address.trim(),
+        zip: form.value.zip.trim(),
+        city: form.value.city.trim(),
+        country: form.value.country.trim(),
+      },
+    }
+
+    await authStore.signup(payload)
+    step.value = 3
+  } catch (err) {
+    // Gestion des erreurs spécifiques
+    if (err.status === 409) {
+      errorMessage.value = 'Un compte existe déjà pour cette adresse e-mail.'
+    } else {
+      errorMessage.value = err.message || 'Erreur lors de la création du compte.'
+    }
+  } finally {
+    isLoading.value = false
+  }
 }
 
 const goHome = () => router.push({ name: 'public.home' })
-const goToCamp = () => router.push({ name: 'public.subscription' })
+const goToCamp = () => {
+  // Si l'utilisateur est connecté après l'inscription, aller vers l'app
+  if (authStore.isAuthenticated.value) {
+    router.push({ name: 'app.camp' })
+  } else {
+    router.push({ name: 'public.subscription' })
+  }
+}
+const goToLogin = () => router.push({ name: 'public.login' })
 </script>
 
 <template>
@@ -97,8 +116,6 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
             type="email"
             placeholder="jane.doe@example.com"
           />
-
-          <p v-if="emailExists" class="error">Un compte existe déjà pour cette adresse e-mail.</p>
 
           <BaseButton
             type="button"
@@ -199,12 +216,13 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
             variant="primary"
             size="md"
             :block="true"
-            :disabled="!isFormValid"
+            :disabled="!isFormValid || isLoading"
           >
-            Créer le compte
+            {{ isLoading ? 'Création en cours...' : 'Créer le compte' }}
           </BaseButton>
 
-          <p v-if="!isFormValid" class="help muted">Veuillez remplir tous les champs.</p>
+          <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
+          <p v-else-if="!isFormValid" class="help muted">Veuillez remplir tous les champs.</p>
         </form>
       </EventsBlock>
     </template>
@@ -213,17 +231,38 @@ const goToCamp = () => router.push({ name: 'public.subscription' })
     <template v-else>
       <h1>CONFIRMATION DE CRÉATION DE COMPTE</h1>
       <p>Merci pour la création de votre compte !</p>
-      <p>
-        Vous allez recevoir un e-mail de confirmation, avec toutes les informations importantes.
+      <p v-if="authStore.isAuthenticated.value">
+        Vous êtes maintenant connecté et pouvez inscrire vos enfants à un camp.
+      </p>
+      <p v-else>
+        Vous pouvez maintenant vous connecter et inscrire vos enfants à un camp.
       </p>
 
       <div class="content confirm">
         <BaseButton type="button" variant="secondary" size="md" :block="true" @click="goHome">
-          Retour à la page d’accueil
+          Retour à la page d'accueil
         </BaseButton>
 
-        <BaseButton type="button" variant="primary" size="md" :block="true" @click="goToCamp">
+        <BaseButton
+          v-if="authStore.isAuthenticated.value"
+          type="button"
+          variant="primary"
+          size="md"
+          :block="true"
+          @click="goToCamp"
+        >
           Inscrire un enfant à un camp
+        </BaseButton>
+
+        <BaseButton
+          v-else
+          type="button"
+          variant="primary"
+          size="md"
+          :block="true"
+          @click="goToLogin"
+        >
+          Se connecter
         </BaseButton>
       </div>
     </template>
