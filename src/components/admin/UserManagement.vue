@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { authStore } from '@/stores/auth'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
@@ -34,11 +33,6 @@ const roleOptions = [
 
 // ✅ id robuste (supporte id ou _id)
 const userId = computed(() => props.user?.id ?? props.user?._id ?? null)
-const myId = computed(() => authStore.getUserId(authStore.user.value))
-const isSelf = computed(() => {
-  if (!userId.value || !myId.value) return false
-  return String(userId.value) === String(myId.value)
-})
 
 // draft des rôles
 const selectedRole = ref('')
@@ -155,7 +149,6 @@ async function confirmRoleEdit() {
 }
 
 function openDeleteDialog() {
-  if (isSelf.value) return
   deleteError.value = ''
   showDelete.value = true
 }
@@ -201,22 +194,12 @@ async function removeUser() {
           Modifier le rôle
         </BaseButton>
 
-        <BaseButton
-          variant="tertiary"
-          :block="true"
-          :disabled="deleting || isSelf"
-          @click="openDeleteDialog"
-        >
+        <BaseButton variant="tertiary" :block="true" :disabled="deleting" @click="openDeleteDialog">
           Supprimer le membre
         </BaseButton>
-
-        <p v-if="isSelf" style="margin: 0.5rem 0 0; opacity: 0.7; font-size: 0.9em">
-          Tu ne peux pas supprimer ton propre compte.
-        </p>
       </template>
     </AdminPanel>
 
-    <!-- ✅ Modal EN DEHORS du slot actions -->
     <ConfirmDialog
       :open="showDelete"
       title="Supprimer le membre"
