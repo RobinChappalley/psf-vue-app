@@ -193,6 +193,12 @@ const goBackToCamp = () => {
 const addChild = () => {
   openCreateChildFlow()
 }
+const campIdsSet = computed(() => {
+  const arr = campsStore.camps.value || []
+  return new Set(arr.map((c) => String(c.id ?? c._id)))
+})
+
+const isMongoId = (v) => /^[a-f\d]{24}$/i.test(String(v))
 
 const continueSignup = async () => {
   if (selectedPeople.value.length === 0) return
@@ -208,25 +214,34 @@ const continueSignup = async () => {
   campSignupLoading.value = true
 
   try {
+    const campIdStr = String(campId)
+
+    //ensemble des camps existants en DB (chargés via /camps)
+    const existingCampIds = campIdsSet.value
+
     await Promise.all(
       selectedPeople.value.map(async (p) => {
         const u = await getUser(p.id)
 
-        const existing = Array.isArray(u.camps) ? u.camps.map(String) : []
-        const next = Array.from(new Set([...existing, String(campId)]))
+        //arde seulement les ids mongo valides ET qui existent vraiment
+        const existing = Array.isArray(u.camps)
+          ? u.camps
+              .map(String)
+              .filter(isMongoId)
+              .filter((id) => existingCampIds.has(id))
+          : []
 
-        const updated = await updateUser(p.id, { camps: next })
+        const next = Array.from(new Set([...existing, campIdStr]))
+
+        await updateUser(p.id, { camps: next })
       }),
     )
-    const myId = currentUser.value?.id ?? currentUser.value?._id
-    if (myId) {
-      const freshMe = await getUser(myId)
-    }
 
     await authStore.refreshMe()
     step.value = 'confirm'
   } catch (e) {
-    campSignupError.value = e?.data?.message || e?.message || "Impossible d'inscrire au camp."
+    campSignupError.value =
+      e?.data?.message || e?.data?.error || e?.message || "Impossible d'inscrire au camp."
   } finally {
     campSignupLoading.value = false
   }
