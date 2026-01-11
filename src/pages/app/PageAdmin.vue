@@ -20,6 +20,9 @@ import {
   getTrainings as apiGetTrainings,
 } from '@/services/trainingsApi'
 
+//API items
+import { getItems as apiGetItems } from '@/services/itemsApi'
+
 // Components
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
@@ -72,16 +75,6 @@ const deleteDialogOpen = ref(false)
 const deleteDialogLoading = ref(false)
 
 /* ======================================================
-   ITEMS (matériel)
-====================================================== */
-const availableItems = ref([
-  { id: 'water-bottle', name: 'Gourde' },
-  { id: 'rain-jacket', name: 'Veste de pluie' },
-  { id: 'helmet', name: 'Casque' },
-  { id: 'first-aid-kit', name: 'Trousse de secours' },
-])
-
-/* ======================================================
    CAMPS: SOURCE DE VÉRITÉ = BACKEND VIA STORE
 ====================================================== */
 const camps = campsStore.camps
@@ -89,7 +82,11 @@ const loadingCamps = campsStore.loading
 const campsError = campsStore.error
 
 onMounted(async () => {
-  await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchResponsibleUsers()])
+  await Promise.all([
+    campsStore.ensureCampsLoaded(),
+    authStore.fetchResponsibleUsers(),
+    fetchAvailableItems(),
+  ])
 })
 
 /* ======================================================
@@ -254,23 +251,30 @@ function openCampCreate() {
 /* ======================================================
    Items picker: v-model sur selectedCamp.itemsList (robuste)
 ====================================================== */
-const activeCampItemsModel = computed({
-  get() {
-    return selectedCamp.value?.itemsList ?? []
-  },
-  set(next) {
-    if (!selectedCamp.value) return
-    selectedCamp.value.itemsList = next
-  },
-})
+const availableItems = ref([])
+const itemsLoading = ref(false)
+const itemsError = ref(null)
 
-async function onSaveCampItems() {
-  if (!selectedCamp.value) return
-  const id = selectedCamp.value.id
-  await apiUpdateCamp(id, { itemsList: selectedCamp.value.itemsList ?? [] })
-  await campsStore.fetchCamps()
-  resyncSelectedCampById(id)
-  step.value = 'camp-menu'
+async function fetchAvailableItems() {
+  itemsLoading.value = true
+  itemsError.value = null
+  try {
+    const items = await apiGetItems()
+
+    // Normalisation : ton picker attend { id, name }
+    availableItems.value = items
+      .map((it) => ({
+        id: String(it._id ?? it.id ?? ''), // Mongo => _id
+        name: String(it.name ?? it.title ?? 'Sans nom'),
+      }))
+      .filter((it) => it.id)
+  } catch (e) {
+    console.error('GET ITEMS ERROR:', e)
+    itemsError.value = e?.message ?? 'Erreur chargement items'
+    availableItems.value = []
+  } finally {
+    itemsLoading.value = false
+  }
 }
 
 /* ======================================================
