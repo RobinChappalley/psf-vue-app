@@ -15,5 +15,7 @@ export function addCampItem(campId, itemId) {
 
 // delete: /camps/:campId/items/:itemId
 export function deleteCampItem(campId, itemId) {
-  return apiFetch(`/camps/${campId}/items/${itemId}`, { method: 'DELETE' })
+  return apiFetch(`/camps/${campId}/item/${itemId}`, {
+    method: 'DELETE',
+  })
 }
