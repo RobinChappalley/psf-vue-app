@@ -10,9 +10,6 @@ const emit = defineEmits(['submit'])
 const props = defineProps({
   mode: { type: String, default: 'create' }, // "create" | "edit"
   initialValues: { type: Object, default: null },
-
-  // ex: { fileName: "trace.gpx", url: "..." }
-  existingGpx: { type: Object, default: null },
 })
 
 /* ======================================================
@@ -25,17 +22,6 @@ const form = reactive({
   subscriptionStartDate: '',
   subscriptionDeadline: '',
 })
-
-/* ======================================================
-   GPX STATE
-====================================================== */
-const gpxFile = ref(null)
-const fileInputKey = ref(0)
-const removeExistingGpx = ref(false)
-
-function resetFileInput() {
-  fileInputKey.value += 1
-}
 
 /* ======================================================
    HELPERS
@@ -58,32 +44,9 @@ watch(
     form.endDate = isoToDate(camp.endDate)
     form.subscriptionStartDate = isoToDate(camp.subStartDatetime ?? camp.subscriptionStartDate)
     form.subscriptionDeadline = isoToDate(camp.subEndDatetime ?? camp.subscriptionDeadline)
-
-    gpxFile.value = null
-    removeExistingGpx.value = false
-    resetFileInput()
   },
   { immediate: true },
 )
-
-/* ======================================================
-   GPX HANDLERS
-====================================================== */
-function onPickGpx(e) {
-  gpxFile.value = e.target.files?.[0] ?? null
-  if (gpxFile.value) removeExistingGpx.value = false
-}
-
-function clearPickedGpx() {
-  gpxFile.value = null
-  resetFileInput()
-}
-
-function requestRemoveExistingGpx() {
-  removeExistingGpx.value = true
-  gpxFile.value = null
-  resetFileInput()
-}
 
 /* ======================================================
    SUBMIT
@@ -99,13 +62,6 @@ function onSubmit() {
     endDate: form.endDate,
     subscriptionStartDate: form.subscriptionStartDate || null,
     subscriptionDeadline: form.subscriptionDeadline || null,
-  }
-
-  // ---- GPX (3 états) ----
-  if (gpxFile.value) {
-    payload.gpsTrack = { file: gpxFile.value }
-  } else if (props.mode === 'edit' && props.existingGpx && removeExistingGpx.value) {
-    payload.gpsTrack = null
   }
 
   emit('submit', payload)
@@ -159,66 +115,6 @@ const today = computed(() => {
       <div class="field">
         <label for="subEnd">Date limite d’inscription</label>
         <input id="subEnd" v-model="form.subscriptionDeadline" type="date" :min="today" />
-      </div>
-
-      <!-- GPX -->
-      <div class="field">
-        <label>GPX du tracé</label>
-
-        <!-- GPX existant -->
-        <div
-          v-if="mode === 'edit' && existingGpx && !removeExistingGpx && !gpxFile"
-          class="gpx-existing"
-        >
-          <p class="file-name">
-            GPX actuel :
-            <strong>{{ existingGpx.fileName ?? 'aucun fichier' }}</strong>
-          </p>
-
-          <BaseButton type="button" variant="secondary" size="sm" @click="requestRemoveExistingGpx">
-            Retirer le GPX
-          </BaseButton>
-        </div>
-
-        <!-- GPX supprimé -->
-        <div v-else-if="mode === 'edit' && existingGpx && removeExistingGpx">
-          <label class="upload">
-            <input
-              :key="fileInputKey"
-              class="upload-input"
-              type="file"
-              accept=".gpx"
-              @change="onPickGpx"
-            />
-            <span class="upload-btn">＋</span>
-            <span class="upload-text">Ajouter un nouveau fichier</span>
-          </label>
-        </div>
-
-        <!-- Aucun GPX -->
-        <div v-else>
-          <label class="upload">
-            <input
-              :key="fileInputKey"
-              class="upload-input"
-              type="file"
-              accept=".gpx"
-              @change="onPickGpx"
-            />
-            <span class="upload-btn">＋</span>
-            <span class="upload-text">Ajouter un fichier</span>
-          </label>
-        </div>
-
-        <!-- Nouveau GPX sélectionné -->
-        <div v-if="gpxFile" class="gpx-picked">
-          <p class="file-name">
-            Nouveau fichier : <strong>{{ gpxFile.name }}</strong>
-          </p>
-          <BaseButton type="button" variant="secondary" size="sm" @click="clearPickedGpx">
-            Retirer le fichier
-          </BaseButton>
-        </div>
       </div>
 
       <BaseButton type="submit" variant="primary" size="md" :block="true" :disabled="!canSubmit">
@@ -277,9 +173,5 @@ input {
 .file-name {
   margin-top: 0.5rem;
   font-size: var(--fs-caption);
-}
-
-.gpx-picked {
-  margin-top: 0.5rem;
 }
 </style>
