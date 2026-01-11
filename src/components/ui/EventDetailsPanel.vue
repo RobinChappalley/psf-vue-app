@@ -103,36 +103,24 @@ const rows = computed(() => {
   // --- CAMP ---
   if (type === 'camp') {
     return base.concat([
-      { label: 'Titre', value: fmt(d.title) },
-      { label: 'Statut', value: fmt(d.status) },
       { label: 'Début', value: fmtDate(d.startDate) },
       { label: 'Fin', value: fmtDate(d.endDate) },
       { label: 'Début inscriptions', value: fmtDateTime(d.subStartDatetime) },
       { label: 'Fin inscriptions', value: fmtDateTime(d.subEndDatetime) },
-      { label: 'Trace GPX', value: fmtGps(d.gpsTrack) },
-      { label: 'Matériel (camp)', value: fmtItems(d.itemsList) },
     ])
   }
 
   // --- TRAINING ---
   if (type === 'training') {
     return base.concat([
-      { label: 'Numéro', value: fmt(d.number) },
       { label: 'Date', value: fmtDate(d.date) },
-      { label: 'Train aller', value: fmt(d.trainGoingTime) },
-      { label: 'Train retour', value: fmt(d.trainReturnTime) },
       { label: 'Heure rdv', value: fmt(d.meetingTime) },
       { label: 'Lieu rdv', value: fmt(d.meetingPoint) },
       { label: 'Heure retour', value: fmt(d.returnTime) },
       { label: 'Distance', value: d.distance !== undefined ? `${d.distance} km` : '—' },
       { label: 'D+ (m)', value: fmt(d.elevationGain) },
-      { label: 'D- (m)', value: fmt(d.elevationLoss) },
-
-      // ✅ ICI: responsable affiché en nom si possible
       { label: 'Responsable', value: fmtResponsible(d) },
-
-      { label: 'Matériel (entrainement)', value: fmtItems(d['items-list']) },
-      { label: 'Remarque', value: fmt(d.remark) },
+      { label: 'Trace GPX', value: fmtGps(d.gpsTrack) },
     ])
   }
 
@@ -177,7 +165,6 @@ const rows = computed(() => {
       { label: 'Distance', value: d.distance !== undefined ? `${d.distance} km` : '—' },
       { label: 'D+ (m)', value: fmt(d.elevationGain) },
       { label: 'D- (m)', value: fmt(d.elevationLoss) },
-      { label: 'Description', value: fmt(d.routeDescription) },
     ])
   }
 
