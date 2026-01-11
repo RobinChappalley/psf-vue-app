@@ -21,6 +21,10 @@ import {
   getTrainings as apiGetTrainings,
 } from '@/services/trainingsApi'
 
+//API items
+import { getItems as apiGetItems } from '@/services/itemsApi'
+import { getCampItems, addCampItem, deleteCampItem } from '@/services/campItemsApi'
+
 // Components
 import DashboardCard from '@/components/admin/DashboardCard.vue'
 import BackButton from '@/components/ui/BackButton.vue'
@@ -85,18 +89,11 @@ const deleteDialogLoading = ref(false)
 const camps = campsStore.camps
 
 onMounted(async () => {
-  await Promise.all([campsStore.ensureCampsLoaded(), authStore.fetchResponsibleUsers()])
-
-  loadingItems.value = true
-  try {
-    availableItems.value = await apiGetItems()
-  } catch (e) {
-    console.error('LOAD ITEMS ERROR:', e)
-    itemsError.value = e
-    availableItems.value = []
-  } finally {
-    loadingItems.value = false
-  }
+  await Promise.all([
+    campsStore.ensureCampsLoaded(),
+    authStore.fetchResponsibleUsers(),
+    fetchAvailableItems(),
+  ])
 })
 
 /* ======================================================
@@ -263,79 +260,52 @@ function openCampCreate() {
 /* ======================================================
    ITEMS (matériel) + AUTO SAVE
 ====================================================== */
-let saveTimer = null
+const availableItems = ref([])
+const itemsLoading = ref(false)
+const itemsError = ref(null)
 
-function toIsoOrNull(v) {
-  if (!v) return null
-  const d = new Date(v)
-  if (Number.isNaN(d.getTime())) return null
-  return d.toISOString()
+async function fetchAvailableItems() {
+  itemsLoading.value = true
+  itemsError.value = null
+  try {
+    const items = await apiGetItems()
+
+    // Normalisation : ton picker attend { id, name }
+    availableItems.value = items
+      .map((it) => ({
+        id: String(it._id ?? it.id ?? ''), // Mongo => _id
+        name: String(it.name ?? it.title ?? 'Sans nom'),
+      }))
+      .filter((it) => it.id)
+  } catch (e) {
+    console.error('GET ITEMS ERROR:', e)
+    itemsError.value = e?.message ?? 'Erreur chargement items'
+    availableItems.value = []
+  } finally {
+    itemsLoading.value = false
+  }
 }
 
-function cleanUndefined(obj) {
-  return Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined))
-}
-
-/**
- *
- * backend camp.itemsList peut être:
- * - [{ item: "ObjectId", quantity: 2 }]
- * - ou [{ item: { _id, name... }, quantity: 2 }] (si populate quelque part)
- */
-function campItemsToPickerModel(itemsList) {
-  return (Array.isArray(itemsList) ? itemsList : [])
-    .map((x) => {
-      const raw = x?.item ?? x?.itemId // ✅ fallback itemId
-      const id = raw && typeof raw === 'object' ? (raw._id ?? raw.id) : raw
-      return {
-        item_id: id ? String(id) : '',
-        quantity: String(x?.quantity ?? 1),
-      }
-    })
-    .filter((x) => x.item_id)
-}
-
-/**
- * picker -> backend shape
- */
-function pickerModelToCampItems(model) {
-  return (Array.isArray(model) ? model : [])
-    .map((x) => {
-      const id = String(x?.item_id ?? '').trim()
-      return {
-        item: id,
-        quantity: Number(x?.quantity ?? 1),
-      }
-    })
-    .filter((x) => x.item)
-}
-
-function sanitizeCampItemsList(itemsList) {
-  return (Array.isArray(itemsList) ? itemsList : [])
-    .map((x) => {
-      const raw = x?.item
-      const id = raw && typeof raw === 'object' ? (raw._id ?? raw.id) : raw
-      const qty = parseInt(String(x?.quantity ?? 1), 10)
-      return {
-        item: id ? String(id) : '',
-        quantity: Number.isFinite(qty) && qty > 0 ? qty : 1,
-      }
-    })
-    .filter((x) => x.item)
-}
-
-/**
- * ✅ Bridge v-model
- * - picker travaille en { item_id, quantity }
- * - selectedCamp.itemsList reste en { item, quantity } (backend)
- */
 const activeCampItemsModel = computed({
   get() {
-    return campItemsToPickerModel(selectedCamp.value?.itemsList)
+    const list = selectedCamp.value?.itemsList ?? []
+    return (Array.isArray(list) ? list : [])
+      .map((x) => ({
+        item_id: String(x?.item?._id ?? x?.item ?? x?.item_id ?? ''),
+      }))
+      .filter((x) => x.item_id)
   },
   set(nextPickerModel) {
     if (!selectedCamp.value) return
-    selectedCamp.value.itemsList = pickerModelToCampItems(nextPickerModel)
+    const ids = (Array.isArray(next) ? next : [])
+      .map((x) => String(x?.item_id ?? ''))
+      .filter(Boolean)
+
+    // on garde le shape backend local (quantity forcée à 1)
+    selectedCamp.value.itemsList = ids.map((id) => ({
+      item: id,
+      quantity: 1,
+    }))
   },
 })
 
@@ -425,26 +395,47 @@ watch(
  * (optionnel) bouton "enregistrer" manuel si tu le gardes
  */
 async function onSaveCampItems() {
-  if (!selectedCamp.value?.id) return
-
-  savingItems.value = true
-  saveItemsError.value = null
   try {
-    const camp = selectedCamp.value
-    const itemsList = sanitizeCampItemsList(camp.itemsList)
-    const payload = buildCampUpdatePayloadForItems(camp, itemsList)
+    if (!selectedCamp.value) throw new Error('selectedCamp is null')
+    const campId = selectedCamp.value.id ?? selectedCamp.value._id
+    if (!campId) throw new Error('campId missing on selectedCamp')
 
-    await apiUpdateCamp(camp.id, payload)
+    // ids désirés (ce que l’UI veut)
+    const desiredIds = new Set(
+      (selectedCamp.value.itemsList ?? [])
+        .map((x) => String(x?.item?._id ?? x?.item ?? x?.item_id ?? ''))
+        .filter(Boolean),
+    )
+
+    // ids actuels (DB)
+    const current = await getCampItems(campId)
+    const currentList = Array.isArray(current) ? current : (current?.itemsList ?? current)
+
+    const currentIds = new Set(
+      (Array.isArray(currentList) ? currentList : [])
+        .map((x) => String(x?.item?._id ?? x?.item ?? x?.item_id ?? ''))
+        .filter(Boolean),
+    )
+
+    const toAdd = [...desiredIds].filter((id) => !currentIds.has(id))
+    const toRemove = [...currentIds].filter((id) => !desiredIds.has(id))
+
+    console.log('[camp items] desiredIds:', [...desiredIds])
+    console.log('[camp items] currentIds:', [...currentIds])
+    console.log('[camp items] toAdd:', toAdd)
+    console.log('[camp items] toRemove:', toRemove)
+
+    // Apply
+    await Promise.all([
+      ...toAdd.map((itemId) => addCampItem(campId, itemId)),
+      ...toRemove.map((itemId) => deleteCampItem(campId, itemId)),
+    ])
 
     await campsStore.fetchCamps()
-    resyncSelectedCampById(camp.id)
-    step.value = 'camp-menu'
+    resyncSelectedCampById(campId)
   } catch (e) {
-    console.error('SAVE ITEMS ERROR:', e)
-    console.error('SAVE ITEMS ERROR data:', e?.data)
-    saveItemsError.value = e
-  } finally {
-    savingItems.value = false
+    console.error('onSaveCampItems ERROR:', e)
+    alert(e?.message ?? 'Erreur enregistrement matériel')
   }
 }
 
@@ -1073,20 +1064,7 @@ async function onUserUpdated(updatedUser) {
               :defaultOpen="true"
             />
 
-            <p v-if="savingItems">Enregistrement…</p>
-            <p v-if="saveItemsError" class="error">Erreur enregistrement</p>
-          </template>
-
-          <template #actions>
-            <BaseButton
-              variant="primary"
-              size="md"
-              :block="true"
-              :disabled="!activeCamp"
-              @click="onSaveCampItems"
-            >
-              Enregistrer
-            </BaseButton>
+            <BaseButton @click="onSaveCampItems"> Enregistrer le matériel </BaseButton>
           </template>
         </AdminPanel>
       </section>

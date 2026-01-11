@@ -22,7 +22,6 @@ function normalizeList(list) {
   return (Array.isArray(list) ? list : [])
     .map((x) => ({
       item_id: String(x?.item_id ?? ''),
-      quantity: Number(x?.quantity ?? 1),
     }))
     .filter((x) => x.item_id && validIds.value.has(x.item_id))
 }
@@ -57,25 +56,10 @@ function toggleItem(itemId, checked) {
 
   if (checked) {
     if (selectedSet.value.has(id)) return
-    commit([...selected.value, { item_id: id, quantity: 1 }])
+    commit([...selected.value, { item_id: id }])
   } else {
     commit(selected.value.filter((x) => x.item_id !== id))
   }
-}
-
-function updateQty(itemId, qty) {
-  const id = String(itemId)
-  const n = Number(qty)
-
-  // on accepte vide/NaN pendant la frappe ? -> on garde l'ancien
-  if (!Number.isFinite(n)) return
-
-  commit(selected.value.map((x) => (x.item_id === id ? { ...x, quantity: n } : x)))
-}
-
-function getQty(itemId) {
-  const id = String(itemId)
-  return selected.value.find((x) => x.item_id === id)?.quantity ?? '1'
 }
 
 /**
@@ -105,21 +89,10 @@ const isOpen = ref(props.defaultOpen)
             />
             <span class="name">{{ it.name }}</span>
           </label>
-
-          <div class="right" v-if="selectedSet.has(String(it.id))">
-            <span class="qty-label">Qté</span>
-            <input
-              class="qty"
-              type="number"
-              min="1"
-              step="1"
-              v-model.number="selected.find((x) => x.item_id === String(it.id)).quantity"
-            />
-          </div>
         </div>
       </div>
 
-      <p class="hint">Coche un item pour l’ajouter, puis ajuste la quantité.</p>
+      <p class="hint">Coche un item pour l’ajouter.</p>
     </div>
   </div>
 </template>
