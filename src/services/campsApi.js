@@ -4,19 +4,34 @@ function normalizeCamp(c) {
   if (!c || typeof c !== 'object') return c
   return {
     ...c,
-    id: c.id ?? c._id, // 🔥 mapping principal
+    id: c.id ?? c._id, // mapping principal
   }
 }
 
+function normalizeTraining(t) {
+  if (!t || typeof t !== 'object') return t
+  return {
+    ...t,
+    id: t.id ?? t._id, // pratique côté front
+  }
+}
+
+// helper pour FormData
+function appendIfDefined(fd, key, value) {
+  if (value === undefined || value === null || value === '') return
+  fd.append(key, value)
+}
+
+/* ======================================================
+   CAMPS CRUD
+====================================================== */
 export async function listCamps() {
   const data = await apiFetch('/camps', { method: 'GET' })
-  // backend renvoie un array direct, donc:
   return Array.isArray(data) ? data.map(normalizeCamp) : []
 }
 
 export async function getCamp(id) {
   const data = await apiFetch(`/camps/${id}`, { method: 'GET' })
-  // selon backend: camp ou objet direct
   return normalizeCamp(data?.camp ?? data)
 }
 
@@ -32,4 +47,76 @@ export async function updateCamp(id, payload) {
 
 export async function deleteCamp(id) {
   return apiFetch(`/camps/${id}`, { method: 'DELETE' })
+}
+
+/* ======================================================
+   TRAININGS (subdocs)
+====================================================== */
+
+export async function listCampTrainings(campId) {
+  const data = await apiFetch(`/camps/${campId}/trainings`, { method: 'GET' })
+  return Array.isArray(data) ? data.map(normalizeTraining) : []
+}
+
+export async function getCampTraining(campId, trainingId) {
+  const data = await apiFetch(`/camps/${campId}/trainings/${trainingId}`, { method: 'GET' })
+  return normalizeTraining(data)
+}
+
+export async function createCampTraining(campId, payload) {
+  const fd = new FormData()
+
+  // required/optional fields
+  appendIfDefined(fd, 'date', payload?.date)
+
+  appendIfDefined(fd, 'meetingPoint', payload?.meetingPoint)
+  appendIfDefined(fd, 'meetingTime', payload?.meetingTime)
+
+  // UI -> backend mapping
+  appendIfDefined(fd, 'returnTime', payload?.arrivalTime)
+  appendIfDefined(fd, 'responsiblePersonId', payload?.responsiblePerson)
+
+  // numbers -> string
+  if (payload?.distance != null) fd.append('distance', String(payload.distance))
+  if (payload?.elevationGain != null) fd.append('elevationGain', String(payload.elevationGain))
+  if (payload?.elevationLoss != null) fd.append('elevationLoss', String(payload.elevationLoss))
+
+  // optional extra fields (si tu les ajoutes plus tard dans l'UI)
+  appendIfDefined(fd, 'remark', payload?.remark)
+  appendIfDefined(fd, 'trainGoingTime', payload?.trainGoingTime)
+  appendIfDefined(fd, 'trainReturnTime', payload?.trainReturnTime)
+
+  // file
+  const file = payload?.gpsTrack?.file
+  if (file instanceof File) {
+    fd.append('gpxFile', file)
+  }
+
+  const data = await apiFetch(`/camps/${campId}/trainings`, {
+    method: 'POST',
+    body: fd,
+  })
+
+  return normalizeTraining(data)
+}
+
+/**
+ * Update training (NO FILE supported by backend PUT route)
+ * payload should use backend field names:
+ * - date, meetingPoint, meetingTime, returnTime, distance, elevationGain, elevationLoss, responsiblePerson, remark, ...
+ *
+ * If your UI uses arrivalTime/responsiblePerson, map before calling:
+ * - arrivalTime -> returnTime
+ * - responsiblePerson -> responsiblePerson (PUT expects responsiblePerson, not responsiblePersonId)
+ */
+export async function updateCampTraining(campId, trainingId, payload) {
+  const data = await apiFetch(`/camps/${campId}/trainings/${trainingId}`, {
+    method: 'PUT',
+    body: payload,
+  })
+  return normalizeTraining(data)
+}
+
+export async function deleteCampTraining(campId, trainingId) {
+  return apiFetch(`/camps/${campId}/trainings/${trainingId}`, { method: 'DELETE' })
 }

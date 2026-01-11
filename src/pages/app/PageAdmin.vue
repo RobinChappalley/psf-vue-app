@@ -14,11 +14,11 @@ import {
 
 // API trainings
 import {
-  createTraining as apiCreateTraining,
   updateTraining as apiUpdateTraining,
   deleteTraining as apiDeleteTraining,
   getTrainings as apiGetTrainings,
 } from '@/services/trainingsApi'
+import { createCampTraining } from '@/services/campsApi'
 
 //API items
 import { getItems as apiGetItems } from '@/services/itemsApi'
@@ -377,11 +377,6 @@ async function onSaveCampItems() {
     const toAdd = [...desiredIds].filter((id) => !currentIds.has(id))
     const toRemove = [...currentIds].filter((id) => !desiredIds.has(id))
 
-    console.log('[camp items] desiredIds:', [...desiredIds])
-    console.log('[camp items] currentIds:', [...currentIds])
-    console.log('[camp items] toAdd:', toAdd)
-    console.log('[camp items] toRemove:', toRemove)
-
     // Apply
     await Promise.all([
       ...toAdd.map((itemId) => addCampItem(campId, itemId)),
@@ -540,39 +535,29 @@ async function onCreateCampEvent(payload) {
   if (!selectedCamp.value) return
   if (payload.type !== 'trainings') return
 
-  const campId = selectedCamp.value.id
-
-  const apiPayload = {
-    date: payload.date,
-    trainGoingTime: payload.trainGoingTime ?? null,
-    trainReturnTime: payload.trainReturnTime ?? null,
-    meetingTime: payload.meetingTime ?? null,
-    meetingPoint: payload.meetingPoint ?? null,
-    returnTime: payload.arrivalTime ?? null,
-    distance: payload.distance ?? null,
-    elevationGain: payload.elevationGain ?? null,
-    elevationLoss: payload.elevationLoss ?? null,
-
-    // ✅ BACKEND CREATE attend responsiblePersonId
-    responsiblePersonId: payload.responsiblePerson ?? null,
-  }
+  const campId = selectedCamp.value.id ?? selectedCamp.value._id
+  if (!campId) return
 
   try {
-    const created = await apiCreateTraining(campId, apiPayload)
+    //IMPORTANT : appelle la version multipart (FormData + gpxFile)
+    const created = await createCampTraining(campId, payload)
+
     const createdTraining = created?.training ?? created
 
+    // resync local
     if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
     selectedCamp.value.trainings = [...selectedCamp.value.trainings, createdTraining]
 
     await campsStore.fetchCamps()
     resyncSelectedCampById(campId)
 
+    // ✅ retour écran admin comme avant
     step.value = 'camp-events'
   } catch (e) {
-    console.error('CREATE TRAINING ERROR:', e)
+    console.error('CREATE TRAINING (GPX) ERROR:', e)
     console.error('status:', e?.status)
     console.error('data:', e?.data)
-    alert(e?.message ?? 'Erreur création entraînement')
+    alert(e?.message ?? 'Erreur création entraînement (GPX)')
   }
 }
 
