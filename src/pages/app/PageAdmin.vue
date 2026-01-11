@@ -4,6 +4,7 @@ import { authStore } from '@/stores/auth'
 import { campsStore } from '@/stores/camps'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { getUser as apiGetUser } from '@/services/usersApi'
+import { getItems as apiGetItems } from '@/services/itemsApi'
 
 // API Camp
 import {
@@ -49,6 +50,14 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog.vue'
 const selectedUser = ref(null)
 const step = ref('home')
 const previousStep = ref('home')
+const isEditingItems = computed(() => step.value === 'camp-items')
+
+const availableItems = ref([])
+const loadingItems = ref(false)
+const itemsError = ref(null)
+
+const savingItems = ref(false)
+const saveItemsError = ref(null)
 
 function goHome() {
   step.value = 'home'
@@ -57,7 +66,6 @@ function goHome() {
 async function openUserDetails(u, fromStep) {
   previousStep.value = fromStep
 
-  // 🔥 évite montage avec un ancien user
   selectedUser.value = null
 
   const id = authStore.getUserId ? authStore.getUserId(u) : (u?.id ?? u?._id ?? null)
@@ -79,8 +87,6 @@ const deleteDialogLoading = ref(false)
    CAMPS: SOURCE DE VÉRITÉ = BACKEND VIA STORE
 ====================================================== */
 const camps = campsStore.camps
-const loadingCamps = campsStore.loading
-const campsError = campsStore.error
 
 onMounted(async () => {
   await Promise.all([
@@ -136,6 +142,8 @@ const selectedCamp = ref(null)
 watch(
   currentAdminCamp,
   (camp) => {
+    if (isEditingItems.value) return
+
     const stillExists =
       camp &&
       (camps.value ?? []).some((c) => String(c.id) === String(camp.id) && c.status !== 'archived')
@@ -250,7 +258,7 @@ function openCampCreate() {
 }
 
 /* ======================================================
-   Items picker: v-model sur selectedCamp.itemsList (robuste)
+   ITEMS (matériel) + AUTO SAVE
 ====================================================== */
 const availableItems = ref([])
 const itemsLoading = ref(false)
@@ -287,7 +295,7 @@ const activeCampItemsModel = computed({
       }))
       .filter((x) => x.item_id)
   },
-  set(next) {
+  set(nextPickerModel) {
     if (!selectedCamp.value) return
     const ids = (Array.isArray(next) ? next : [])
       .map((x) => String(x?.item_id ?? ''))
@@ -301,6 +309,91 @@ const activeCampItemsModel = computed({
   },
 })
 
+/**
+ * Empêche l'autosave pendant la première synchro
+ */
+const itemsHydrated = ref(false)
+
+watch(
+  () => selectedCamp.value?.id,
+  (id) => {
+    itemsHydrated.value = !!id
+  },
+  { immediate: true },
+)
+
+function buildCampUpdatePayloadForItems(camp, itemsList) {
+  const payload = {
+    // 🔒 force types attendus
+    title: String(camp?.title ?? '').trim(),
+    status: String(camp?.status ?? 'draft'),
+
+    startDate: toIsoOrNull(camp?.startDate),
+    endDate: toIsoOrNull(camp?.endDate),
+
+    // souvent optionnels, mais si ton backend les valide, ils doivent être ISO
+    subStartDatetime: camp?.subStartDatetime ? toIsoOrNull(camp.subStartDatetime) : undefined,
+    subEndDatetime: camp?.subEndDatetime ? toIsoOrNull(camp.subEndDatetime) : undefined,
+
+    itemsList,
+  }
+
+  //ne jamais envoyer undefined
+  const cleaned = cleanUndefined(payload)
+
+  // si title vide -> on n'essaie même pas (sinon 400)
+  if (!cleaned.title) {
+    throw new Error('Camp invalide: title manquant (backend refuse le PUT).')
+  }
+
+  return cleaned
+}
+
+watch(
+  activeCampItemsModel,
+  () => {
+    if (!selectedCamp.value?.id) return
+    if (!itemsHydrated.value) return
+    if (!isEditingItems.value) return
+
+    if (saveTimer) clearTimeout(saveTimer)
+
+    saveTimer = setTimeout(async () => {
+      savingItems.value = true
+      saveItemsError.value = null
+
+      try {
+        const camp = selectedCamp.value
+        const id = camp.id
+
+        const itemsList = sanitizeCampItemsList(camp.itemsList)
+
+        // 🔎 debug utile
+        // console.log('SENDING itemsList:', JSON.stringify(itemsList, null, 2))
+
+        const payload = buildCampUpdatePayloadForItems(camp, itemsList)
+        await apiUpdateCamp(id, payload)
+
+        // ✅ refresh store uniquement si PUT OK
+        await campsStore.fetchCamps()
+        resyncSelectedCampById(id)
+      } catch (e) {
+        console.error('AUTO SAVE ITEMS ERROR:', e)
+        const errors = e?.data?.errors ?? []
+        console.table(errors) // ✅ lisible
+        console.log('RAW errors:', JSON.stringify(errors, null, 2)) // ✅ à copier/coller
+        saveItemsError.value = e
+      } finally {
+        savingItems.value = false
+      }
+    }, 600)
+  },
+  { deep: true },
+)
+
+/**
+ * (optionnel) bouton "enregistrer" manuel si tu le gardes
+ */
 async function onSaveCampItems() {
   try {
     if (!selectedCamp.value) throw new Error('selectedCamp is null')
