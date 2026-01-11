@@ -3,10 +3,10 @@ import { computed } from 'vue'
 import AppIcone from '@/components/AppIcone.vue'
 
 const props = defineProps({
-  variant: { type: String, default: 'primary' },
-  size: { type: String, default: 'md' },
-  icon: { type: String, required: true },
-  as: { type: String, default: 'button' },
+  variant: { type: String, default: 'primary' }, // primary | secondary | tertiary
+  size: { type: String, default: 'md' }, // sm | md | lg
+  icon: { type: String },
+  as: { type: String, default: 'button' }, // button | link
   to: { type: Object, default: null },
   type: { type: String, default: 'button' },
   disabled: { type: Boolean, default: false },
