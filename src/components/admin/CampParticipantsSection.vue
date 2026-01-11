@@ -11,7 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(['openUser'])
 
-const filter = ref('all') // 'all' | 'paid' | 'pending'
+const filter = ref('all')
 const loading = ref(false)
 const error = ref(null)
 const users = ref([])
@@ -38,7 +38,7 @@ async function fetchUsers() {
   try {
     users.value = await getUsers({
       campId: campId.value,
-      hasPaid: hasPaidParam.value, // true | false | null
+      hasPaid: hasPaidParam.value,
     })
   } catch (e) {
     console.error('FETCH CAMP USERS ERROR:', e)

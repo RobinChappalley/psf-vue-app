@@ -13,7 +13,7 @@ const props = defineProps({
   icon: { type: String, default: 'calendarPlus' },
 
   // source de l’année
-  yearFrom: { type: String, default: 'startDate' }, // 'startDate' | 'endDate'
+  yearFrom: { type: String, default: 'startDate' },
 })
 
 const emit = defineEmits(['openYear'])

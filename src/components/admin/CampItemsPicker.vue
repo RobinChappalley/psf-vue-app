@@ -124,12 +124,12 @@ const isOpen = ref(props.defaultOpen)
 
 .meta {
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--nav-inactive);
 }
 
 .chev {
   font-size: 1rem;
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--nav-inactive);
 }
 
 .panel {
@@ -174,7 +174,7 @@ const isOpen = ref(props.defaultOpen)
 
 .qty-label {
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--nav-inactive);
 }
 
 .qty {
@@ -192,6 +192,6 @@ const isOpen = ref(props.defaultOpen)
 .hint {
   margin: 0.5rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--nav-inactive);
 }
 </style>

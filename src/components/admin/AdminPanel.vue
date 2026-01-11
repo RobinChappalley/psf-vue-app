@@ -49,7 +49,7 @@ defineProps({
 .empty {
   margin: 0 0 var(--sp-3);
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--nav-inactive);
 }
 
 .content {
@@ -66,6 +66,6 @@ defineProps({
 .hint {
   margin: 0.75rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
+  color: --nav-inactive;
 }
 </style>
