@@ -938,6 +938,7 @@ async function onUserUpdated(updatedUser) {
         mode="edit"
         :type="selectedEvent?.type ?? 'trainings'"
         :initial-values="selectedEvent?.data ?? null"
+        :existing-gpx="selectedEvent?.data?.gpsTrack ?? null"
         :type-options="[
           { key: 'trainings', label: 'Entrainement', enabled: true },
           { key: 'stages', label: 'Etape', enabled: false },

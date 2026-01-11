@@ -402,7 +402,13 @@ const today = computed(() => {
         >
           <p class="file-name">
             GPX actuel :
-            <strong>{{ existingGpx.fileName ?? 'aucun fichier' }}</strong>
+            <strong>
+              {{
+                existingGpx?.coordinates?.length
+                  ? `présent (${existingGpx.coordinates.length} points)`
+                  : 'aucun'
+              }}
+            </strong>
           </p>
 
           <BaseButton type="button" variant="secondary" size="sm" @click="requestRemoveExistingGpx">
