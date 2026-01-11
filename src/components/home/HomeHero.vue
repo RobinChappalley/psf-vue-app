@@ -16,12 +16,12 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 
         <BaseButton
           as="link"
-          :to="{ name: 'public.history' }"
+          :to="{ name: 'public.subscription' }"
           variant="primary"
           size="md"
           :block="true"
         >
-          Découvrez les camps <br />des précédentes années
+          S'inscrire au camp
         </BaseButton>
       </div>
     </div>
