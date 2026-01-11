@@ -8,7 +8,7 @@ import { campsStore } from '@/stores/camps'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { getUser, updateUser } from '@/services/usersApi'
-import campItemsSection from '@/components/camp/campItemsSection.vue'
+
 // -------------------------------------------------
 // Charger les camps (lazy) via store
 // -------------------------------------------------
@@ -188,11 +188,6 @@ const selectedPeople = computed(() => signupPeople.value.filter((p) => p.selecte
 // -------------------------------------------------
 // Navigation actions
 // -------------------------------------------------
-const campId = computed(() => camp.value?.id ?? camp.value?._id ?? null)
-
-// -------------------------------------------------
-// Navigation actions
-// -------------------------------------------------
 const goBackToCamp = () => {
   step.value = 'camp'
 }
@@ -298,9 +293,6 @@ const continueSignup = async () => {
           Le parcours est adapté aux jeunes participants et préparé tout au long de l’année, grâce à
           des entrainements.
         </p>
-      </section>
-      <section class="section">
-        <campItemsSection v-if="campId" :camp-id="campId" />
       </section>
 
       <section class="section">
