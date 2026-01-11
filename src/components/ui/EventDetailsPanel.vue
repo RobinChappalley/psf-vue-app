@@ -107,7 +107,6 @@ const rows = computed(() => {
       { label: 'Fin', value: fmtDate(d.endDate) },
       { label: 'Début inscriptions', value: fmtDateTime(d.subStartDatetime) },
       { label: 'Fin inscriptions', value: fmtDateTime(d.subEndDatetime) },
-      { label: 'Matériel (camp)', value: fmtItems(d.itemsList) },
     ])
   }
 
