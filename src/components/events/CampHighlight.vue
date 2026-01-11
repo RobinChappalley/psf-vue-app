@@ -13,7 +13,6 @@ const startStr = computed(() => props.event['start-date'] || props.event.dateSta
 const endStr = computed(() => props.event['end-date'] || props.event.dateEnd || '')
 
 const dateLabel = computed(() => {
-  // si tu as déjà des strings type "12 juillet", on les affiche telles quelles
   if (startStr.value && endStr.value && startStr.value.includes(' ')) {
     return `du ${startStr.value} au ${endStr.value}`
   }
@@ -27,7 +26,6 @@ const dateLabel = computed(() => {
 })
 
 const goMoreInfo = () => {
-  // 🔁 adapte selon tes routes
   router.push({ name: 'public.subscription', params: { id: props.event.id } })
 }
 </script>
@@ -96,7 +94,6 @@ const goMoreInfo = () => {
   line-height: 1.35;
 }
 
-/* tableau "Date / Âge" */
 .facts {
   margin: 0 0 var(--sp-4);
 }

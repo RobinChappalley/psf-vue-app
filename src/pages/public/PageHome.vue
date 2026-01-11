@@ -53,13 +53,9 @@ onMounted(async () => {
 
     const next = candidates[0] || null
     campEvent.value = campToEvent(next)
-
-    // Debug (tu peux enlever)
-    // console.log('PublicHome next published future camp:', next)
   } catch (e) {
     campError.value = e?.message ?? 'Erreur chargement camp'
     campEvent.value = null
-    console.warn('PublicHome: cannot load camps:', e)
   } finally {
     loadingCamp.value = false
   }

@@ -56,7 +56,7 @@ function onKeydown(e) {
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--c-bg-dark);
   display: grid;
   place-items: center;
   padding: 1rem;
@@ -113,7 +113,7 @@ function onKeydown(e) {
 }
 
 .btn.danger {
-  background: var(--c-primary); /* tu peux remplacer par var(--c-danger) si tu l’as */
+  background: var(--c-primary);
   border-color: transparent;
 }
 

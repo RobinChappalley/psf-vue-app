@@ -22,7 +22,6 @@ defineProps({
 
 <style scoped>
 .events-block {
-  /* même look que tes blocs de maquette (fond clair, léger) */
   background: var(--c-surface);
   border: 1px solid var(--c-surface);
   border-radius: var(--r-input);

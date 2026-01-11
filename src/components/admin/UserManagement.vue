@@ -148,9 +148,7 @@ async function confirmRoleEdit() {
     const updated = await apiUpdateUser(userId.value, { role: [selectedRole.value] })
     emit('updated', updated)
     mode.value = 'view'
-  } catch (e) {
-    console.error('confirmRoleEdit ERROR:', e)
-  }
+  } catch (e) {}
 }
 
 function openDeleteDialog() {
@@ -171,7 +169,6 @@ async function removeUser() {
     showDelete.value = false
     emit('deleted', userId.value)
   } catch (e) {
-    console.error(e)
     deleteError.value = "Impossible de supprimer l'utilisateur."
   } finally {
     deleting.value = false

@@ -19,9 +19,7 @@ const token = authStore.token.value
 onMounted(async () => {
   try {
     await hikesStore.ensureHikesLoaded()
-  } catch (e) {
-    console.error(e)
-  }
+  } catch (e) {}
 })
 
 const hikes = computed(() => hikesStore.hikes.value)
@@ -60,7 +58,6 @@ async function submitForm() {
   try {
     const userId = authStore.getUserId(authStore.user.value)
     if (!userId) {
-      console.error('Utilisateur non connecté')
       return
     }
 
@@ -77,9 +74,7 @@ async function submitForm() {
     closeSheet()
     form.description = ''
     form.imageFile = null
-  } catch (e) {
-    console.error("Erreur lors de l'ajout de la randonnée : ", e)
-  }
+  } catch (e) {}
 }
 
 // Geolocation - Nearest training

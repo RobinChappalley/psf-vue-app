@@ -9,7 +9,7 @@ const router = useRouter()
 // 1 = email, 2 = formulaire complet, 3 = confirmation
 const step = ref(1)
 
-// ✅ "DB" mock (plus tard: API)
+// "DB" mock (plus tard: API)
 const existingUsers = ref([
   { id: 'u1', email: 'jane.doe@example.com' },
   { id: 'u2', email: 'robin@test.ch' },
@@ -66,7 +66,7 @@ const goStep2 = () => {
 const createAccount = () => {
   if (!isFormValid.value) return
 
-  // ✅ Simulation DB (plus tard: backend)
+  //Simulation DB (plus tard: backend)
   existingUsers.value.push({
     id: String(Date.now()),
     email: normalizedEmail.value,

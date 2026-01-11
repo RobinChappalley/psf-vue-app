@@ -27,7 +27,6 @@ const hasPaidParam = computed(() => {
 async function fetchUsers() {
   if (!campId.value) {
     users.value = []
-    console.log('campId', campId.value, 'filter', filter.value, 'hasPaidParam', hasPaidParam.value)
 
     return
   }
@@ -41,21 +40,11 @@ async function fetchUsers() {
       hasPaid: hasPaidParam.value,
     })
   } catch (e) {
-    console.error('FETCH CAMP USERS ERROR:', e)
     error.value = e
     users.value = []
   } finally {
     loading.value = false
   }
-  console.log(
-    'hasPaid fields:',
-    users.value.map((u) => ({
-      id: u.id,
-      hasPaid: u.hasPaid,
-      participationHasPaid: u.participationInfo?.hasPaid,
-      type: typeof u.hasPaid,
-    })),
-  )
 }
 
 watch(

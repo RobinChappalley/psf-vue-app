@@ -172,22 +172,6 @@ const isOpen = ref(props.defaultOpen)
   align-items: center;
 }
 
-.qty-label {
-  font-size: var(--fs-caption);
-  color: var(--nav-inactive);
-}
-
-.qty {
-  width: 90px;
-  font-family: var(--font-body);
-  font-size: var(--fs-body);
-  padding: 0.45rem 0.55rem;
-  border-radius: var(--r-input);
-  border: 1px solid var(--c-border);
-  background: var(--c-bg);
-  color: var(--c-text);
-}
-
 .empty,
 .hint {
   margin: 0.5rem 0 0;

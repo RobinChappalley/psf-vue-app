@@ -237,13 +237,13 @@ function buildApiPayload() {
   if (tshirtGender && ['m', 'f'].includes(tshirtGender)) tshirt.gender = tshirtGender
   if (Object.keys(tshirt).length) pi.tshirtInfo = tshirt
 
-  // ✅ booleans
+  //booleans
   pi.isCASMember = !!form.participationInfo?.isCASMember
   pi.isHelicopterInsured = !!form.participationInfo?.isHelicopterInsured
   pi.hasPhotoConsent = !!form.participationInfo?.hasPhotoConsent
   pi.hasPaid = !!form.participationInfo?.hasPaid
 
-  // ✅ miroir au root pour filtrage backend
+  //miroir au root pour filtrage backend
   payload.hasPaid = pi.hasPaid
 
   if (Object.keys(pi).length) payload.participationInfo = pi
@@ -258,7 +258,6 @@ function onNext() {
 
   if (step.value === 'other') {
     const payload = buildApiPayload()
-    console.log('FORM SUBMIT PAYLOAD:', payload) // ✅ log au moment du clic
     emit('submit', payload)
     stepIndex.value = steps.findIndex((s) => s.key === 'confirm')
     return
@@ -289,9 +288,7 @@ function finish() {
       <Transition name="slide" mode="out-in">
         <!-- Étape 1 : Informations générales -->
         <section v-if="step === 'general'" key="general" class="page">
-          <!-- Slots optionnels : si tu les fournis, ça remplace -->
           <slot name="general" :form="form">
-            <!-- Contenu par défaut minimal (pour éviter une page vide) -->
             <div class="field" v-if="!isChild">
               <label>E-mail</label>
               <input
@@ -502,7 +499,6 @@ function finish() {
 </template>
 
 <style scoped>
-/* --- Layout page --- */
 .wrap {
   padding: var(--sp-3);
   margin: 0 auto;
@@ -532,8 +528,6 @@ function finish() {
 .back:active {
   opacity: 0.7;
 }
-
-/* --- Card (form container) --- */
 .card {
   background: var(--c-surface);
   border-radius: var(--r-card);
@@ -541,14 +535,12 @@ function finish() {
   padding: var(--sp-3);
 }
 
-/* --- Page sections inside card --- */
 .page {
   min-height: 26rem;
   display: flex;
   flex-direction: column;
 }
 
-/* Fields */
 .field {
   display: flex;
   flex-direction: column;
@@ -558,7 +550,7 @@ function finish() {
 
 label {
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.7);
+  color: var(--c-bg-dark);
 }
 
 input {
@@ -575,7 +567,7 @@ input {
 }
 
 input:focus {
-  border-color: rgba(177, 67, 41, 0.6);
+  border-color: var(--c-info);
 }
 
 .grid-2 {
@@ -584,7 +576,6 @@ input:focus {
   gap: var(--sp-2);
 }
 
-/* Chips */
 .chips {
   display: flex;
   flex-wrap: wrap;
@@ -633,7 +624,6 @@ input:focus {
   opacity: 0.85;
 }
 
-/* Toggle rows */
 .toggle-row {
   display: flex;
   align-items: center;
@@ -658,7 +648,7 @@ input:focus {
 .track {
   width: 3rem;
   height: 1.6rem;
-  background: rgba(38, 38, 24, 0.15);
+  background: var(--c-border);
   border-radius: 999px;
   position: relative;
   transition: opacity 160ms ease;
@@ -678,7 +668,7 @@ input:focus {
 }
 
 .switch input:checked + .track {
-  background: rgba(177, 67, 41, 0.35);
+  background: var(--c-primary);
 }
 
 .switch input:checked + .track::after {
@@ -694,7 +684,7 @@ input:focus {
 
 .confirm-text {
   margin: 0 0 var(--sp-3);
-  color: rgba(38, 38, 24, 0.75);
+  color: var(--c-bg-dark);
 }
 
 /* Transition "nouvelle page" */
@@ -716,6 +706,6 @@ input:focus {
 .error {
   margin: 0.25rem 0 0;
   font-size: var(--fs-caption);
-  color: #b00020;
+  color: var(--c-primary);
 }
 </style>

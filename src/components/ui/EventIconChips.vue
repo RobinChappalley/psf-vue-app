@@ -57,7 +57,6 @@ function pick(key) {
 </template>
 
 <style scoped>
-/* rail global + pastille animée */
 .chips {
   position: relative;
   display: grid;
@@ -80,7 +79,7 @@ function pick(key) {
   width: calc((100% - 0.6rem) / var(--n));
   border-radius: 999px;
   background: var(--c-border);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 2px var(--shadow-sm);
 
   transform: translateX(calc(var(--i) * 100%));
   transition: transform 220ms cubic-bezier(0.2, 0.9, 0.2, 1);
@@ -110,7 +109,6 @@ function pick(key) {
   transition: transform 120ms ease;
 }
 
-/* icône */
 .icon {
   width: 20px;
   height: 20px;
@@ -118,7 +116,6 @@ function pick(key) {
   place-items: center;
 }
 
-/* feedback tactile */
 .chip:active {
   transform: scale(0.96);
 }

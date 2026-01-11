@@ -11,7 +11,7 @@ const props = defineProps({
 const isOpen = ref(!!props.defaultOpen)
 const loading = ref(false)
 const error = ref('')
-const items = ref([]) // [{ id, name, quantity }]
+const items = ref([])
 
 function normalizeCampItems(data) {
   const list = Array.isArray(data) ? data : (data?.itemsList ?? data)
@@ -32,7 +32,6 @@ async function load() {
     const data = await getCampItems(props.campId)
     items.value = normalizeCampItems(data)
   } catch (e) {
-    console.error('GET CAMP ITEMS ERROR:', e)
     error.value = e?.message ?? 'Impossible de charger le matériel.'
     items.value = []
   } finally {
@@ -42,18 +41,15 @@ async function load() {
 
 async function toggle() {
   isOpen.value = !isOpen.value
-  // lazy-load : charge à l'ouverture seulement si pas déjà chargé
   if (isOpen.value && items.value.length === 0 && !loading.value) {
     await load()
   }
 }
 
 function refresh() {
-  // permet au parent de forcer un reload si besoin
   return load()
 }
 
-// expose refresh() au parent si tu veux l'appeler via ref
 defineExpose({ refresh })
 
 const countLabel = computed(() => {
@@ -61,7 +57,7 @@ const countLabel = computed(() => {
   return `${items.value.length} item(s)`
 })
 
-// si le campId change, on reset (et si ouvert, on recharge)
+// si le campId change, c'est reset
 watch(
   () => String(props.campId ?? ''),
   async () => {
@@ -124,12 +120,12 @@ watch(
 
 .meta {
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--c-bg-dark);
 }
 
 .chev {
   font-size: 1rem;
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--c-bg-dark);
 }
 
 .panel {
@@ -159,13 +155,13 @@ watch(
 
 .qty-label {
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var (--c-bg-dark);
 }
 
 .empty,
 .hint {
   margin: 0.5rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.55);
+  color: var(--nav-inactive);
 }
 </style>

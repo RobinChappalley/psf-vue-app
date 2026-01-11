@@ -5,18 +5,16 @@ import { getTypeEvent } from '@/composables/getTypeEvent'
 
 const props = defineProps({
   // objet normalisé venant de tes archives:
-  // { type: 'camp'|'training'|'information-evening'|'generalMeeting'|'fundraisings'|'stages', data: {...}, __campTitle: '...' }
   event: { type: Object, required: true },
 
-  // ✅ fonction passée depuis AdminPage
-  // ex: (id) => "Prénom Nom" (ou fallback id)
+  //fonction passée depuis AdminPage
   displayUserName: { type: Function, required: false },
 })
 
 function fmt(value) {
   if (value === null || value === undefined || value === '') return '—'
   if (Array.isArray(value)) return value.length ? value.join(', ') : '—'
-  if (typeof value === 'object') return '—' // évite [object Object] si on oublie un mapping
+  if (typeof value === 'object') return '—'
   return String(value)
 }
 
@@ -39,19 +37,11 @@ function fmtGps(gpsTrack) {
   return gpsTrack.fileName ?? '✅'
 }
 
-function fmtItems(items) {
-  if (!Array.isArray(items) || items.length === 0) return '—'
-  // affichage simple
-  return items.map((it) => `${it.item_id ?? '—'} × ${it.quantity ?? '—'}`).join(', ')
-}
-
 function fmtParticipants(participants) {
   if (!Array.isArray(participants) || participants.length === 0) return '—'
-  // info-evening: [{email, nbOfParticipants}]
   if (typeof participants[0] === 'object') {
     return participants.map((p) => `${p.email ?? '—'} (${p.nbOfParticipants ?? '—'})`).join(', ')
   }
-  // fundraisings: ["id", "id"]
   return participants.map(String).join(', ')
 }
 
@@ -75,14 +65,11 @@ function getResponsibleId(d) {
 function fmtResponsible(d) {
   const rid = getResponsibleId(d)
 
-  // si on a une fonction de mapping (AdminPage), on l'utilise
   if (props.displayUserName && rid) return props.displayUserName(rid)
 
-  // fallback: affiche ce qu’on a (id ou déjà un nom)
   return fmt(rid ?? d?.responsiblePerson ?? d?.responsiblePersonId)
 }
 
-// titre basé sur getTypeEvent (déjà cohérent avec tes cards)
 const title = computed(() => {
   const meta = getTypeEvent({ type: props.event?.type, data: props.event?.data })
   return (meta?.title ?? 'DÉTAILS').toUpperCase()
@@ -97,7 +84,6 @@ const rows = computed(() => {
   const type = ev.type
   const d = ev.data ?? {}
 
-  // petit contexte si tu veux toujours montrer le camp associé
   const base = ev.__campTitle ? [{ label: 'Camp', value: ev.__campTitle }] : []
 
   // --- CAMP ---
@@ -168,7 +154,7 @@ const rows = computed(() => {
     ])
   }
 
-  // fallback (si tu ajoutes un type plus tard)
+  // fallback
   return base.concat([{ label: 'Données', value: '—' }])
 })
 </script>

@@ -21,7 +21,6 @@ async function fetchCamps() {
   }
 }
 
-// ✅ à appeler depuis les pages
 async function ensureCampsLoaded() {
   if (camps.value.length) return camps.value
   if (inFlight) return inFlight

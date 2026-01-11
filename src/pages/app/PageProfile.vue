@@ -30,7 +30,7 @@ const displayEmail = computed(() => {
   return me.value.email || '—'
 })
 
-// ✅ Source de vérité enfants = store (API)
+//Source de vérité enfants = store (API)
 const children = computed(() => authStore.children.value)
 
 // sélection enfant en cours d'édition
@@ -66,9 +66,7 @@ async function openChildren() {
   step.value = 'children'
   try {
     await authStore.fetchChildren()
-  } catch (e) {
-    console.error(e)
-  }
+  } catch (e) {}
 }
 
 /* ======================================================
@@ -87,7 +85,6 @@ async function onSubmitPersonalData(payload) {
     // option UX
     // step.value = 'profile'
   } catch (e) {
-    console.error(e)
     errorMsg.value = e?.message ?? 'Erreur lors de la sauvegarde.'
   } finally {
     saving.value = false
@@ -121,19 +118,18 @@ async function onSubmitChildData(payload) {
     const childId = selectedChild.value?.id ?? selectedChild.value?._id
 
     if (childId) {
-      // ✅ update enfant existant
+      // update enfant existant
       await authStore.updateChild({ ...payload, id: childId })
     } else {
-      // ✅ création enfant
+      // création enfant
       await authStore.createChild(payload)
     }
 
-    // ✅ resync liste enfants (au cas où)
+    // resync liste enfants (au cas où)
     await authStore.fetchChildren()
 
     closeChildEditAndBack()
   } catch (e) {
-    console.error(e)
     childError.value = e?.message ?? "Erreur lors de la sauvegarde de l'enfant."
   } finally {
     savingChild.value = false

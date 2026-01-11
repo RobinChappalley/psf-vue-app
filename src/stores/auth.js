@@ -5,7 +5,7 @@ import { getChildrenByParent, createChildApi, updateUserApi } from '@/services/c
 import {
   updateUser as updateUserFromUsersApi,
   getAdminUsers as getAdminUsersApi,
-  getUsers as getUsersApi, // ✅ pour récupérer les accompagnants
+  getUsers as getUsersApi,
 } from '@/services/usersApi'
 
 /* ======================================================
@@ -52,7 +52,7 @@ async function login(email, password) {
   user.value = normalizeUser(data.user)
   persistAuth()
 
-  // ✅ charge admins + accompagnants (responsables possibles)
+  //charge admins + accompagnants (responsables possibles)
   await fetchResponsibleUsers().catch(() => {})
 
   return user.value
@@ -92,7 +92,7 @@ async function refreshMe() {
 }
 
 /**
- * ✅ Update du profil de l'utilisateur connecté
+ * Update du profil de l'utilisateur connecté
  * payload = patch (champs modifiés uniquement)
  */
 async function updateMe(payload) {
@@ -106,7 +106,7 @@ async function updateMe(payload) {
 }
 
 /**
- * ✅ Update d'un user par id (utile pour enfants/admin)
+ * Update d'un user par id (utile pour enfants/admin)
  * Retourne l'user updated (et refreshMe si c'est "moi")
  */
 async function updateUserById(id, payload) {
@@ -127,7 +127,7 @@ async function updateUserById(id, payload) {
    ENFANTS (API RÉELLE)
 ====================================================== */
 
-// ✅ SOURCE DE VÉRITÉ
+// SOURCE DE VÉRITÉ
 const childrenObjects = ref([])
 
 // Getter pratique (à utiliser partout)
@@ -206,7 +206,6 @@ async function updateChild(childPayload) {
    ADMIN / RESPONSABLES (BACKEND)
 ====================================================== */
 
-// ✅ liste des admins = source de vérité (si tu l’utilises ailleurs)
 const adminUsersObjects = ref([])
 const adminUsers = computed(() => adminUsersObjects.value)
 
@@ -224,7 +223,6 @@ async function fetchAdminUsers() {
   return adminUsersObjects.value
 }
 
-// ✅ responsables possibles = admins + accompagnants
 const responsibleUsersObjects = ref([])
 const responsibleUsers = computed(() => responsibleUsersObjects.value)
 

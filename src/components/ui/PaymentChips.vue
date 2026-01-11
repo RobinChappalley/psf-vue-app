@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 
 const props = defineProps({
-  modelValue: { type: String, default: 'all' }, // 'all' | 'paid' | 'pending'
+  modelValue: { type: String, default: 'all' },
 })
 const emit = defineEmits(['update:modelValue'])
 

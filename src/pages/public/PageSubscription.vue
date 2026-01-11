@@ -39,7 +39,6 @@ onMounted(async () => {
   } catch (e) {
     error.value = e?.message ?? 'Erreur chargement camp'
     camp.value = null
-    console.warn('PublicCamp: cannot load camps:', e)
   } finally {
     loading.value = false
   }
