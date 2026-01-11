@@ -40,6 +40,7 @@ const classes = computed(() => [
 
   border: none;
   border-radius: 6px;
+  margin-top: 2rem;
 
   cursor: pointer;
   text-decoration: none;
