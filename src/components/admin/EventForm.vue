@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from 'vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
 import EventDropdown from '@/components/ui/EventDropdown.vue'
+import ConfirmDialog from '../ui/ConfirmDialog.vue'
 
 const emit = defineEmits(['submit', 'cancel', 'update:type', 'delete'])
 
@@ -196,12 +197,28 @@ function toNumberOrNull(v) {
   return Number.isFinite(n) ? n : null
 }
 
+//Delete
+const isDeleteModalOpen = ref(false)
+const deleting = ref(false)
+
 function onDelete() {
   if (props.mode !== 'edit') return
-  if (props.confirmDelete) {
-    const ok = window.confirm('Supprimer cet évènement ? Cette action est définitive.')
-    if (!ok) return
+
+  // si tu veux garder l’option confirmDelete
+  if (!props.confirmDelete) {
+    emit('delete')
+    return
   }
+
+  isDeleteModalOpen.value = true
+}
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false
+}
+
+async function confirmDelete() {
+  // Si tu veux juste émettre et laisser le parent gérer:
+  closeDeleteModal()
   emit('delete')
 }
 
@@ -445,6 +462,18 @@ const today = computed(() => {
         </BaseButton>
       </div>
     </form>
+    <ConfirmDialog
+      :open="isDeleteModalOpen"
+      title="Supprimer l’évènement ?"
+      message="Cette action est définitive. Voulez-vous continuer ?"
+      confirm-text="Supprimer"
+      cancel-text="Annuler"
+      :dangerous="true"
+      :loading="deleting"
+      @confirm="confirmDelete"
+      @cancel="closeDeleteModal"
+      @close="closeDeleteModal"
+    />
   </section>
 </template>
 
