@@ -203,6 +203,18 @@ defineProps({
     />
   </svg>
 
+  <!-- PLUS -->
+  <svg v-else-if="name === 'plus'" viewBox="0 0 32 32" class="icon" aria-hidden="true">
+    <path
+      d="M16 6V26M6 16H26"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      stroke-linecap="round"
+    />
+    c
+  </svg>
+
   <!-- fallback -->
   <span v-else class="missing" aria-hidden="true"></span>
 </template>
