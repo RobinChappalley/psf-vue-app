@@ -10,7 +10,7 @@ defineProps({
 <template>
   <article class="hike-card">
     <header class="hike-header">
-      <span class="author">{{ hike.user?.email ?? 'Anonyme' }}</span>
+      <span class="author">{{ hike.user?.firstname }} {{ hike.user?.lastname ?? 'Anonyme' }}</span>
     </header>
 
     <img v-if="hike.imageUrl" :src="hike.imageUrl" alt="" class="hike-image" />
