@@ -18,7 +18,7 @@ export default defineConfig({
         name: 'Pieds sans Frontières',
         short_name: 'PSF',
         description: 'Application mobile de Pieds sans Frontières',
-        theme_color: '#ffffff',
+        theme_color: '#000000',
         icons: [
           {
             src: 'pwa-192x192.png', // Tu devras créer cette image
@@ -31,6 +31,9 @@ export default defineConfig({
             type: 'image/png',
           },
         ],
+      },
+      workbox: {
+        importScripts: ['push-sw.js'],
       },
     }),
   ],

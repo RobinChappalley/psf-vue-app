@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import AppIcone from '@/components/AppIcone.vue'
 
 const props = defineProps({
   variant: { type: String, default: 'primary' },
@@ -16,11 +17,11 @@ const classes = computed(() => ['fab', `fab--${props.variant}`, `fab--${props.si
 
 <template>
   <RouterLink v-if="as === 'link' && to" :to="to" :class="classes">
-    <slot>{{ props.icon }}</slot>
+    <slot><AppIcone :name="icon" /></slot>
   </RouterLink>
 
   <button v-else :type="type" :disabled="disabled" :class="classes">
-    <slot>{{ props.icon }}</slot>
+    <slot><AppIcone :name="icon" /></slot>
   </button>
 </template>
 

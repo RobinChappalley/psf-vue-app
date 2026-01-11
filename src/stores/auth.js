@@ -40,7 +40,7 @@ function normalizeUser(u) {
 }
 
 /* ======================================================
-   LOGIN / LOGOUT
+   LOGIN / LOGOUT / SIGNUP
 ====================================================== */
 async function login(email, password) {
   const data = await apiFetch('/login', {
@@ -56,6 +56,33 @@ async function login(email, password) {
   await fetchResponsibleUsers().catch(() => {})
 
   return user.value
+}
+
+/**
+ * Inscription d'un nouveau compte parent
+ * Après inscription, l'utilisateur est automatiquement connecté
+ */
+async function signup(userData) {
+  // Force le rôle parent pour les inscriptions publiques
+  const payload = {
+    ...userData,
+    role: ['parent'],
+  }
+
+  const data = await apiFetch('/signup', {
+    method: 'POST',
+    body: payload,
+  })
+
+  // Si le backend retourne un token, on connecte automatiquement
+  if (data.token) {
+    token.value = data.token
+    user.value = normalizeUser(data.user)
+    persistAuth()
+    await fetchResponsibleUsers().catch(() => {})
+  }
+
+  return data
 }
 
 function logout() {
@@ -274,6 +301,7 @@ export const authStore = {
   isAuthenticated,
   login,
   logout,
+  signup,
   hasAnyRole,
 
   // helpers
