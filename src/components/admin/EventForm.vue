@@ -11,7 +11,7 @@ const props = defineProps({
   initialValues: { type: Object, default: null },
   confirmDelete: { type: Boolean, default: true },
 
-  // ex: { fileName: "trace.gpx", url: "..." }
+  // En edit: ici on passe gpsTrack du training (GeoJSON LineString), pas un fichier
   existingGpx: { type: Object, default: null },
 
   // dropdown options (même format que ton EventDropdown)
@@ -42,11 +42,10 @@ function toDateInput(v) {
 }
 
 /* ======================================================
-   GPX STATE (déclaré AVANT watch/onSubmit)
+   GPX STATE (UPLOAD UNIQUEMENT EN CREATE)
 ====================================================== */
 const gpxFile = ref(null)
 const fileInputKey = ref(0)
-const removeExistingGpx = ref(false)
 
 function resetFileInput() {
   fileInputKey.value += 1
@@ -54,16 +53,9 @@ function resetFileInput() {
 
 function onPickGpx(e) {
   gpxFile.value = e.target.files?.[0] ?? null
-  if (gpxFile.value) removeExistingGpx.value = false
 }
 
 function clearPickedGpx() {
-  gpxFile.value = null
-  resetFileInput()
-}
-
-function requestRemoveExistingGpx() {
-  removeExistingGpx.value = true
   gpxFile.value = null
   resetFileInput()
 }
@@ -97,9 +89,8 @@ watch(
   (t) => {
     form.type = t
 
-    // reset GPX quand on change de type (évite que le GPX reste sélectionné si on passe à "stages")
+    // reset GPX quand on change de type (évite que le fichier reste si on passe à "stages")
     gpxFile.value = null
-    removeExistingGpx.value = false
     resetFileInput()
   },
   { immediate: true },
@@ -140,17 +131,21 @@ watch(
     form.startPoint = v.startPoint ?? ''
     form.endPoint = v.endPoint ?? ''
 
-    // reset GPX à l’ouverture/chargement
+    // reset GPX à l’ouverture/chargement (surtout utile en edit)
     gpxFile.value = null
-    removeExistingGpx.value = false
     resetFileInput()
   },
   { immediate: true },
 )
+
 function onPickType(v) {
   const t = typeof v === 'object' && v !== null ? (v.key ?? v.value ?? '') : (v ?? '')
   form.type = t
   emit('update:type', t)
+
+  // reset GPX si on change de type via dropdown UI
+  gpxFile.value = null
+  resetFileInput()
 }
 
 /** Quels champs afficher ? */
@@ -233,11 +228,9 @@ function onSubmit() {
         responsiblePerson: form.responsiblePerson || null,
       }
 
-      // ---- GPX (même logique que CampForm) ----
-      if (gpxFile.value) {
+      // ✅ GPX uniquement à la création
+      if (props.mode === 'create' && gpxFile.value) {
         payload.gpsTrack = { file: gpxFile.value }
-      } else if (props.mode === 'edit' && props.existingGpx && removeExistingGpx.value) {
-        payload.gpsTrack = null
       }
       break
 
@@ -280,7 +273,7 @@ function onSubmit() {
   emit('submit', payload)
 }
 
-//s'assurer que l'évènement ne soit pas dans le passé
+// s'assurer que l'évènement ne soit pas dans le passé
 const today = computed(() => {
   const d = new Date()
   return d.toISOString().slice(0, 10) // YYYY-MM-DD
@@ -395,13 +388,10 @@ const today = computed(() => {
       <div v-if="visible.showTraining" class="field">
         <label>GPX du tracé</label>
 
-        <!-- GPX existant -->
-        <div
-          v-if="mode === 'edit' && existingGpx && !removeExistingGpx && !gpxFile"
-          class="gpx-existing"
-        >
+        <!-- EDIT: lecture seule -->
+        <div v-if="mode === 'edit'" class="gpx-existing">
           <p class="file-name">
-            GPX actuel :
+            GPX :
             <strong>
               {{
                 existingGpx?.coordinates?.length
@@ -410,14 +400,11 @@ const today = computed(() => {
               }}
             </strong>
           </p>
-
-          <BaseButton type="button" variant="secondary" size="sm" @click="requestRemoveExistingGpx">
-            Retirer le GPX
-          </BaseButton>
+          <p class="hint">Le GPX ne peut être ajouté qu’à la création.</p>
         </div>
 
-        <!-- GPX supprimé -->
-        <div v-else-if="mode === 'edit' && existingGpx && removeExistingGpx">
+        <!-- CREATE: upload -->
+        <template v-else>
           <label class="upload">
             <input
               :key="fileInputKey"
@@ -427,30 +414,17 @@ const today = computed(() => {
               @change="onPickGpx"
             />
           </label>
-        </div>
 
-        <!-- Aucun GPX -->
-        <div v-else>
-          <label class="upload">
-            <input
-              :key="fileInputKey"
-              class="upload-input"
-              type="file"
-              accept=".gpx"
-              @change="onPickGpx"
-            />
-          </label>
-        </div>
-
-        <!-- Nouveau GPX sélectionné -->
-        <div v-if="gpxFile" class="gpx-picked">
-          <p class="file-name">
-            Nouveau fichier : <strong>{{ gpxFile.name }}</strong>
-          </p>
-          <BaseButton type="button" variant="secondary" size="sm" @click="clearPickedGpx">
-            Retirer le fichier
-          </BaseButton>
-        </div>
+          <!-- Nouveau GPX sélectionné -->
+          <div v-if="gpxFile" class="gpx-picked">
+            <p class="file-name">
+              Fichier sélectionné : <strong>{{ gpxFile.name }}</strong>
+            </p>
+            <BaseButton type="button" variant="secondary" size="sm" @click="clearPickedGpx">
+              Retirer le fichier
+            </BaseButton>
+          </div>
+        </template>
       </div>
 
       <div class="actions">
