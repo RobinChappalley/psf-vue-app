@@ -10,25 +10,77 @@ const props = defineProps({
   },
 })
 
+const emit = defineEmits([
+  'open-camp-details', // quand inscrit + camp (ouvre nouvelle section)
+  'select', // optionnel si tu veux généraliser plus tard
+])
+
 const router = useRouter()
 
 const isRegistered = computed(() => props.event.userStatus === 'registered')
 
+function openDetailsIfAllowed() {
+  if (isRegistered.value && props.event.type === 'camp') {
+    emit('open-camp-details', props.event)
+    return true
+  }
+
+  if (isRegistered.value && props.event.type === 'training') {
+    emit('open-training-details', props.event)
+    return true
+  }
+
+  return false
+}
+
 const goToEvent = () => {
+  // si inscrit + camp : details
+  if (openDetailsIfAllowed()) return
+
+  // si inscrit (autres types), pour l’instant on ne fait rien (comme avant)
   if (isRegistered.value) return
-  //Cas camp : redirection vers la page camp
+
+  // Cas camp : redirection vers la page camp (inscription)
   if (props.event.type === 'camp') {
-    router.push({ name: 'app.camp' }) // <-- adapte si ton nom de route est différent
+    router.push({ name: 'app.camp' })
     return
   }
 
   // 🔜 Plus tard: popup / modal selon type
   console.log('Popup info à faire plus tard pour:', props.event.type, props.event)
 }
+
+// ✅ rendre la card cliquable au clic (et accessible clavier)
+// - on ouvre les détails si inscrit + camp
+// - sinon, même comportement que le bouton
+function onCardClick() {
+  // évite d’ouvrir si l’event n’a pas de date par ex.
+  goToEvent()
+}
+
+function onKeydown(e) {
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault()
+    goToEvent()
+  }
+}
+
+const cardClickable = computed(() => {
+  // tu peux mettre true pour tous, mais là on met cliquable si :
+  // - camp inscrit (details)
+  // - ou camp non inscrit (inscription page)
+  return props.event.type === 'camp'
+})
 </script>
 
 <template>
-  <article class="event-card">
+  <article
+    class="event-card"
+    :role="cardClickable ? 'button' : undefined"
+    :tabindex="cardClickable ? 0 : undefined"
+    @click="onCardClick"
+    @keydown="onKeydown"
+  >
     <div class="date">
       <div class="day">{{ new Date(event['start-date']).getDate() }}</div>
       <div class="month">
@@ -45,7 +97,7 @@ const goToEvent = () => {
       <BaseButton
         :disabled="isRegistered"
         :variant="isRegistered ? 'secondary' : 'primary'"
-        @click="goToEvent"
+        @click.stop="goToEvent"
       >
         {{ isRegistered ? 'Inscrit' : 'S’inscrire' }}
       </BaseButton>
