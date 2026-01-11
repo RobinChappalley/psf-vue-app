@@ -282,7 +282,7 @@ async function onSubmitChildData(payload) {
 .user-email {
   margin-top: 2px;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.6);
+  color: var(--c-bg-dark);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

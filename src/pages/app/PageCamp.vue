@@ -539,7 +539,7 @@ p + p {
   height: 1.25rem;
   border-radius: 999px;
   background: var(--c-bg);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--c-border);
   transition: all 0.2s ease;
 }
 

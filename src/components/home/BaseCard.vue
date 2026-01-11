@@ -24,7 +24,7 @@ defineProps({
   padding: var(--sp-2);
   margin-bottom: 2rem;
 
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 6px var(--shadow-sm);
 }
 
 .card-title {

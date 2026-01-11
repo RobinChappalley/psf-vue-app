@@ -1097,7 +1097,7 @@ async function onUserUpdated(updatedUser) {
 .empty {
   margin: 0 0 var(--sp-3);
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--c-bg-dark);
 }
 
 .events-list {
@@ -1109,7 +1109,7 @@ async function onUserUpdated(updatedUser) {
 .hint {
   margin: 0.75rem 0 0;
   font-size: var(--fs-caption);
-  color: rgba(38, 38, 24, 0.65);
+  color: var(--c-bg-dark);
 }
 
 .camp-panel {

@@ -119,7 +119,7 @@ const cardClickable = computed(() => {
   width: 56px;
   overflow: hidden;
   border-radius: var(--r-input);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  border: 1px solid var(--c-border);
   text-align: center;
 }
 
