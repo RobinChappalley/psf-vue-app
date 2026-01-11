@@ -5,22 +5,12 @@ defineProps({
     required: true,
   },
 })
-
-function fmtDate(dateStr) {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  })
-}
 </script>
 
 <template>
   <article class="hike-card">
     <header class="hike-header">
       <span class="author">{{ hike.user?.email ?? 'Anonyme' }}</span>
-      <time class="date">{{ fmtDate(hike.createdAt) }}</time>
     </header>
 
     <img v-if="hike.imageUrl" :src="hike.imageUrl" alt="" class="hike-image" />
@@ -40,9 +30,6 @@ function fmtDate(dateStr) {
 }
 
 .hike-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   margin-bottom: var(--sp-1);
 }
 
@@ -50,12 +37,6 @@ function fmtDate(dateStr) {
   font-weight: var(--fw-semibold);
   font-size: var(--fs-body);
   color: var(--c-text);
-}
-
-.date {
-  font-size: var(--fs-caption);
-  color: var(--c-text);
-  opacity: 0.7;
 }
 
 .hike-image {
