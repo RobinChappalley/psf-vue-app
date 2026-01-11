@@ -57,7 +57,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 
 .title {
   font-family: var(--font-title);
-  font-size: 5.75rem;
+  font-size: 5rem;
   line-height: 1.05;
   color: var(--c-bg);
   margin-bottom: var(--sp-2);
