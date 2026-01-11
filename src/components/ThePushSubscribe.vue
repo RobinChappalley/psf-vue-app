@@ -1,16 +1,37 @@
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 import { apiFetch } from '@/services/apiFetch'
 
 async function subscribeUserToPush() {
   if (!('serviceWorker' in navigator)) return
   if (!('PushManager' in window)) return
 
+  //Check permission
+  if (Notification.permission === 'denied') {
+    console.warn('Permission denied for notifications')
+    return
+  }
+
+  const registration = await navigator.serviceWorker.ready
+
+  //Check if subscription already exists
+  const existingSubscription = await registration.pushManager.getSubscription()
+  if (existingSubscription) {
+    console.log('User has already subscribed to notifications')
+    return
+  }
+
+  //Ask for permission if necessary
+  if (Notification.permission === 'default') {
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') {
+      console.warn('Permission denied for notifications')
+      return
+    }
+  }
+
   //Get backend public key
   const { publicKey } = await apiFetch('/push/vapidPublicKey')
-
-  //Ask for permission
-  const registration = await navigator.serviceWorker.ready
 
   //Subscribe
   const subscription = await registration.pushManager.subscribe({
@@ -24,7 +45,8 @@ async function subscribeUserToPush() {
     body: subscription,
   })
 
-  console.log('User has successfully subscribed to push notifications')
+  //Send a welcome notification
+  sendWelcomePush()
 }
 
 //Translate public key
@@ -39,25 +61,23 @@ onMounted(() => {
   subscribeUserToPush().catch(console.error)
 })
 
-async function sendTestPush() {
+async function sendWelcomePush() {
   const registration = await navigator.serviceWorker.ready
   const subscription = await registration.pushManager.getSubscription()
 
   if (!subscription) {
-    console.warn('Utilisateur pas encore abonné aux notifications')
+    console.warn('User has not yet subscribed to notifications')
     return
   }
 
-  await apiFetch('/push/test', {
+  await apiFetch('/push/welcome', {
     method: 'POST',
     body: JSON.stringify({ subscription }),
   })
-
-  console.log('Notification test envoyée depuis le front !')
 }
 </script>
 
 <template>
   <button @click="subscribeUserToPush">Activer les notifications</button>
-  <button @click="sendTestPush">Envoyer une notification test</button>
+  <button @click="sendWelcomePush">Envoyer une notification test</button>
 </template>

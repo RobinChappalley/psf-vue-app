@@ -3,11 +3,15 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import AppIcone from '@/components/AppIcone.vue'
-import ThePushSubscribe from './ThePushSubscribe.vue'
+import { usePushNotifications } from '@/composables/usePushNotification'
 
 const router = useRouter()
 
 const isAuthed = computed(() => authStore.isAuthenticated.value)
+
+//Check and/or ask permission for notifications
+const { subscribeUserToPush } = usePushNotifications()
+subscribeUserToPush().catch(console.error)
 
 function goToLogin() {
   router.push({ name: 'public.login' })
@@ -17,8 +21,6 @@ function goToLogin() {
 <template>
   <header class="app-header">
     <img src="/src/assets/img/psf-logo.svg" alt="Pieds Sans Frontières" class="logo" />
-
-    <ThePushSubscribe />
 
     <button v-if="!isAuthed" class="login-btn" @click="goToLogin" aria-label="Se connecter">
       <AppIcone name="profile" />

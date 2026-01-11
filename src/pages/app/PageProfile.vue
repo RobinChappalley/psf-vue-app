@@ -11,6 +11,20 @@ import ProfilePersonalDataForm from '@/components/profile/PersonalDataForm.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
 import ChildrenList from '@/components/profile/ChildrenList.vue'
 
+import { usePushNotifications } from '@/composables/usePushNotification'
+
+/* ======================================================
+   NOTIIFICATIONS
+====================================================== */
+const {
+  permission,
+  supported,
+  hasSubscription,
+  subscribeUserToPush,
+  unsubscribeUserFromPush,
+  sendWelcomePush,
+} = usePushNotifications()
+
 /* ======================================================
    STATE / DERIVED
 ====================================================== */
@@ -174,6 +188,19 @@ async function onSubmitChildData(payload) {
 
         <ProfileMenuItem @click="openChildren"> Enfants </ProfileMenuItem>
       </nav>
+
+      <div class="menu-item notifications-item">
+        <p class="label">Notifications</p>
+        <BaseButton
+          class="notifications-button"
+          :disabled="!hasSubscription && !supported ? true : false"
+          @click="hasSubscription ? unsubscribeUserFromPush() : subscribeUserToPush()"
+          variant="secondary"
+          size="sm"
+        >
+          {{ hasSubscription ? 'Désactiver' : 'Activer' }}
+        </BaseButton>
+      </div>
 
       <div class="spacer"></div>
 
@@ -358,5 +385,33 @@ async function onSubmitChildData(payload) {
   font-family: var(--font-title);
   font-size: var(--fs-h2);
   font-weight: var(--fw-title);
+}
+
+.notifications-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--fs-body);
+  color: var(--c-text);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.notifications-item .label {
+  display: flex;
+  align-items: center;
+  text-align: left;
+  flex: 1;
+}
+
+.notifications-button {
+  flex-shrink: 0;
+  height: 32px;
+  min-height: 32px;
+  line-height: 1;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
