@@ -9,6 +9,7 @@ const props = defineProps({
   mode: { type: String, default: 'create' }, // create | edit
   type: { type: String, required: true }, // 'trainings' | 'stages' | 'information-evening' | 'generalMeeting' | 'fundraisings'
   initialValues: { type: Object, default: null },
+  confirmDelete: { type: Boolean, default: true },
 
   // ex: { fileName: "trace.gpx", url: "..." }
   existingGpx: { type: Object, default: null },
@@ -146,11 +147,10 @@ watch(
   },
   { immediate: true },
 )
-
-function onPickResponsible(v) {
-  // EventDropdown peut renvoyer un id (string) OU un objet { key, ... }
-  form.responsiblePerson =
-    typeof v === 'object' && v !== null ? (v.key ?? v.value ?? v.id ?? v._id ?? '') : (v ?? '')
+function onPickType(v) {
+  const t = typeof v === 'object' && v !== null ? (v.key ?? v.value ?? '') : (v ?? '')
+  form.type = t
+  emit('update:type', t)
 }
 
 /** Quels champs afficher ? */
@@ -296,7 +296,7 @@ const today = computed(() => {
         <EventDropdown
           :model-value="form.type"
           :options="typeOptions"
-          @update:modelValue="onPickResponsible"
+          @update:modelValue="onPickType"
         />
       </div>
 
