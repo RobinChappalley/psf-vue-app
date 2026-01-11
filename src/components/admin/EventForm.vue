@@ -244,7 +244,6 @@ function onSubmit() {
     case 'stages':
       payload = {
         ...base,
-        routeDescription: form.description?.trim?.() || null,
         startPoint: form.startPoint.trim() || null,
         endPoint: form.endPoint.trim() || null,
         distance: toNumberOrNull(form.distance),
