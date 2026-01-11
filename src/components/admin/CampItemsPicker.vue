@@ -22,7 +22,7 @@ function normalizeList(list) {
   return (Array.isArray(list) ? list : [])
     .map((x) => ({
       item_id: String(x?.item_id ?? ''),
-      quantity: String(x?.quantity ?? '1'),
+      quantity: Number(x?.quantity ?? 1),
     }))
     .filter((x) => x.item_id && validIds.value.has(x.item_id))
 }
@@ -57,7 +57,7 @@ function toggleItem(itemId, checked) {
 
   if (checked) {
     if (selectedSet.value.has(id)) return
-    commit([...selected.value, { item_id: id, quantity: '1' }])
+    commit([...selected.value, { item_id: id, quantity: 1 }])
   } else {
     commit(selected.value.filter((x) => x.item_id !== id))
   }
@@ -65,10 +65,12 @@ function toggleItem(itemId, checked) {
 
 function updateQty(itemId, qty) {
   const id = String(itemId)
-  const value = String(qty ?? '')
+  const n = Number(qty)
 
-  // Laisser l'utilisateur effacer pendant qu'il tape
-  commit(selected.value.map((x) => (x.item_id === id ? { ...x, quantity: value } : x)))
+  // on accepte vide/NaN pendant la frappe ? -> on garde l'ancien
+  if (!Number.isFinite(n)) return
+
+  commit(selected.value.map((x) => (x.item_id === id ? { ...x, quantity: n } : x)))
 }
 
 function getQty(itemId) {
@@ -111,8 +113,7 @@ const isOpen = ref(props.defaultOpen)
               type="number"
               min="1"
               step="1"
-              :value="getQty(it.id)"
-              @input="updateQty(it.id, $event.target.value)"
+              v-model.number="selected.find((x) => x.item_id === String(it.id)).quantity"
             />
           </div>
         </div>
