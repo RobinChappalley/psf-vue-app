@@ -19,7 +19,7 @@ async function fetchUsers() {
     const hasPaid =
       paidFilter.value === 'paid' ? true : paidFilter.value === 'unpaid' ? false : null
 
-    const list = await getUsers({ role, search: search.value || null })
+    const list = await getUsers({ role, search: search.value || null, hasPaid })
     usersObjects.value = list
     return list
   } catch (e) {
