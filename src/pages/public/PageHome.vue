@@ -85,9 +85,9 @@ onMounted(async () => {
         passionnés.
       </p>
     </div>
-    <div class="people">
+    <!--<div class="people">
       <PeopleBubble v-for="(name, index) in people" :key="index" :name="name" />
-    </div>
+    </div>-->
   </section>
   <section v-if="campEvent">
     <CampHighlight :event="campEvent" />
