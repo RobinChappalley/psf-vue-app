@@ -10,10 +10,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits([
-  'open-camp-details', // quand inscrit + camp (ouvre nouvelle section)
-  'select', // optionnel si tu veux généraliser plus tard
-])
+const emit = defineEmits(['open-camp-details', 'open-training-details', 'select'])
 
 const router = useRouter()
 
