@@ -66,6 +66,6 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 .subtitle {
   color: var(--c-bg);
   margin-bottom: var(--sp-3);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 </style>
