@@ -30,6 +30,17 @@ const displayEmail = computed(() => {
   return me.value.email || '—'
 })
 
+const displayHikesCount = computed(() => {
+  if (!me.value) return ''
+
+  const count = me.value.hikesCount || 0
+
+  if (count === 0) return '0 randonnée publiée'
+  if (count === 1) return '1 randonnée publiée'
+
+  return `${count} randonnées publiées`
+})
+
 //Source de vérité enfants = store (API)
 const children = computed(() => authStore.children.value)
 
@@ -154,6 +165,7 @@ async function onSubmitChildData(payload) {
         <div class="user-meta">
           <span class="user-name">{{ displayName }}</span>
           <span class="user-email">{{ displayEmail }}</span>
+          <span class="user-email">{{ displayHikesCount }}</span>
         </div>
       </section>
 
