@@ -16,18 +16,18 @@ const NAV_ITEMS = [
     icon: 'clipboard',
     publicOnly: true,
   },
-  {
-    label: 'Historique',
-    name: 'public.history',
-    icon: 'history',
-    publicOnly: true,
-  },
-  {
-    label: 'Contact',
-    name: 'public.contact',
-    icon: 'mail',
-    publicOnly: true,
-  },
+  //{
+  //  label: 'Historique',
+  //  name: 'public.history',
+  //  icon: 'history',
+  //  publicOnly: true,
+  //},
+  //{
+  // label: 'Contact',
+  //  name: 'public.contact',
+  //  icon: 'mail',
+  //  publicOnly: true,
+  //},
 
   // --- CONNECTÉ ---
   {
@@ -42,12 +42,12 @@ const NAV_ITEMS = [
     icon: 'camp',
     authOnly: true,
   },
-  {
-    label: 'Historique',
-    name: 'app.history',
-    icon: 'history',
-    authOnly: true,
-  },
+  //{
+  //  label: 'Historique',
+  //  name: 'app.history',
+  //  icon: 'history',
+  //  authOnly: true,
+  // },
   {
     label: 'Profil',
     name: 'app.profile',

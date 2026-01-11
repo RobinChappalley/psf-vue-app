@@ -18,7 +18,7 @@ function goToLogin() {
     <img src="/src/assets/img/psf-logo.svg" alt="Pieds Sans Frontières" class="logo" />
 
     <button v-if="!isAuthed" class="login-btn" @click="goToLogin" aria-label="Se connecter">
-      <AppIcone name="userCircle" />
+      <AppIcone name="profile" />
     </button>
   </header>
 </template>

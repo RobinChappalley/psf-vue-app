@@ -16,12 +16,12 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 
         <BaseButton
           as="link"
-          :to="{ name: 'public.history' }"
+          :to="{ name: 'public.subscription' }"
           variant="primary"
           size="md"
           :block="true"
         >
-          Découvrez les camps <br />des précédentes années
+          S'inscrire au camp
         </BaseButton>
       </div>
     </div>
@@ -57,7 +57,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 
 .title {
   font-family: var(--font-title);
-  font-size: 5.75rem;
+  font-size: 5rem;
   line-height: 1.05;
   color: var(--c-bg);
   margin-bottom: var(--sp-2);
@@ -66,6 +66,6 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 .subtitle {
   color: var(--c-bg);
   margin-bottom: var(--sp-3);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 </style>
