@@ -292,14 +292,16 @@ const activeCampItemsModel = computed({
       }))
       .filter((x) => x.item_id)
   },
-  set(nextPickerModel) {
+  set(next) {
+    // ✅ IMPORTANT : next est le paramètre du setter
     if (!selectedCamp.value) return
-    const ids = (Array.isArray(next) ? next : [])
+
+    const cleanIds = (Array.isArray(next) ? next : [])
       .map((x) => String(x?.item_id ?? ''))
       .filter(Boolean)
 
-    // on garde le shape backend local (quantity forcée à 1)
-    selectedCamp.value.itemsList = ids.map((id) => ({
+    // Picker -> Backend (quantity forcée à 1)
+    selectedCamp.value.itemsList = cleanIds.map((id) => ({
       item: id,
       quantity: 1,
     }))
@@ -345,48 +347,6 @@ function buildCampUpdatePayloadForItems(camp, itemsList) {
 
   return cleaned
 }
-
-watch(
-  activeCampItemsModel,
-  () => {
-    if (!selectedCamp.value?.id) return
-    if (!itemsHydrated.value) return
-    if (!isEditingItems.value) return
-
-    if (saveTimer) clearTimeout(saveTimer)
-
-    saveTimer = setTimeout(async () => {
-      savingItems.value = true
-      saveItemsError.value = null
-
-      try {
-        const camp = selectedCamp.value
-        const id = camp.id
-
-        const itemsList = sanitizeCampItemsList(camp.itemsList)
-
-        // 🔎 debug utile
-        // console.log('SENDING itemsList:', JSON.stringify(itemsList, null, 2))
-
-        const payload = buildCampUpdatePayloadForItems(camp, itemsList)
-        await apiUpdateCamp(id, payload)
-
-        // ✅ refresh store uniquement si PUT OK
-        await campsStore.fetchCamps()
-        resyncSelectedCampById(id)
-      } catch (e) {
-        console.error('AUTO SAVE ITEMS ERROR:', e)
-        const errors = e?.data?.errors ?? []
-        console.table(errors) // ✅ lisible
-        console.log('RAW errors:', JSON.stringify(errors, null, 2)) // ✅ à copier/coller
-        saveItemsError.value = e
-      } finally {
-        savingItems.value = false
-      }
-    }, 600)
-  },
-  { deep: true },
-)
 
 /**
  * (optionnel) bouton "enregistrer" manuel si tu le gardes
