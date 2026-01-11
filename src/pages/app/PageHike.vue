@@ -11,6 +11,7 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import FloatingButton from '@/components/ui/FloatingButton.vue'
 import BottomSheet from '@/components/ui/BottomSheet.vue'
 import HikeCard from '@/components/hikes/HikeCard.vue'
+import MenuChips from '@/components/ui/MenuChips.vue'
 
 // Authentification
 const token = authStore.token.value
@@ -25,6 +26,9 @@ onMounted(async () => {
 const hikes = computed(() => hikesStore.hikes.value)
 const loading = computed(() => hikesStore.loading.value)
 const error = computed(() => hikesStore.error.value)
+
+//Handle tabs
+const activeSection = ref('feed')
 
 // Bottom sheet
 const sheetOpen = ref(false)
@@ -42,6 +46,8 @@ const form = reactive({
   description: '',
   imageFile: null,
 })
+
+const submitting = ref(false)
 
 function onFileChange(e) {
   const file = e.target.files[0] || null
@@ -61,6 +67,8 @@ async function submitForm() {
       return
     }
 
+    submitting.value = true
+
     const formData = new FormData()
     formData.append('user', userId)
     formData.append('content', form.description)
@@ -69,12 +77,17 @@ async function submitForm() {
     }
 
     await postHikes(formData, token)
-    await hikesStore.fetchHikes()
 
     closeSheet()
     form.description = ''
     form.imageFile = null
-  } catch (e) {}
+
+    await hikesStore.fetchHikes()
+  } catch (e) {
+    console.error("Erreur lors de l'ajout de la randonnée : ", e)
+  } finally {
+    submitting.value = false
+  }
 }
 
 // Geolocation - Nearest training
@@ -124,15 +137,42 @@ function fmtDate(dateStr) {
   <section class="section">
     <h1>Randonnées</h1>
 
-    <!-- Nearest training search -->
-    <div class="nearest-section">
-      <BaseButton
-        variant="secondary"
-        @click="findNearestTraining"
-        :disabled="nearestLoading || geoLoading"
-      >
-        {{ nearestLoading ? 'Recherche...' : 'Entraînement le plus proche' }}
-      </BaseButton>
+    <MenuChips
+      v-model="activeSection"
+      :items="[
+        { key: 'feed', label: 'Publications' },
+        { key: 'nearest-hike', label: 'A proximité' },
+      ]"
+    />
+
+    <!-- Hikes feed section -->
+    <div v-if="activeSection === 'feed'">
+      <!-- Loading and errors -->
+      <div v-if="loading" class="loading">Chargement des randonnées…</div>
+      <div v-if="error" class="error">{{ error }}</div>
+
+      <div v-if="!loading && hikes.length === 0" class="empty-state">
+        Aucune randonnée disponible.
+      </div>
+
+      <div v-if="hikes.length" class="hikes-feed">
+        <HikeCard v-for="hike in hikes" :key="hike._id" :hike="hike" />
+      </div>
+
+      <FloatingButton @click="openSheet">+</FloatingButton>
+    </div>
+
+    <!-- Nearest training section -->
+    <div class="nearest-section" v-if="activeSection === 'nearest-hike'">
+      <div class="nearest-button">
+        <BaseButton
+          variant="primary"
+          @click="findNearestTraining"
+          :disabled="nearestLoading || geoLoading"
+        >
+          {{ nearestLoading ? 'Recherche...' : 'Entraînement le plus proche' }}
+        </BaseButton>
+      </div>
 
       <div v-if="nearestTraining" class="nearest-result">
         <div class="nearest-card">
@@ -146,21 +186,6 @@ function fmtDate(dateStr) {
 
       <p v-if="nearestError" class="error">{{ nearestError }}</p>
     </div>
-
-    <!-- Loading and errors -->
-    <div v-if="loading" class="loading">Chargement des randonnées…</div>
-    <div v-if="error" class="error">{{ error }}</div>
-
-    <!-- Hikes feed -->
-    <div v-if="!loading && hikes.length === 0" class="empty-state">
-      Aucune randonnée disponible.
-    </div>
-
-    <div v-if="hikes.length" class="hikes-feed">
-      <HikeCard v-for="hike in hikes" :key="hike._id" :hike="hike" />
-    </div>
-
-    <FloatingButton icon="plus" @click="openSheet" />
 
     <!-- Add hike form -->
     <BottomSheet :open="sheetOpen" title="Ajouter une randonnée" @close="closeSheet">
@@ -181,7 +206,9 @@ function fmtDate(dateStr) {
           <input id="image" type="file" @change="onFileChange" accept="image/*" />
         </div>
 
-        <BaseButton type="submit" block>Publier</BaseButton>
+        <BaseButton type="submit" block :disabled="submitting">{{
+          submitting ? 'Publication en cours…' : 'Publier'
+        }}</BaseButton>
       </form>
     </BottomSheet>
   </section>
@@ -190,6 +217,13 @@ function fmtDate(dateStr) {
 <style scoped>
 .nearest-section {
   margin-bottom: var(--sp-3);
+}
+
+.nearest-button {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--sp-4);
+  margin-top: var(--sp-2);
 }
 
 .nearest-result {
