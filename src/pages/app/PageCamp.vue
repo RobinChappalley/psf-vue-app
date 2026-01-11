@@ -216,14 +216,14 @@ const continueSignup = async () => {
   try {
     const campIdStr = String(campId)
 
-    // ✅ ensemble des camps existants en DB (chargés via /camps)
+    //ensemble des camps existants en DB (chargés via /camps)
     const existingCampIds = campIdsSet.value
 
     await Promise.all(
       selectedPeople.value.map(async (p) => {
         const u = await getUser(p.id)
 
-        // ✅ garde seulement les ids mongo valides ET qui existent vraiment
+        //arde seulement les ids mongo valides ET qui existent vraiment
         const existing = Array.isArray(u.camps)
           ? u.camps
               .map(String)
@@ -240,8 +240,6 @@ const continueSignup = async () => {
     await authStore.refreshMe()
     step.value = 'confirm'
   } catch (e) {
-    console.log('UPDATE ERROR DATA:', e?.data)
-    console.log('UPDATE ERROR FIRST:', e?.data?.errors?.[0])
     campSignupError.value =
       e?.data?.message || e?.data?.error || e?.message || "Impossible d'inscrire au camp."
   } finally {
