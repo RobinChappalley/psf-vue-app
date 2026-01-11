@@ -8,7 +8,8 @@ import { campsStore } from '@/stores/camps'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { getUser, updateUser } from '@/services/usersApi'
-import campItemsSection from '@/components/camp/campItemsSection.vue'
+import CampItemsSection from '@/components/camp/CampItemsSection.vue'
+
 // -------------------------------------------------
 // Charger les camps (lazy) via store
 // -------------------------------------------------
@@ -188,11 +189,6 @@ const selectedPeople = computed(() => signupPeople.value.filter((p) => p.selecte
 // -------------------------------------------------
 // Navigation actions
 // -------------------------------------------------
-const campId = computed(() => camp.value?.id ?? camp.value?._id ?? null)
-
-// -------------------------------------------------
-// Navigation actions
-// -------------------------------------------------
 const goBackToCamp = () => {
   step.value = 'camp'
 }
@@ -241,6 +237,9 @@ const continueSignup = async () => {
     campSignupLoading.value = false
   }
 }
+
+//Items
+const campId = computed(() => camp.value?.id ?? camp.value?._id ?? null)
 </script>
 
 <template>
@@ -300,7 +299,7 @@ const continueSignup = async () => {
         </p>
       </section>
       <section class="section">
-        <campItemsSection v-if="campId" :camp-id="campId" />
+        <CampItemsSection v-if="campId" :camp-id="campId" />
       </section>
 
       <section class="section">
