@@ -17,7 +17,13 @@ async function onSubmit() {
     await authStore.login(email.value, password.value)
     router.push({ name: 'app.home' })
   } catch (e) {
-    error.value = e?.message || 'Erreur de connexion'
+    if (e?.status === 401) {
+      error.value = 'Email ou mot de passe incorrect.'
+    } else if (e?.status === 400) {
+      error.value = 'Veuillez vérifier les champs.'
+    } else {
+      error.value = e?.message || 'Erreur de connexion'
+    }
   }
 }
 </script>
@@ -49,6 +55,9 @@ async function onSubmit() {
         />
 
         <BaseButton class="submit" type="submit"> Se connecter </BaseButton>
+        <p v-if="error" class="error" role="alert">
+          {{ error }}
+        </p>
 
         <p class="hint">
           Pas encore de compte ?
@@ -106,5 +115,13 @@ async function onSubmit() {
 .link {
   color: var(--c-text);
   text-decoration: underline;
+}
+.error {
+  margin-top: var(--sp-1);
+  padding: var(--sp-1);
+  border: 1px solid var(--c-primary);
+  border-radius: var(--r-input);
+  background: rgba(211, 51, 51, 0.08);
+  font-size: var(--fs-caption);
 }
 </style>
