@@ -15,3 +15,12 @@ export function updateTraining(campId, trainingId, payload) {
 export function deleteTraining(campId, trainingId) {
   return apiFetch(`/camps/${campId}/trainings/${trainingId}`, { method: 'DELETE' })
 }
+
+export function getNearestTraining(latitude, longitude, maxDistance = 50) {
+  const params = new URLSearchParams({
+    latitude: String(latitude),
+    longitude: String(longitude),
+    maxDistance: String(maxDistance),
+  })
+  return apiFetch(`/camps/trainings/nearest?${params}`, { method: 'GET' })
+}

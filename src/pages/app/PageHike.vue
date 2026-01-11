@@ -4,19 +4,21 @@ import { computed, onMounted, ref, reactive } from 'vue'
 import { hikesStore } from '@/stores/hikes'
 import { authStore } from '@/stores/auth'
 import { postHikes } from '@/services/hikesApi'
+import { getNearestTraining } from '@/services/trainingsApi'
+import { useGeolocation } from '@/composables/useGeolocation'
 
 import BaseButton from '@/components/ui/BaseButton.vue'
 import FloatingButton from '@/components/ui/FloatingButton.vue'
 import BottomSheet from '@/components/ui/BottomSheet.vue'
+import HikeCard from '@/components/hikes/HikeCard.vue'
 
-//Authentification
+// Authentification
 const token = authStore.token.value
 
-//Retrieve hikes
+// Retrieve hikes
 onMounted(async () => {
   try {
     await hikesStore.ensureHikesLoaded()
-    console.log(hikesStore.hikes.value)
   } catch (e) {
     console.error(e)
   }
@@ -26,13 +28,9 @@ const hikes = computed(() => hikesStore.hikes.value)
 const loading = computed(() => hikesStore.loading.value)
 const error = computed(() => hikesStore.error.value)
 
-console.log(hikes)
-
-//Define what is displayed
-const section = 'photos'
+// Bottom sheet
 const sheetOpen = ref(false)
 
-//Handle bottom sheet
 function openSheet() {
   sheetOpen.value = true
 }
@@ -41,7 +39,7 @@ function closeSheet() {
   sheetOpen.value = false
 }
 
-//Handle form
+// Handle form
 const form = reactive({
   description: '',
   imageFile: null,
@@ -52,26 +50,29 @@ function onFileChange(e) {
   if (file && file.size > 10 * 1024 * 1024) {
     alert('Le fichier est trop volumineux (max 10MB).')
     form.imageFile = null
-    e.target.value = '' // réinitialiser le input
+    e.target.value = ''
     return
   }
   form.imageFile = file
 }
 
 async function submitForm() {
-  console.log('Token :', token)
-  console.log('Description :', form.description)
-  console.log('Image :', form.imageFile)
   try {
+    const userId = authStore.getUserId(authStore.user.value)
+    if (!userId) {
+      console.error('Utilisateur non connecté')
+      return
+    }
+
     const formData = new FormData()
+    formData.append('user', userId)
     formData.append('content', form.description)
     if (form.imageFile) {
       formData.append('image', form.imageFile)
     }
 
     await postHikes(formData, token)
-
-    await hikesStore.ensureHikesLoaded()
+    await hikesStore.fetchHikes()
 
     closeSheet()
     form.description = ''
@@ -81,13 +82,45 @@ async function submitForm() {
   }
 }
 
-//Format date
+// Geolocation - Nearest training
+const { getCurrentPosition, loading: geoLoading, error: geoError } = useGeolocation()
+const nearestTraining = ref(null)
+const nearestLoading = ref(false)
+const nearestError = ref(null)
+
+async function findNearestTraining() {
+  nearestLoading.value = true
+  nearestError.value = null
+  nearestTraining.value = null
+
+  const pos = await getCurrentPosition()
+  if (!pos) {
+    nearestError.value = geoError.value || 'Impossible de vous localiser'
+    nearestLoading.value = false
+    return
+  }
+
+  try {
+    const result = await getNearestTraining(pos.latitude, pos.longitude)
+    nearestTraining.value = result
+  } catch (e) {
+    nearestError.value = e.message || 'Aucun entraînement trouvé'
+  } finally {
+    nearestLoading.value = false
+  }
+}
+
+function clearNearestTraining() {
+  nearestTraining.value = null
+  nearestError.value = null
+}
+
 function fmtDate(dateStr) {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('fr-FR', {
-    year: 'numeric',
-    month: 'long',
     day: 'numeric',
+    month: 'long',
+    year: 'numeric',
   })
 }
 </script>
@@ -96,62 +129,159 @@ function fmtDate(dateStr) {
   <section class="section">
     <h1>Randonnées</h1>
 
-    <template v-if="section === 'photos'">
-      <!-- Loading and errors -->
-      <div v-if="loading">Chargement des randonnées…</div>
-      <div v-if="error" class="error">{{ error }}</div>
+    <!-- Nearest training search -->
+    <div class="nearest-section">
+      <BaseButton
+        variant="secondary"
+        @click="findNearestTraining"
+        :disabled="nearestLoading || geoLoading"
+      >
+        {{ nearestLoading ? 'Recherche...' : 'Entraînement le plus proche' }}
+      </BaseButton>
 
-      <!-- List of Hikes -->
-      <div v-if="!loading && hikes.length === 0">Aucune randonnée disponible.</div>
+      <div v-if="nearestTraining" class="nearest-result">
+        <div class="nearest-card">
+          <button class="close-btn" @click="clearNearestTraining" type="button">&times;</button>
+          <h3>Entraînement trouvé</h3>
+          <p><strong>Date :</strong> {{ fmtDate(nearestTraining.date) }}</p>
+          <p><strong>Lieu :</strong> {{ nearestTraining.meetingPoint || 'Non spécifié' }}</p>
+          <p><strong>Distance :</strong> {{ nearestTraining._distanceKm?.toFixed(1) ?? '?' }} km</p>
+        </div>
+      </div>
 
-      <ul v-if="hikes.length" class="hike-list">
-        <li v-for="hike in hikes" :key="hike._id" class="hike-item">
-          <h3>{{ hike.user.email }}</h3>
-          <p v-if="hike.createdAt">{{ fmtDate(hike.createdAt) }}</p>
-          <p>{{ hike.content || 'Randonnée' }}</p>
-          <img v-if="hike.imageUrl" :src="hike.imageUrl" :alt="'Photo de la randonnée'" />
-        </li>
-      </ul>
-      <FloatingButton @click="openSheet">+</FloatingButton>
-    </template>
+      <p v-if="nearestError" class="error">{{ nearestError }}</p>
+    </div>
 
-    <template v-if="section === 'hikes'">
-      <p>page des randos</p>
-    </template>
+    <!-- Loading and errors -->
+    <div v-if="loading" class="loading">Chargement des randonnées…</div>
+    <div v-if="error" class="error">{{ error }}</div>
 
-    <BottomSheet :open="sheetOpen" title="Ajouter une photo" @close="closeSheet">
-      <form @submit.prevent="submitForm">
-        <label>
-          Description
-          <input
-            type="text"
+    <!-- Hikes feed -->
+    <div v-if="!loading && hikes.length === 0" class="empty-state">
+      Aucune randonnée disponible.
+    </div>
+
+    <div v-if="hikes.length" class="hikes-feed">
+      <HikeCard v-for="hike in hikes" :key="hike._id" :hike="hike" />
+    </div>
+
+    <FloatingButton icon="plus" @click="openSheet" />
+
+    <!-- Add hike form -->
+    <BottomSheet :open="sheetOpen" title="Ajouter une randonnée" @close="closeSheet">
+      <form class="hike-form" @submit.prevent="submitForm">
+        <div class="form-group">
+          <label for="description">Description</label>
+          <textarea
+            id="description"
             v-model="form.description"
-            placeholder="Entrez une description"
+            placeholder="Racontez votre randonnée..."
+            rows="3"
             required
-          />
-        </label>
+          ></textarea>
+        </div>
 
-        <label>
-          Image
-          <input type="file" @change="onFileChange" accept="image/*" />
-        </label>
+        <div class="form-group">
+          <label for="image">Photo</label>
+          <input id="image" type="file" @change="onFileChange" accept="image/*" />
+        </div>
 
-        <BaseButton type="submit">Valider</BaseButton>
+        <BaseButton type="submit" block>Publier</BaseButton>
       </form>
     </BottomSheet>
   </section>
 </template>
 
 <style scoped>
-.hike-list {
-  list-style: none;
-  padding: 0;
+.nearest-section {
+  margin-bottom: var(--sp-3);
 }
-.hike-item {
-  border-bottom: 1px solid var(--muted);
-  padding: 0.75rem 0;
+
+.nearest-result {
+  margin-top: var(--sp-2);
 }
+
+.nearest-card {
+  position: relative;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-card);
+  padding: var(--sp-2);
+}
+
+.nearest-card h3 {
+  margin: 0 0 var(--sp-1);
+  font-family: var(--font-title);
+  font-size: var(--fs-h3);
+}
+
+.nearest-card p {
+  margin: 0.25rem 0;
+  font-size: var(--fs-body);
+}
+
+.close-btn {
+  position: absolute;
+  top: var(--sp-1);
+  right: var(--sp-1);
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--c-text);
+  opacity: 0.6;
+}
+
+.close-btn:hover {
+  opacity: 1;
+}
+
+.loading,
+.empty-state {
+  text-align: center;
+  padding: var(--sp-2);
+  color: var(--c-text);
+  opacity: 0.7;
+}
+
 .error {
-  color: var(--danger);
+  color: var(--c-warning);
+  margin-top: var(--sp-1);
+}
+
+.hikes-feed {
+  display: flex;
+  flex-direction: column;
+}
+
+.hike-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.form-group label {
+  font-weight: var(--fw-semibold);
+  font-size: var(--fs-body);
+}
+
+.form-group textarea {
+  padding: var(--sp-1);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-input);
+  font-size: var(--fs-body);
+  font-family: var(--font-body);
+  resize: vertical;
+}
+
+.form-group input[type='file'] {
+  padding: var(--sp-1);
 }
 </style>
