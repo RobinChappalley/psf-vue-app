@@ -608,7 +608,7 @@ async function onSubmitPasswordChange() {
 }
 
 .success-msg {
-  color: var(--c-success, #38a169);
+  color: #38a169;
   font-size: var(--fs-caption);
   margin-bottom: var(--sp-2);
 }
