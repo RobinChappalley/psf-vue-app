@@ -9,15 +9,13 @@ function joinUrl(base, path) {
 /**
  * apiFetch("/login", { method: "POST", body: { ... } })
  * - ajoute automatiquement Content-Type si body est un objet
- * - ajoute automatiquement Authorization si token présent en localStorage
+ * - envoie automatiquement les cookies (credentials: include)
  * - parse JSON si possible
  */
 export async function apiFetch(path, options = {}) {
   const url = joinUrl(BASE_URL, path)
 
   const headers = new Headers(options.headers || {})
-  const token = localStorage.getItem('token')
-  if (token) headers.set('Authorization', `Bearer ${token}`)
 
   let body = options.body
   // si on passe un objet JS, on le JSON-encode
@@ -26,7 +24,12 @@ export async function apiFetch(path, options = {}) {
     body = JSON.stringify(body)
   }
 
-  const res = await fetch(url, { ...options, headers, body })
+  const res = await fetch(url, {
+    ...options,
+    credentials: 'include', // Envoie les cookies automatiquement
+    headers,
+    body,
+  })
 
   // tente de parser en JSON, sinon texte
   const contentType = res.headers.get('content-type') || ''

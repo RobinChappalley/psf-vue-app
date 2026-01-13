@@ -17,13 +17,39 @@ import BackButton from '@/components/ui/BackButton.vue'
 // --------------------
 // Charger les camps (lazy, sans App.vue)
 // --------------------
-onMounted(async () => {
-  campsStore.ensureCampsLoaded()
-  if (authStore.isAuthenticated.value) {
-    await profileStore.refreshMe()
-    await childrenStore.fetchChildren()
+const user = computed(() => authStore.user.value)
 
-    // optionnel mais utile si ton panel affiche des responsables par nom
+/* Dans PageHome.vue */
+
+onMounted(async () => {
+  // 1. Charger les camps (Toujours nécessaire)
+  campsStore.ensureCampsLoaded()
+
+  // 2. Si l'utilisateur est connecté, on rafraichit ses données
+  if (authStore.isAuthenticated.value) {
+    // On sécurise l'ID (on s'assure qu'il existe)
+    const myId = user.value?.id
+
+    if (myId) {
+      // ÉTAPE A : Rafraîchir l'utilisateur
+      try {
+        const freshUser = await profileStore.refreshUser(myId)
+
+        // C'EST ICI LA CLÉ :
+        // On met à jour l'affichage (authStore) avec ce qu'on vient de recevoir
+        if (freshUser) {
+          authStore.user.value = freshUser
+        }
+      } catch (e) {
+        console.error('Erreur chargement user', e)
+      }
+
+      // ÉTAPE B : Charger les enfants
+      // On passe l'ID qu'on a déjà récupéré
+      await childrenStore.fetchChildren(myId).catch((e) => console.error('Erreur enfants', e))
+    }
+
+    // ÉTAPE C : Responsables
     await responsiblesStore.fetchResponsibleUsers().catch(() => {})
   }
 })
@@ -42,7 +68,6 @@ function backToHome() {
 // --------------------
 // USER + CAMP ACTUEL
 // --------------------
-const user = computed(() => authStore.user.value)
 const firstname = computed(() => user.value?.firstname || '')
 
 const camps = computed(() => campsStore.camps.value)

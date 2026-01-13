@@ -4,12 +4,9 @@ export function getHikes() {
   return apiFetch('/hikes', { method: 'GET' })
 }
 
-export function postHikes(formData, token) {
+export function postHikes(formData) {
   return apiFetch('/hikes', {
     method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
     body: formData,
   })
 }

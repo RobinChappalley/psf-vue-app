@@ -1,18 +1,11 @@
 // src/stores/childrenStore.js
-// Gestion des enfants du parent connecté
+// Gestion des enfants (Découplé de Auth)
 
 import { ref, computed } from 'vue'
 import { getChildrenByParent, createChildApi, updateUserApi } from '@/services/children'
 import { getUserId } from './_helpers'
 
-// Import différé pour éviter la dépendance circulaire
-let _authStore = null
-function getAuthStore() {
-  if (!_authStore) {
-    _authStore = require('./auth').authStore
-  }
-  return _authStore
-}
+// PLUS AUCUNE référence à Auth ici (ni require, ni import)
 
 /* ======================================================
    STATE
@@ -26,46 +19,47 @@ const children = computed(() => childrenObjects.value)
 
 /**
  * Récupère les enfants d'un parent
- * @param {string|null} parentId - ID du parent (utilise le user connecté par défaut)
+ * @param {string|number} parentId - ID du parent (OBLIGATOIRE)
  */
-async function fetchChildren(parentId = null) {
-  const auth = getAuthStore()
-  const pid = parentId ?? getUserId(auth.user.value)
-  if (!pid) throw new Error('Missing parentId')
+async function fetchChildren(parentId) {
+  // Avant : on cherchait dans auth si parentId était null.
+  // Maintenant : on bloque si pas d'ID.
+  if (!parentId) throw new Error('Parent ID manquant pour fetchChildren')
 
-  const res = await getChildrenByParent(pid)
+  const res = await getChildrenByParent(parentId)
+
+  // Gestion sécurisée du retour API (tableau ou objet avec data)
   childrenObjects.value = Array.isArray(res) ? res : (res?.data ?? [])
+
   return childrenObjects.value
 }
 
 /**
- * Crée un objet enfant vide pour les formulaires
- * @param {string|null} parentId - ID du parent
+ * Crée un objet enfant vide pré-rempli avec l'ID du parent
+ * @param {string|number} parentId - ID du parent (OBLIGATOIRE)
  */
-function createEmptyChild(parentId = null) {
-  const auth = getAuthStore()
-  const pid = parentId ?? getUserId(auth.user.value)
+function createEmptyChild(parentId) {
+  if (!parentId) throw new Error('Parent ID manquant pour createEmptyChild')
+
   return {
     firstname: '',
     lastname: '',
     role: ['enfant'],
-    parent: pid,
+    parent: parentId, // On utilise l'ID passé en paramètre
     participationInfo: {},
     address: {},
   }
 }
 
 /**
- * Crée un nouvel enfant
+ * Crée un nouvel enfant en base de données
+ * @param {string|number} parentId - ID du parent (OBLIGATOIRE)
  * @param {Object} childPayload - Données de l'enfant
  */
-async function createChild(childPayload) {
-  const auth = getAuthStore()
-  if (!auth.user.value) throw new Error('Not authenticated')
+async function createChild(parentId, childPayload) {
+  if (!parentId) throw new Error('Parent ID manquant pour createChild')
 
-  const parentId = getUserId(auth.user.value)
-  if (!parentId) throw new Error('Missing parent id')
-
+  // Nettoyage des données (inchangé)
   const firstname = String(childPayload?.firstname ?? '').trim()
   const lastname = String(childPayload?.lastname ?? '').trim()
 
@@ -77,13 +71,17 @@ async function createChild(childPayload) {
     ...childPayload,
     firstname,
     lastname,
-    parent: parentId,
+    parent: parentId, // On lie explicitement au parent reçu
     role: ['enfant'],
   }
 
+  // On nettoie au cas où
   delete payload.parentId
 
+  // 1. Création API
   const created = await createChildApi(payload)
+
+  // 2. On rafraîchit la liste pour ce parent précis !!
   await fetchChildren(parentId)
 
   return created
@@ -91,21 +89,26 @@ async function createChild(childPayload) {
 
 /**
  * Met à jour un enfant existant
+ * @param {string|number} parentId - ID du parent (Nécessaire pour rafraîchir la liste après update)
  * @param {Object} childPayload - Données de l'enfant avec id
  */
-async function updateChild(childPayload) {
-  const id = getUserId(childPayload)
-  if (!id) throw new Error('Missing child id')
+async function updateChild(parentId, childPayload) {
+  // On a besoin de l'ID de l'enfant pour l'API
+  const childId = getUserId(childPayload) // ou childPayload.id ou ._id
+  if (!childId) throw new Error('Child ID manquant')
+
+  if (!parentId) throw new Error('Parent ID manquant (nécessaire pour rafraichir la liste)')
 
   const payload = { ...childPayload }
+  // On nettoie l'ID du payload pour éviter de l'envoyer dans le body si l'API n'aime pas ça
   delete payload.id
   delete payload._id
 
-  const updated = await updateUserApi(id, payload)
+  // 1. Update API
+  const updated = await updateUserApi(childId, payload)
 
-  const auth = getAuthStore()
-  const pid = getUserId(auth.user.value)
-  if (pid) await fetchChildren(pid)
+  // 2. On rafraîchit la liste du parent
+  await fetchChildren(parentId)
 
   return updated
 }
@@ -128,7 +131,7 @@ export const childrenStore = {
   // Actions
   fetchChildren,
   createEmptyChild,
-  createChild,
-  updateChild,
+  createChild, // Attention: signature changée (parentId, payload)
+  updateChild, // Attention: signature changée (parentId, payload)
   reset,
 }

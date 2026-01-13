@@ -1,85 +1,67 @@
-// src/stores/profile.js
-// Gestion du profil de l'utilisateur connecté
+/* src/stores/profile.js */
 
-import { apiFetch } from '@/services/apiFetch'
-import { updateUser as updateUserFromUsersApi } from '@/services/usersApi'
-import { getUserId, normalizeUser } from './_helpers'
+// 1. On utilise des imports standards (pas de require)
+import { apiFetch } from '@/services/apiFetch' // ou ton chemin vers l'API
+import { normalizeUser } from './_helpers' // ou l'endroit où tu as cette fonction
 
-// Import différé pour éviter la dépendance circulaire
-let _authStore = null
-function getAuthStore() {
-  if (!_authStore) {
-    _authStore = require('./auth').authStore
-  }
-  return _authStore
+// IMPORTANT : On n'importe PAS authStore ici.
+// C'est ça qui causait la boucle et les crashs.
+
+const profileStore = {
+  // --- Fonctions utilitaires ---
+
+  persistUser(user) {
+    if (user) {
+      localStorage.setItem('user', JSON.stringify(user))
+    } else {
+      localStorage.removeItem('user')
+    }
+  },
+
+  // --- Actions ---
+
+  /**
+   * Cette fonction a désormais besoin qu'on lui donne l'ID.
+   * Elle ne va plus le chercher toute seule.
+   */
+  async refreshUser(userId) {
+    if (!userId) return null
+
+    try {
+      // Appel API standard
+      const fresh = await apiFetch(`/users/${userId}`)
+
+      // On nettoie les données
+      const normalized = normalizeUser(fresh.user || fresh)
+
+      // On sauvegarde le token/user si nécessaire
+      profileStore.persistUser(normalized)
+
+      return normalized
+    } catch (e) {
+      console.error(e)
+      return null
+    }
+  },
+
+  /**
+   * Pareil ici : on donne l'ID et les données à changer
+   */
+  async updateUser(userId, payload) {
+    if (!userId) throw new Error('ID utilisateur manquant')
+
+    // 1. On envoie la modif à l'API
+    await apiFetch(`/users/${userId}`, {
+      method: 'PATCH', // ou PUT selon ton API
+      body: payload,
+    })
+
+    // 2. On récupère la version à jour pour être sûr
+    // (On réutilise la fonction d'au dessus)
+    const updatedUser = await profileStore.refreshUser(userId)
+
+    return updatedUser
+  },
 }
 
-/**
- * Persiste l'utilisateur dans localStorage
- */
-function persistUser(user) {
-  if (user) {
-    localStorage.setItem('user', JSON.stringify(user))
-  } else {
-    localStorage.removeItem('user')
-  }
-}
-
-/**
- * Rafraîchit le profil depuis l'API
- */
-async function refreshMe() {
-  const auth = getAuthStore()
-  const myId = getUserId(auth.user.value)
-  if (!myId) return null
-
-  const fresh = await apiFetch(`/users/${myId}`, { method: 'GET' })
-  auth.user.value = normalizeUser(fresh?.user ?? fresh)
-  persistUser(auth.user.value)
-
-  return auth.user.value
-}
-
-/**
- * Met à jour le profil de l'utilisateur connecté
- * @param {Object} payload - Champs à modifier
- */
-async function updateMe(payload) {
-  const auth = getAuthStore()
-  const myId = getUserId(auth.user.value)
-  if (!myId) throw new Error('Not authenticated')
-
-  await updateUserFromUsersApi(myId, payload)
-  await refreshMe()
-
-  return auth.user.value
-}
-
-/**
- * Met à jour un utilisateur par son ID
- * Si c'est l'utilisateur connecté, rafraîchit aussi le profil local
- * @param {string} id - ID de l'utilisateur
- * @param {Object} payload - Champs à modifier
- */
-async function updateUserById(id, payload) {
-  if (!id) throw new Error('Missing user id')
-
-  const updated = await updateUserFromUsersApi(id, payload)
-
-  const auth = getAuthStore()
-  const myId = getUserId(auth.user.value)
-  if (myId && String(myId) === String(id)) {
-    await refreshMe()
-    return auth.user.value
-  }
-
-  return updated
-}
-
-export const profileStore = {
-  // Fonctions
-  refreshMe,
-  updateMe,
-  updateUserById,
-  persistUser,
-}
+export { profileStore }

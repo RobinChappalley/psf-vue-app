@@ -13,9 +13,6 @@ import BottomSheet from '@/components/ui/BottomSheet.vue'
 import HikeCard from '@/components/hikes/HikeCard.vue'
 import MenuChips from '@/components/ui/MenuChips.vue'
 
-// Authentification
-const token = authStore.token.value
-
 // Retrieve hikes
 onMounted(async () => {
   try {
@@ -76,7 +73,7 @@ async function submitForm() {
       formData.append('image', form.imageFile)
     }
 
-    await postHikes(formData, token)
+    await postHikes(formData)
 
     closeSheet()
     form.description = ''

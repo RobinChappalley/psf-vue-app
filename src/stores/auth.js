@@ -1,5 +1,6 @@
 // src/stores/auth.js
-// Authentification : token, login, logout, signup
+// Authentification : login, logout, signup
+// Le token est géré via cookie HttpOnly (non accessible en JS)
 
 import { ref, computed } from 'vue'
 import { apiFetch } from '@/services/apiFetch'
@@ -8,20 +9,21 @@ import { getUserId, normalizeUser } from './_helpers'
 /* ======================================================
    STATE
 ====================================================== */
-const token = ref(localStorage.getItem('token'))
 const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
 
-const isAuthenticated = computed(() => !!token.value && !!user.value)
+// L'authentification est basée sur la présence du user
+// Le token est dans un cookie HttpOnly (non accessible en JS)
+const isAuthenticated = computed(() => !!user.value)
 
 /* ======================================================
    PERSISTENCE
 ====================================================== */
-function persistAuth() {
-  if (token.value) localStorage.setItem('token', token.value)
-  else localStorage.removeItem('token')
-
-  if (user.value) localStorage.setItem('user', JSON.stringify(user.value))
-  else localStorage.removeItem('user')
+function persistUser() {
+  if (user.value) {
+    localStorage.setItem('user', JSON.stringify(user.value))
+  } else {
+    localStorage.removeItem('user')
+  }
 }
 
 /* ======================================================
@@ -30,8 +32,7 @@ function persistAuth() {
 
 /**
  * Connexion utilisateur
- * @param {string} email
- * @param {string} password
+ * Le token est automatiquement stocké dans un cookie par le backend
  */
 async function login(email, password) {
   const data = await apiFetch('/login', {
@@ -39,16 +40,15 @@ async function login(email, password) {
     body: { email, password },
   })
 
-  token.value = data.token
   user.value = normalizeUser(data.user)
-  persistAuth()
+  persistUser()
 
   return user.value
 }
 
 /**
  * Inscription d'un nouveau compte parent
- * @param {Object} userData - Données utilisateur
+ * Le token est automatiquement stocké dans un cookie par le backend
  */
 async function signup(userData) {
   const payload = {
@@ -61,23 +61,27 @@ async function signup(userData) {
     body: payload,
   })
 
-  if (data.token) {
-    token.value = data.token
+  if (data.user) {
     user.value = normalizeUser(data.user)
-    persistAuth()
+    persistUser()
   }
 
   return data
 }
 
 /**
- * Déconnexion - reset tous les stores
+ * Déconnexion - appelle le backend pour supprimer le cookie
  */
-function logout() {
+async function logout() {
+  try {
+    // Appel API pour supprimer le cookie côté serveur
+    await apiFetch('/logout', { method: 'POST' })
+  } catch (e) {
+    // Ignorer les erreurs de logout (ex: déjà déconnecté)
+  }
+
   // Reset auth state
   user.value = null
-  token.value = null
-  localStorage.removeItem('token')
   localStorage.removeItem('user')
 
   // Reset autres stores (import dynamique pour éviter dépendance circulaire)
@@ -89,7 +93,6 @@ function logout() {
 
 /**
  * Vérifie si l'utilisateur a au moins un des rôles spécifiés
- * @param {string[]} roles - Rôles à vérifier
  */
 function hasAnyRole(roles) {
   const current = user.value?.role || []
@@ -101,7 +104,6 @@ function hasAnyRole(roles) {
 ====================================================== */
 export const authStore = {
   // State
-  token,
   user,
   isAuthenticated,
 
@@ -113,5 +115,5 @@ export const authStore = {
 
   // Helpers (réexportés pour compatibilité)
   getUserId,
-  persistAuth,
+  persistUser,
 }
