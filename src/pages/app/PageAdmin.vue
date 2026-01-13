@@ -1,7 +1,10 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { authStore } from '@/stores/auth'
+import { profileStore } from '@/stores/profile'
+import { responsiblesStore } from '@/stores/responsibles'
 import { campsStore } from '@/stores/camps'
+import { getUserId } from '@/stores/_helpers'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
 import { getUser as apiGetUser } from '@/services/usersApi'
 
@@ -67,7 +70,7 @@ async function openUserDetails(u, fromStep) {
 
   selectedUser.value = null
 
-  const id = authStore.getUserId ? authStore.getUserId(u) : (u?.id ?? u?._id ?? null)
+  const id = getUserId(u)
 
   try {
     selectedUser.value = id ? await apiGetUser(id) : u
@@ -89,7 +92,7 @@ const camps = campsStore.camps
 onMounted(async () => {
   await Promise.all([
     campsStore.ensureCampsLoaded(),
-    authStore.fetchResponsibleUsers(),
+    responsiblesStore.fetchResponsibleUsers(),
     fetchAvailableItems(),
   ])
 })
@@ -98,7 +101,7 @@ onMounted(async () => {
    RESPONSABLES (admins + accompagnants)
 ====================================================== */
 const responsibleOptions = computed(() =>
-  (authStore.responsibleUsers.value ?? []).map((u) => ({
+  (responsiblesStore.responsibleUsers.value ?? []).map((u) => ({
     value: u.id ?? u._id,
     label: `${u.firstname} ${u.lastname}`,
   })),
@@ -106,7 +109,7 @@ const responsibleOptions = computed(() =>
 
 // Dictionnaire id -> user (pour afficher le nom au lieu de l'id)
 const usersById = computed(() => {
-  const list = authStore.responsibleUsers?.value ?? []
+  const list = responsiblesStore.responsibleUsers?.value ?? []
   const map = new Map()
   list.forEach((u) => {
     const id = u?.id ?? u?._id
@@ -657,13 +660,11 @@ async function onUserUpdated(updatedUser) {
 
     // si l'utilisateur modifié = moi, refresh mon profil
     const my = authStore.user?.value ?? null
-    const myId = authStore.getUserId ? authStore.getUserId(my) : (my?.id ?? my?._id ?? null)
-    const updatedId = authStore.getUserId
-      ? authStore.getUserId(updatedUser)
-      : (updatedUser?.id ?? updatedUser?._id ?? null)
+    const myId = getUserId(my)
+    const updatedId = getUserId(updatedUser)
 
     if (myId && updatedId && String(myId) === String(updatedId)) {
-      await authStore.refreshMe().catch(() => {})
+      await profileStore.refreshMe().catch(() => {})
     }
   } catch (e) {}
 }
