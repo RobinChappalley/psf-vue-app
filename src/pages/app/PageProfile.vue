@@ -247,6 +247,11 @@ async function onSubmitPasswordChange() {
     currentPassword.value = ''
     newPassword.value = ''
     confirmPassword.value = ''
+
+    // Masquer le message de succès après 3 secondes
+    setTimeout(() => {
+      passwordSuccess.value = false
+    }, 3000)
   } catch (e) {
     passwordError.value = e?.message ?? 'Erreur lors du changement de mot de passe.'
   } finally {
