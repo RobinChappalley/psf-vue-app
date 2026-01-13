@@ -4,6 +4,7 @@ import { authStore } from '@/stores/auth'
 import { profileStore } from '@/stores/profile'
 import { childrenStore } from '@/stores/childrenStore'
 import { hikesStore } from '@/stores/hikes'
+import { apiFetch } from '@/services/apiFetch'
 
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -84,7 +85,7 @@ const children = computed(() => childrenStore.children.value)
 const selectedChild = ref(null)
 
 // sections internes
-const step = ref('profile') // "profile" | "personal" | "children" | "child-edit"
+const step = ref('profile') // "profile" | "personal" | "children" | "child-edit" | "password"
 
 /* ======================================================
    NAVIGATION
@@ -102,6 +103,7 @@ function goBack() {
   if (step.value === 'personal') return backToProfile()
   if (step.value === 'children') return backToProfile()
   if (step.value === 'child-edit') return closeChildEditAndBack()
+  if (step.value === 'password') return backToProfile()
   step.value = 'profile'
 }
 
@@ -182,6 +184,75 @@ async function onSubmitChildData(payload) {
     savingChild.value = false
   }
 }
+
+/* ======================================================
+   CHANGEMENT DE MOT DE PASSE
+====================================================== */
+const currentPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const savingPassword = ref(false)
+const passwordError = ref('')
+const passwordSuccess = ref(false)
+
+function openPasswordChange() {
+  // Reset les champs
+  currentPassword.value = ''
+  newPassword.value = ''
+  confirmPassword.value = ''
+  passwordError.value = ''
+  passwordSuccess.value = false
+  step.value = 'password'
+}
+
+async function onSubmitPasswordChange() {
+  if (savingPassword.value) return
+
+  // Validation
+  if (!currentPassword.value.trim()) {
+    passwordError.value = 'Veuillez entrer votre mot de passe actuel.'
+    return
+  }
+
+  if (!newPassword.value.trim()) {
+    passwordError.value = 'Veuillez entrer un nouveau mot de passe.'
+    return
+  }
+
+  if (newPassword.value.length < 6) {
+    passwordError.value = 'Le nouveau mot de passe doit contenir au moins 6 caractères.'
+    return
+  }
+
+  if (newPassword.value !== confirmPassword.value) {
+    passwordError.value = 'Les mots de passe ne correspondent pas.'
+    return
+  }
+
+  savingPassword.value = true
+  passwordError.value = ''
+  passwordSuccess.value = false
+
+  try {
+    await apiFetch('/change-password', {
+      method: 'POST',
+      body: {
+        currentPassword: currentPassword.value,
+        newPassword: newPassword.value,
+      },
+    })
+
+    passwordSuccess.value = true
+    // Reset les champs après succès
+    currentPassword.value = ''
+    newPassword.value = ''
+    confirmPassword.value = ''
+  } catch (e) {
+    passwordError.value = e?.message ?? 'Erreur lors du changement de mot de passe.'
+  } finally {
+    savingPassword.value = false
+  }
+}
 </script>
 
 <template>
@@ -209,6 +280,8 @@ async function onSubmitChildData(payload) {
         <ProfileMenuItem @click="openPersonalData"> Données personnelles </ProfileMenuItem>
 
         <ProfileMenuItem @click="openChildren"> Enfants </ProfileMenuItem>
+
+        <ProfileMenuItem @click="openPasswordChange"> Changer le mot de passe </ProfileMenuItem>
       </nav>
 
       <div class="menu-item notifications-item">
@@ -292,8 +365,67 @@ async function onSubmitChildData(payload) {
       />
 
       <section v-else class="alt">
-        <p>Impossible de charger l’enfant.</p>
+        <p>Impossible de charger l'enfant.</p>
       </section>
+    </template>
+
+    <!-- ========================= -->
+    <!-- ÉCRAN 5 : CHANGER MOT DE PASSE -->
+    <!-- ========================= -->
+    <template v-else-if="step === 'password'">
+      <header>
+        <BackButton @click="goBack" />
+      </header>
+
+      <h2>Changer le mot de passe</h2>
+
+      <form class="password-form" @submit.prevent="onSubmitPasswordChange">
+        <div class="form-group">
+          <label for="current-password">Mot de passe actuel</label>
+          <input
+            id="current-password"
+            v-model="currentPassword"
+            type="password"
+            autocomplete="current-password"
+            placeholder="Votre mot de passe actuel"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="new-password">Nouveau mot de passe</label>
+          <input
+            id="new-password"
+            v-model="newPassword"
+            type="password"
+            autocomplete="new-password"
+            placeholder="Minimum 6 caractères"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="confirm-password">Confirmer le nouveau mot de passe</label>
+          <input
+            id="confirm-password"
+            v-model="confirmPassword"
+            type="password"
+            autocomplete="new-password"
+            placeholder="Retapez le nouveau mot de passe"
+          />
+        </div>
+
+        <p v-if="passwordError" class="error-msg">{{ passwordError }}</p>
+        <p v-if="passwordSuccess" class="success-msg">Mot de passe modifié avec succès !</p>
+
+        <BaseButton
+          type="submit"
+          variant="primary"
+          size="md"
+          :block="true"
+          :disabled="savingPassword"
+        >
+          {{ savingPassword ? 'Modification...' : 'Modifier le mot de passe' }}
+        </BaseButton>
+      </form>
     </template>
   </div>
 </template>
@@ -435,5 +567,49 @@ async function onSubmitChildData(payload) {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* ---------- PASSWORD FORM ---------- */
+.password-form {
+  margin-top: var(--sp-3);
+}
+
+.form-group {
+  margin-bottom: var(--sp-3);
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: var(--sp-1);
+  font-size: var(--fs-caption);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+}
+
+.form-group input {
+  width: 100%;
+  padding: var(--sp-2);
+  font-size: var(--fs-body);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-input);
+  background: var(--c-bg);
+  color: var(--c-text);
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: var(--c-primary);
+}
+
+.error-msg {
+  color: var(--c-error, #e53e3e);
+  font-size: var(--fs-caption);
+  margin-bottom: var(--sp-2);
+}
+
+.success-msg {
+  color: var(--c-success, #38a169);
+  font-size: var(--fs-caption);
+  margin-bottom: var(--sp-2);
 }
 </style>
