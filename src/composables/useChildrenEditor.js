@@ -1,6 +1,6 @@
 // src/composables/useChildrenEditor.js
 import { computed, ref } from 'vue'
-import { authStore } from '@/stores/auth'
+import { childrenStore } from '@/stores/childrenStore'
 
 /**
  * Gère:
@@ -17,7 +17,7 @@ import { authStore } from '@/stores/auth'
  * } = useChildrenEditor()
  */
 export function useChildrenEditor() {
-  const children = computed(() => authStore.childrenObjects.value)
+  const children = computed(() => childrenStore.childrenObjects.value)
 
   const selectedChild = ref(null)
   const isCreatingChild = ref(false)
@@ -29,18 +29,18 @@ export function useChildrenEditor() {
 
   function openCreateChild(parentId) {
     isCreatingChild.value = true
-    selectedChild.value = authStore.createEmptyChild(parentId)
+    selectedChild.value = childrenStore.createEmptyChild(parentId)
   }
 
   async function submitChild(payload) {
     if (isCreatingChild.value) {
-      const created = await authStore.createChild(payload)
+      const created = await childrenStore.createChild(payload)
       selectedChild.value = created
       isCreatingChild.value = false
       return created
     }
 
-    const updated = await authStore.updateChild(payload)
+    const updated = await childrenStore.updateChild(payload)
     if (updated) selectedChild.value = updated
     return updated
   }
