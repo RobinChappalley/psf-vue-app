@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { authStore } from '@/stores/auth'
+import { profileStore } from '@/stores/profile'
+import { childrenStore } from '@/stores/childrenStore'
+import { responsiblesStore } from '@/stores/responsibles'
 import { campsStore } from '@/stores/camps'
 import { useEventsFeed } from '@/composables/useEventsFeed'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
@@ -17,11 +20,11 @@ import BackButton from '@/components/ui/BackButton.vue'
 onMounted(async () => {
   campsStore.ensureCampsLoaded()
   if (authStore.isAuthenticated.value) {
-    await authStore.refreshMe()
-    await authStore.fetchChildren()
+    await profileStore.refreshMe()
+    await childrenStore.fetchChildren()
 
     // optionnel mais utile si ton panel affiche des responsables par nom
-    await authStore.fetchResponsibleUsers().catch(() => {})
+    await responsiblesStore.fetchResponsibleUsers().catch(() => {})
   }
 })
 
@@ -64,7 +67,7 @@ const events = computed(() => {
   const campId = String(camp.id ?? camp._id ?? '')
   const myCampIds = (user.value?.camps || []).map(String)
 
-  const childrenCampIds = (authStore.childrenObjects.value || [])
+  const childrenCampIds = (childrenStore.childrenObjects.value || [])
     .flatMap((ch) => (Array.isArray(ch.camps) ? ch.camps : []))
     .map(String)
 
@@ -162,8 +165,8 @@ const displayUserName = (id) => {
   const rid = String(id ?? '')
   if (!rid) return '—'
   const u =
-    authStore.responsibleUsersObjects.value?.find((x) => String(x.id ?? x._id) === rid) ||
-    authStore.adminUsersObjects.value?.find((x) => String(x.id ?? x._id) === rid) ||
+    responsiblesStore.responsibleUsersObjects.value?.find((x) => String(x.id ?? x._id) === rid) ||
+    responsiblesStore.adminUsersObjects.value?.find((x) => String(x.id ?? x._id) === rid) ||
     null
   if (!u) return rid
   return `${u.firstname ?? ''} ${u.lastname ?? ''}`.trim() || rid
