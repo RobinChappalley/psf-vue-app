@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue'
 import { authStore } from '@/stores/auth'
+import { profileStore } from '@/stores/profile'
+import { childrenStore } from '@/stores/childrenStore'
 import { hikesStore } from '@/stores/hikes'
 
 import ProfileMenuItem from '@/components/ui/ProfileMenuItem.vue'
@@ -76,7 +78,7 @@ onMounted(async () => {
 })
 
 //Source de vérité enfants = store (API)
-const children = computed(() => authStore.children.value)
+const children = computed(() => childrenStore.children.value)
 
 // sélection enfant en cours d'édition
 const selectedChild = ref(null)
@@ -110,7 +112,7 @@ function openPersonalData() {
 async function openChildren() {
   step.value = 'children'
   try {
-    await authStore.fetchChildren()
+    await childrenStore.fetchChildren()
   } catch (e) {}
 }
 
@@ -126,7 +128,7 @@ async function onSubmitPersonalData(payload) {
   errorMsg.value = ''
 
   try {
-    await authStore.updateMe(payload)
+    await profileStore.updateMe(payload)
     // option UX
     // step.value = 'profile'
   } catch (e) {
@@ -146,7 +148,7 @@ function onEditChild(child) {
 
 function onAddChild() {
   const parentId = me.value?.id ?? me.value?._id
-  selectedChild.value = authStore.createEmptyChild(parentId)
+  selectedChild.value = childrenStore.createEmptyChild(parentId)
   step.value = 'child-edit'
 }
 
@@ -164,14 +166,14 @@ async function onSubmitChildData(payload) {
 
     if (childId) {
       // update enfant existant
-      await authStore.updateChild({ ...payload, id: childId })
+      await childrenStore.updateChild({ ...payload, id: childId })
     } else {
       // création enfant
-      await authStore.createChild(payload)
+      await childrenStore.createChild(payload)
     }
 
     // resync liste enfants (au cas où)
-    await authStore.fetchChildren()
+    await childrenStore.fetchChildren()
 
     closeChildEditAndBack()
   } catch (e) {
