@@ -235,7 +235,7 @@ async function onSubmitPasswordChange() {
 
   try {
     await apiFetch('/change-password', {
-      method: 'POST',
+      method: 'PUT',
       body: {
         currentPassword: currentPassword.value,
         newPassword: newPassword.value,
