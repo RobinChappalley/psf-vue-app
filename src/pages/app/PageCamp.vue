@@ -4,6 +4,8 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import BackButton from '@/components/ui/BackButton.vue'
 import FullDataForm from '@/components/profile/FullDataForm.vue'
 import { authStore } from '@/stores/auth'
+import { profileStore } from '@/stores/profile'
+import { childrenStore } from '@/stores/childrenStore'
 import { campsStore } from '@/stores/camps'
 import { useChildrenEditor } from '@/composables/useChildrenEditor'
 import { getCurrentCamp } from '@/composables/getCurrentCamp'
@@ -106,8 +108,8 @@ function openCreateChildFlow() {
 async function onSubmitChildData(payload) {
   await submitChild(payload)
 
-  // recharge depuis l’API (garanti à jour)
-  await authStore.fetchChildren()
+  // recharge depuis l'API (garanti à jour)
+  await childrenStore.fetchChildren()
 
   // retour à la liste + rebuild
   step.value = 'signup'
@@ -171,7 +173,7 @@ const openSignup = async () => {
   signupError.value = ''
   signupLoading.value = true
   try {
-    await authStore.fetchChildren() // parentId pris depuis user.value
+    await childrenStore.fetchChildren() // parentId pris depuis user.value
     signupPeople.value = buildSignupPeople()
     step.value = 'signup'
   } catch (e) {
@@ -237,7 +239,7 @@ const continueSignup = async () => {
       }),
     )
 
-    await authStore.refreshMe()
+    await profileStore.refreshMe()
     step.value = 'confirm'
   } catch (e) {
     campSignupError.value =
