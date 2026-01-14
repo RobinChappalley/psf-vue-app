@@ -16,6 +16,7 @@ import FullDataForm from '@/components/profile/FullDataForm.vue'
 import ChildrenList from '@/components/profile/ChildrenList.vue'
 
 import { usePushNotifications } from '@/composables/usePushNotification'
+import ThePushSubscribe from '@/components/ThePushSubscribe.vue'
 
 /* ======================================================
    NOTIIFICATIONS
@@ -291,15 +292,7 @@ async function onSubmitPasswordChange() {
 
       <div class="menu-item notifications-item">
         <p class="label">Notifications</p>
-        <BaseButton
-          class="notifications-button"
-          :disabled="!hasSubscription && !supported ? true : false"
-          @click="hasSubscription ? unsubscribeUserFromPush() : subscribeUserToPush()"
-          variant="secondary"
-          size="sm"
-        >
-          {{ hasSubscription ? 'Désactiver' : 'Activer' }}
-        </BaseButton>
+        <ThePushSubscribe></ThePushSubscribe>
       </div>
 
       <div class="spacer"></div>

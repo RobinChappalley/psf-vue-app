@@ -3,15 +3,10 @@ import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { authStore } from '@/stores/auth'
 import AppIcone from '@/components/AppIcone.vue'
-import { usePushNotifications } from '@/composables/usePushNotification'
 
 const router = useRouter()
 
 const isAuthed = computed(() => authStore.isAuthenticated.value)
-
-//Check and/or ask permission for notifications
-const { subscribeUserToPush } = usePushNotifications()
-subscribeUserToPush().catch(console.error)
 
 function goToLogin() {
   router.push({ name: 'public.login' })

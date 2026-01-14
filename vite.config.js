@@ -21,12 +21,12 @@ export default defineConfig({
         theme_color: '#000000',
         icons: [
           {
-            src: 'pwa-192x192.png', // Tu devras créer cette image
+            src: 'pwa-192x192.png', // Icône principale
             sizes: '192x192',
             type: 'image/png',
           },
           {
-            src: 'pwa-512x512.png', // Et celle-ci
+            src: 'pwa-512x512.png', // Icône principale
             sizes: '512x512',
             type: 'image/png',
           },

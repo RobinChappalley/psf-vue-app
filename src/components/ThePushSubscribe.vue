@@ -1,83 +1,147 @@
 <script setup>
-import { onMounted, ref } from 'vue'
-import { apiFetch } from '@/services/apiFetch'
+import { usePushNotifications } from '@/composables/usePushNotification.js'
 
-async function subscribeUserToPush() {
-  if (!('serviceWorker' in navigator)) return
-  if (!('PushManager' in window)) return
-
-  //Check permission
-  if (Notification.permission === 'denied') {
-    console.warn('Permission denied for notifications')
-    return
-  }
-
-  const registration = await navigator.serviceWorker.ready
-
-  //Check if subscription already exists
-  const existingSubscription = await registration.pushManager.getSubscription()
-  if (existingSubscription) {
-    console.log('User has already subscribed to notifications')
-    return
-  }
-
-  //Ask for permission if necessary
-  if (Notification.permission === 'default') {
-    const permission = await Notification.requestPermission()
-    if (permission !== 'granted') {
-      console.warn('Permission denied for notifications')
-      return
-    }
-  }
-
-  //Get backend public key
-  const { publicKey } = await apiFetch('/push/vapidPublicKey')
-
-  //Subscribe
-  const subscription = await registration.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: urlBase64ToUint8Array(publicKey),
-  })
-
-  //Send subscription to backend
-  await apiFetch('/push/subscribe', {
-    method: 'POST',
-    body: subscription,
-  })
-
-  //Send a welcome notification
-  sendWelcomePush()
-}
-
-//Translate public key
-function urlBase64ToUint8Array(base64String) {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/')
-  const rawData = atob(base64)
-  return Uint8Array.from([...rawData].map((char) => char.charCodeAt(0)))
-}
-
-onMounted(() => {
-  subscribeUserToPush().catch(console.error)
-})
-
-async function sendWelcomePush() {
-  const registration = await navigator.serviceWorker.ready
-  const subscription = await registration.pushManager.getSubscription()
-
-  if (!subscription) {
-    console.warn('User has not yet subscribed to notifications')
-    return
-  }
-
-  await apiFetch('/push/welcome', {
-    method: 'POST',
-    body: JSON.stringify({ subscription }),
-  })
-}
+// On récupère tout ce dont on a besoin depuis le composable
+const {
+  supported,
+  permission,
+  hasSubscription,
+  isLoading,
+  error,
+  subscribeUserToPush,
+  unsubscribeUserFromPush,
+  sendWelcomePush,
+} = usePushNotifications()
 </script>
 
 <template>
-  <button @click="subscribeUserToPush">Activer les notifications</button>
-  <button @click="sendWelcomePush">Envoyer une notification test</button>
+  <div class="push-wrapper">
+    <!-- Message d'erreur -->
+    <div v-if="error" class="text-error error-message">
+      {{ error }}
+    </div>
+
+    <!-- 1. Si le navigateur ne gère pas les notifs -->
+    <div v-if="!supported" class="text-error">
+      Votre navigateur ne supporte pas les notifications.
+    </div>
+
+    <!-- 2. Si l'utilisateur a bloqué les notifs -->
+    <div v-else-if="permission === 'denied'" class="denied-zone">
+      <p class="text-error">Notifications bloquées</p>
+      <p class="denied-instructions">
+        Pour réactiver les notifications, ouvrez les paramètres de votre navigateur
+        et autorisez les notifications pour ce site.
+      </p>
+    </div>
+
+    <!-- 3. Si tout est OK -->
+    <div v-else>
+      <!-- Cas A : Déjà Abonné -->
+      <div v-if="hasSubscription" class="subscribed-zone">
+        <p>Notifications actives</p>
+
+        <div class="buttons">
+          <button
+            @click="sendWelcomePush"
+            class="btn-test"
+            :disabled="isLoading"
+          >
+            Tester
+          </button>
+
+          <button
+            @click="unsubscribeUserFromPush"
+            class="btn-stop"
+            :disabled="isLoading"
+          >
+            <span v-if="isLoading">Désactivation...</span>
+            <span v-else>Désactiver</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cas B : Pas encore Abonné -->
+      <div v-else>
+        <button
+          @click="subscribeUserToPush"
+          class="btn-start"
+          :disabled="isLoading"
+        >
+          <span v-if="isLoading">Activation...</span>
+          <span v-else>Activer les notifications</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
+
+<style scoped>
+.push-wrapper {
+  padding: 1rem;
+  text-align: center;
+}
+
+.text-error {
+  color: var(--c-error, #d32f2f);
+  font-size: 0.9em;
+}
+
+.error-message {
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+  background: var(--c-error-bg, #ffebee);
+  border-radius: 4px;
+}
+
+.denied-zone {
+  padding: 1rem;
+}
+
+.denied-instructions {
+  font-size: 0.85em;
+  color: var(--c-text-secondary, #666);
+  margin-top: 0.5rem;
+}
+
+.subscribed-zone p {
+  color: var(--c-success, #388e3c);
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-start {
+  background-color: var(--c-primary, #4caf50);
+  color: white;
+}
+
+.btn-test {
+  background-color: var(--c-info, #2196f3);
+  color: white;
+}
+
+.btn-stop {
+  background-color: var(--c-border, #ccc);
+  color: var(--c-text, #333);
+}
+</style>
