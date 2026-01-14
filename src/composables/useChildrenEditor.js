@@ -9,6 +9,9 @@ import { childrenStore } from '@/stores/childrenStore'
  * - submit (create/update)
  * - fermeture
  *
+ * IMPORTANT: Ce composable est découplé de authStore.
+ * Le parentId doit être passé par le composant appelant.
+ *
  * Utilisation:
  * const {
  *   children, selectedChild, isCreatingChild,
@@ -28,19 +31,27 @@ export function useChildrenEditor() {
   }
 
   function openCreateChild(parentId) {
+    if (!parentId) throw new Error('parentId requis pour openCreateChild')
     isCreatingChild.value = true
     selectedChild.value = childrenStore.createEmptyChild(parentId)
   }
 
-  async function submitChild(payload) {
+  /**
+   * Soumet les données d'un enfant (création ou mise à jour)
+   * @param {string|number} parentId - ID du parent (OBLIGATOIRE)
+   * @param {Object} payload - Données de l'enfant
+   */
+  async function submitChild(parentId, payload) {
+    if (!parentId) throw new Error('parentId requis pour submitChild')
+
     if (isCreatingChild.value) {
-      const created = await childrenStore.createChild(payload)
+      const created = await childrenStore.createChild(parentId, payload)
       selectedChild.value = created
       isCreatingChild.value = false
       return created
     }
 
-    const updated = await childrenStore.updateChild(payload)
+    const updated = await childrenStore.updateChild(parentId, payload)
     if (updated) selectedChild.value = updated
     return updated
   }
@@ -56,7 +67,7 @@ export function useChildrenEditor() {
     isCreatingChild,
     openEditChild,
     openCreateChild,
-    submitChild,
+    submitChild, // Signature changée: (parentId, payload)
     closeChildEdit,
   }
 }

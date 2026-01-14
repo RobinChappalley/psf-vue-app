@@ -71,6 +71,8 @@ async function signup(userData) {
 
 /**
  * Déconnexion - appelle le backend pour supprimer le cookie
+ * Note: Les autres stores doivent être reset par le composant appelant
+ * ou via un watcher dans App.vue
  */
 async function logout() {
   try {
@@ -80,15 +82,9 @@ async function logout() {
     // Ignorer les erreurs de logout (ex: déjà déconnecté)
   }
 
-  // Reset auth state
+  // Reset auth state uniquement
   user.value = null
   localStorage.removeItem('user')
-
-  // Reset autres stores (import dynamique pour éviter dépendance circulaire)
-  const { childrenStore } = require('./childrenStore')
-  const { responsiblesStore } = require('./responsibles')
-  childrenStore.reset()
-  responsiblesStore.reset()
 }
 
 /**

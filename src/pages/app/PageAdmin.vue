@@ -664,7 +664,8 @@ async function onUserUpdated(updatedUser) {
     const updatedId = getUserId(updatedUser)
 
     if (myId && updatedId && String(myId) === String(updatedId)) {
-      await profileStore.refreshMe().catch(() => {})
+      const refreshed = await profileStore.refreshUser(myId).catch(() => null)
+      if (refreshed) authStore.user.value = refreshed
     }
   } catch (e) {}
 }

@@ -106,10 +106,11 @@ function openCreateChildFlow() {
 }
 
 async function onSubmitChildData(payload) {
-  await submitChild(payload)
+  const parentId = currentUser.value?.id ?? currentUser.value?._id ?? null
+  await submitChild(parentId, payload)
 
   // recharge depuis l'API (garanti à jour)
-  await childrenStore.fetchChildren()
+  await childrenStore.fetchChildren(parentId)
 
   // retour à la liste + rebuild
   step.value = 'signup'
@@ -173,7 +174,8 @@ const openSignup = async () => {
   signupError.value = ''
   signupLoading.value = true
   try {
-    await childrenStore.fetchChildren() // parentId pris depuis user.value
+    const parentId = currentUser.value?.id ?? currentUser.value?._id ?? null
+    await childrenStore.fetchChildren(parentId)
     signupPeople.value = buildSignupPeople()
     step.value = 'signup'
   } catch (e) {
@@ -239,7 +241,12 @@ const continueSignup = async () => {
       }),
     )
 
-    await profileStore.refreshMe()
+    // Rafraîchir l'utilisateur courant
+    const myId = currentUser.value?.id ?? currentUser.value?._id
+    if (myId) {
+      const updated = await profileStore.refreshUser(myId)
+      if (updated) authStore.user.value = updated
+    }
     step.value = 'confirm'
   } catch (e) {
     campSignupError.value =
