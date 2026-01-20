@@ -23,6 +23,38 @@ import {
 } from '@/services/trainingsApi'
 import { createCampTraining } from '@/services/campsApi'
 
+// API stages
+import {
+  getStages as apiGetStages,
+  createStage as apiCreateStage,
+  updateStage as apiUpdateStage,
+  deleteStage as apiDeleteStage,
+} from '@/services/stagesApi'
+
+// API fundraisings
+import {
+  getFundraisings as apiGetFundraisings,
+  createFundraising as apiCreateFundraising,
+  updateFundraising as apiUpdateFundraising,
+  deleteFundraising as apiDeleteFundraising,
+} from '@/services/fundraisingsApi'
+
+// API AG (Assemblée Générale) - singleton
+import {
+  getAG as apiGetAG,
+  createAG as apiCreateAG,
+  updateAG as apiUpdateAG,
+  deleteAG as apiDeleteAG,
+} from '@/services/agApi'
+
+// API Information Evening - singleton
+import {
+  getInfoEvening as apiGetInfoEvening,
+  createInfoEvening as apiCreateInfoEvening,
+  updateInfoEvening as apiUpdateInfoEvening,
+  deleteInfoEvening as apiDeleteInfoEvening,
+} from '@/services/infoEveningApi'
+
 //API items
 import { getItems as apiGetItems } from '@/services/itemsApi'
 import { getCampItems, addCampItem, deleteCampItem } from '@/services/campItemsApi'
@@ -244,11 +276,30 @@ function dateOnlyToIsoEnd(v) {
 async function onOpenCamp(camp) {
   selectedCamp.value = camp
 
-  // hydrate trainings depuis l'endpoint dédié
   const campId = camp.id
-  const res = await apiGetTrainings(campId)
-  const trainings = res?.trainings ?? res
+
+  // Charger tous les événements en parallèle
+  const [trainingsRes, stagesRes, fundraisingsRes, agRes, infoEveningRes] = await Promise.all([
+    apiGetTrainings(campId).catch(() => []),
+    apiGetStages(campId).catch(() => []),
+    apiGetFundraisings(campId).catch(() => []),
+    apiGetAG(campId).catch(() => null),
+    apiGetInfoEvening(campId).catch(() => null),
+  ])
+
+  // Hydrater le camp avec les événements
+  const trainings = trainingsRes?.trainings ?? trainingsRes
   selectedCamp.value.trainings = Array.isArray(trainings) ? trainings : []
+
+  const stages = stagesRes?.stages ?? stagesRes
+  selectedCamp.value.stages = Array.isArray(stages) ? stages : []
+
+  const fundraisings = fundraisingsRes?.fundraisings ?? fundraisingsRes
+  selectedCamp.value.fundraisings = Array.isArray(fundraisings) ? fundraisings : []
+
+  // Singletons
+  selectedCamp.value.generalMeeting = agRes?.generalMeeting ?? agRes ?? null
+  selectedCamp.value.infoEvening = infoEveningRes?.infoEvening ?? infoEveningRes ?? null
 
   step.value = 'camp-menu'
 }
@@ -522,104 +573,249 @@ const selectedEvent = ref(null) // { type: 'trainings', data: training }
 
 async function onCreateCampEvent(payload) {
   if (!selectedCamp.value) return
-  if (payload.type !== 'trainings') return
 
   const campId = selectedCamp.value.id ?? selectedCamp.value._id
   if (!campId) return
 
+  const eventType = payload.type
+
   try {
-    //IMPORTANT : appelle la version multipart (FormData + gpxFile)
-    const created = await createCampTraining(campId, payload)
+    let created
 
-    const createdTraining = created?.training ?? created
+    switch (eventType) {
+      case 'trainings':
+        // Training avec GPX (multipart)
+        created = await createCampTraining(campId, payload)
+        const createdTraining = created?.training ?? created
+        if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
+        selectedCamp.value.trainings = [...selectedCamp.value.trainings, createdTraining]
+        break
 
-    // resync local
-    if (!Array.isArray(selectedCamp.value.trainings)) selectedCamp.value.trainings = []
-    selectedCamp.value.trainings = [...selectedCamp.value.trainings, createdTraining]
+      case 'stages':
+        created = await apiCreateStage(campId, payload)
+        const createdStage = created?.stage ?? created
+        if (!Array.isArray(selectedCamp.value.stages)) selectedCamp.value.stages = []
+        selectedCamp.value.stages = [...selectedCamp.value.stages, createdStage]
+        break
+
+      case 'fundraisings':
+        created = await apiCreateFundraising(campId, payload)
+        const createdFundraising = created?.fundraising ?? created
+        if (!Array.isArray(selectedCamp.value.fundraisings)) selectedCamp.value.fundraisings = []
+        selectedCamp.value.fundraisings = [...selectedCamp.value.fundraisings, createdFundraising]
+        break
+
+      case 'generalMeeting':
+        // Singleton: créer ou remplacer
+        created = await apiCreateAG(campId, payload)
+        selectedCamp.value.generalMeeting = created?.generalMeeting ?? created
+        break
+
+      case 'information-evening':
+        // Singleton: créer ou remplacer
+        created = await apiCreateInfoEvening(campId, payload)
+        selectedCamp.value.infoEvening = created?.infoEvening ?? created
+        break
+
+      default:
+        alert(`Type d'événement non supporté: ${eventType}`)
+        return
+    }
 
     await campsStore.fetchCamps()
     resyncSelectedCampById(campId)
 
-    // retour écran admin comme avant
     step.value = 'camp-events'
   } catch (e) {
-    alert(e?.message ?? 'Erreur création entraînement (GPX)')
+    alert(e?.message ?? `Erreur création ${eventType}`)
   }
 }
 
-function onOpenTraining(training) {
-  selectedEvent.value = { type: 'trainings', data: training }
+function onOpenEvent(event, type) {
+  selectedEvent.value = { type, data: event }
   step.value = 'camp-event-edit'
+}
+
+// Alias pour compatibilité
+function onOpenTraining(training) {
+  onOpenEvent(training, 'trainings')
 }
 
 async function onUpdateCampEvent(payload) {
   if (!selectedCamp.value || !selectedEvent.value) return
-  if (selectedEvent.value.type !== 'trainings') return
 
   const campId = selectedCamp.value.id
+  const eventType = selectedEvent.value.type
   const old = selectedEvent.value.data
-  const trainingId = old?.id ?? old?._id
+  const eventId = old?.id ?? old?._id
 
-  if (!trainingId) {
-    alert("Impossible de modifier: l'entraînement n'a pas d'id.")
-    return
+  try {
+    let updated
+
+    switch (eventType) {
+      case 'trainings':
+        if (!eventId) {
+          alert("Impossible de modifier: l'entraînement n'a pas d'id.")
+          return
+        }
+        const trainingPayload = {
+          date: payload.date ?? undefined,
+          trainGoingTime: payload.trainGoingTime ?? undefined,
+          trainReturnTime: payload.trainReturnTime ?? undefined,
+          meetingTime: payload.meetingTime ?? undefined,
+          meetingPoint: payload.meetingPoint ?? undefined,
+          returnTime: payload.arrivalTime ?? undefined,
+          distance: payload.distance ?? undefined,
+          elevationGain: payload.elevationGain ?? undefined,
+          elevationLoss: payload.elevationLoss ?? undefined,
+          responsiblePerson: payload.responsiblePerson ?? undefined,
+        }
+        const trainingRes = await apiUpdateTraining(campId, eventId, trainingPayload)
+        updated = trainingRes?.training ?? trainingRes
+        selectedCamp.value.trainings = (selectedCamp.value.trainings ?? []).map((t) =>
+          String(getTrainingId(t)) === String(eventId) ? updated : t,
+        )
+        break
+
+      case 'stages':
+        if (!eventId) {
+          alert("Impossible de modifier: l'étape n'a pas d'id.")
+          return
+        }
+        const stagePayload = {
+          date: payload.date ?? undefined,
+          startPoint: payload.startPoint ?? undefined,
+          endPoint: payload.endPoint ?? undefined,
+          distance: payload.distance ?? undefined,
+          elevationGain: payload.elevationGain ?? undefined,
+          elevationLoss: payload.elevationLoss ?? undefined,
+          routeDescription: payload.routeDescription ?? undefined,
+        }
+        const stageRes = await apiUpdateStage(campId, eventId, stagePayload)
+        updated = stageRes?.stage ?? stageRes
+        selectedCamp.value.stages = (selectedCamp.value.stages ?? []).map((s) =>
+          String(s?.id ?? s?._id) === String(eventId) ? updated : s,
+        )
+        break
+
+      case 'fundraisings':
+        if (!eventId) {
+          alert("Impossible de modifier: la vente n'a pas d'id.")
+          return
+        }
+        const fundraisingPayload = {
+          dateTime: payload.dateTime ?? undefined,
+          location: payload.location ?? undefined,
+        }
+        const fundraisingRes = await apiUpdateFundraising(campId, eventId, fundraisingPayload)
+        updated = fundraisingRes?.fundraising ?? fundraisingRes
+        selectedCamp.value.fundraisings = (selectedCamp.value.fundraisings ?? []).map((f) =>
+          String(f?.id ?? f?._id) === String(eventId) ? updated : f,
+        )
+        break
+
+      case 'generalMeeting':
+        // Singleton: pas d'ID
+        const agPayload = {
+          dateTime: payload.dateTime ?? undefined,
+          location: payload.location ?? undefined,
+        }
+        const agRes = await apiUpdateAG(campId, agPayload)
+        updated = agRes?.generalMeeting ?? agRes
+        selectedCamp.value.generalMeeting = updated
+        break
+
+      case 'information-evening':
+        // Singleton: pas d'ID
+        const iePayload = {
+          dateTime: payload.dateTime ?? undefined,
+          location: payload.location ?? undefined,
+        }
+        const ieRes = await apiUpdateInfoEvening(campId, iePayload)
+        updated = ieRes?.infoEvening ?? ieRes
+        selectedCamp.value.infoEvening = updated
+        break
+
+      default:
+        alert(`Type d'événement non supporté: ${eventType}`)
+        return
+    }
+
+    selectedEvent.value.data = updated
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(campId)
+    step.value = 'camp-events'
+  } catch (e) {
+    alert(e?.message ?? `Erreur modification ${eventType}`)
   }
-
-  const apiPayload = {
-    date: payload.date ?? undefined,
-    trainGoingTime: payload.trainGoingTime ?? undefined,
-    trainReturnTime: payload.trainReturnTime ?? undefined,
-    meetingTime: payload.meetingTime ?? undefined,
-    meetingPoint: payload.meetingPoint ?? undefined,
-    returnTime: payload.arrivalTime ?? undefined,
-    distance: payload.distance ?? undefined,
-    elevationGain: payload.elevationGain ?? undefined,
-    elevationLoss: payload.elevationLoss ?? undefined,
-
-    // BACKEND UPDATE attend responsiblePerson
-    responsiblePerson: payload.responsiblePerson ?? undefined,
-  }
-
-  const updatedRes = await apiUpdateTraining(campId, trainingId, apiPayload)
-  const updated = updatedRes?.training ?? updatedRes
-
-  const list = selectedCamp.value.trainings ?? []
-  selectedCamp.value.trainings = list.map((t) =>
-    String(getTrainingId(t)) === String(trainingId) ? updated : t,
-  )
-  selectedEvent.value.data = updated
-
-  await campsStore.fetchCamps()
-  resyncSelectedCampById(campId)
-
-  step.value = 'camp-events'
 }
 
 async function onDeleteCampEvent() {
   if (!selectedCamp.value || !selectedEvent.value) return
-  if (selectedEvent.value.type !== 'trainings') return
 
   const campId = selectedCamp.value.id
-  const trainingId = selectedEvent.value.data?.id ?? selectedEvent.value.data?._id
+  const eventType = selectedEvent.value.type
+  const eventId = selectedEvent.value.data?.id ?? selectedEvent.value.data?._id
 
-  if (!trainingId) {
-    alert("Impossible de supprimer: l'entraînement n'a pas d'id.")
-    return
+  try {
+    switch (eventType) {
+      case 'trainings':
+        if (!eventId) {
+          alert("Impossible de supprimer: l'entraînement n'a pas d'id.")
+          return
+        }
+        await apiDeleteTraining(campId, eventId)
+        selectedCamp.value.trainings = (selectedCamp.value.trainings ?? []).filter(
+          (t) => String(getTrainingId(t)) !== String(eventId),
+        )
+        break
+
+      case 'stages':
+        if (!eventId) {
+          alert("Impossible de supprimer: l'étape n'a pas d'id.")
+          return
+        }
+        await apiDeleteStage(campId, eventId)
+        selectedCamp.value.stages = (selectedCamp.value.stages ?? []).filter(
+          (s) => String(s?.id ?? s?._id) !== String(eventId),
+        )
+        break
+
+      case 'fundraisings':
+        if (!eventId) {
+          alert("Impossible de supprimer: la vente n'a pas d'id.")
+          return
+        }
+        await apiDeleteFundraising(campId, eventId)
+        selectedCamp.value.fundraisings = (selectedCamp.value.fundraisings ?? []).filter(
+          (f) => String(f?.id ?? f?._id) !== String(eventId),
+        )
+        break
+
+      case 'generalMeeting':
+        // Singleton: pas d'ID
+        await apiDeleteAG(campId)
+        selectedCamp.value.generalMeeting = null
+        break
+
+      case 'information-evening':
+        // Singleton: pas d'ID
+        await apiDeleteInfoEvening(campId)
+        selectedCamp.value.infoEvening = null
+        break
+
+      default:
+        alert(`Type d'événement non supporté: ${eventType}`)
+        return
+    }
+
+    selectedEvent.value = null
+    await campsStore.fetchCamps()
+    resyncSelectedCampById(campId)
+    step.value = 'camp-events'
+  } catch (e) {
+    alert(e?.message ?? `Erreur suppression ${eventType}`)
   }
-
-  await apiDeleteTraining(campId, trainingId)
-
-  // resync local
-  selectedCamp.value.trainings = (selectedCamp.value.trainings ?? []).filter(
-    (t) => String(getTrainingId(t)) !== String(trainingId),
-  )
-
-  selectedEvent.value = null
-
-  await campsStore.fetchCamps()
-  resyncSelectedCampById(campId)
-
-  step.value = 'camp-events'
 }
 
 /* ======================================================
@@ -871,8 +1067,13 @@ async function onUserUpdated(updatedUser) {
       <CampEventsSection
         :camp-title="selectedCamp?.title ?? ''"
         :trainings="selectedCamp?.trainings ?? []"
+        :stages="selectedCamp?.stages ?? []"
+        :fundraisings="selectedCamp?.fundraisings ?? []"
+        :general-meeting="selectedCamp?.generalMeeting ?? null"
+        :info-evening="selectedCamp?.infoEvening ?? null"
         @create="step = 'camp-event-create'"
         @openTraining="onOpenTraining"
+        @openEvent="onOpenEvent"
       />
     </template>
     <!-- ========================= -->
@@ -903,7 +1104,7 @@ async function onUserUpdated(updatedUser) {
 
       <CreateCampEventSection
         :camp="selectedCamp"
-        :allowed-keys="['trainings']"
+        :allowed-keys="['trainings', 'stages', 'fundraisings', 'generalMeeting', 'information-evening']"
         :responsible-options="responsibleOptions"
         @submit="onCreateCampEvent"
       />
@@ -924,10 +1125,10 @@ async function onUserUpdated(updatedUser) {
         :existing-gpx="selectedEvent?.data?.gpsTrack ?? null"
         :type-options="[
           { key: 'trainings', label: 'Entrainement', enabled: true },
-          { key: 'stages', label: 'Etape', enabled: false },
-          { key: 'information-evening', label: `Soirée d'information`, enabled: false },
-          { key: 'generalMeeting', label: 'Assemblée générale', enabled: false },
-          { key: 'fundraisings', label: 'Vente de pâtisserie', enabled: false },
+          { key: 'stages', label: 'Etape', enabled: true },
+          { key: 'information-evening', label: `Soirée d'information`, enabled: true },
+          { key: 'generalMeeting', label: 'Assemblée générale', enabled: true },
+          { key: 'fundraisings', label: 'Vente de pâtisserie', enabled: true },
         ]"
         :responsible-options="responsibleOptions"
         @update:type="() => {}"

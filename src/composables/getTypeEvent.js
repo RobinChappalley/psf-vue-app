@@ -1,6 +1,6 @@
 export function getTypeEvent(item) {
   // item attendu (normalisé):
-  // { type: 'camp'|'trainings'|'information-evening'|'generalMeeting'|'fundraisings', data: {...}, camp?: {...} }
+  // { type: 'camp'|'training'|'stages'|'information-evening'|'generalMeeting'|'fundraisings', data: {...}, camp?: {...} }
 
   const type = item?.type
   const e = item?.data ?? {}
@@ -36,6 +36,15 @@ export function getTypeEvent(item) {
         return loc ? `Vente de pâtisserie ${loc}` : `Vente de pâtisserie`
       },
       description: () => '',
+    },
+
+    stages: {
+      icon: 'stage',
+      title: () => `Étape ${e.number ?? ''}`.trim(),
+      description: () => {
+        if (e.startPoint && e.endPoint) return `${e.startPoint} → ${e.endPoint}`
+        return e.startPoint ?? e.endPoint ?? ''
+      },
     },
   }
 

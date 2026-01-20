@@ -83,6 +83,10 @@ const form = reactive({
   // stage
   startPoint: '',
   endPoint: '',
+  routeDescription: '',
+
+  // fundraisings, AG, IE (heure pour dateTime)
+  eventTime: '',
 })
 
 watch(
@@ -131,8 +135,19 @@ watch(
     // stage
     form.startPoint = v.startPoint ?? ''
     form.endPoint = v.endPoint ?? ''
+    form.routeDescription = v.routeDescription ?? ''
 
-    // reset GPX à l’ouverture/chargement (surtout utile en edit)
+    // fundraisings, AG, IE: extraire l'heure de dateTime
+    if (v.dateTime) {
+      const dt = new Date(v.dateTime)
+      if (!Number.isNaN(dt.getTime())) {
+        form.eventTime = dt.toTimeString().slice(0, 5) // HH:MM
+      }
+    } else {
+      form.eventTime = ''
+    }
+
+    // reset GPX à l'ouverture/chargement (surtout utile en edit)
     gpxFile.value = null
     resetFileInput()
   },
@@ -158,6 +173,7 @@ const visible = computed(() => {
         showLocation: false,
         showTraining: true,
         showStage: false,
+        showEventTime: false,
       }
     case 'stages':
       return {
@@ -165,6 +181,7 @@ const visible = computed(() => {
         showLocation: false,
         showTraining: false,
         showStage: true,
+        showEventTime: false,
       }
     case 'information-evening':
     case 'generalMeeting':
@@ -174,6 +191,7 @@ const visible = computed(() => {
         showLocation: true,
         showTraining: false,
         showStage: false,
+        showEventTime: true,
       }
     default:
       return {
@@ -181,6 +199,7 @@ const visible = computed(() => {
         showLocation: false,
         showTraining: false,
         showStage: false,
+        showEventTime: false,
       }
   }
 })
@@ -257,27 +276,25 @@ function onSubmit() {
         distance: toNumberOrNull(form.distance),
         elevationGain: toNumberOrNull(form.elevationGain),
         elevationLoss: toNumberOrNull(form.elevationLoss),
+        routeDescription: form.routeDescription.trim() || null,
       }
       break
 
     case 'information-evening':
-      payload = {
-        ...base,
-        location: form.location.trim(),
-      }
-      break
-
     case 'generalMeeting':
-      payload = {
-        ...base,
-        location: form.location.trim(),
-      }
-      break
-
     case 'fundraisings':
-      payload = {
-        ...base,
-        location: form.location.trim(),
+      {
+        // Combiner date + eventTime pour créer dateTime
+        let dateTime = null
+        if (form.date) {
+          const timePart = form.eventTime || '00:00'
+          dateTime = new Date(`${form.date}T${timePart}:00`).toISOString()
+        }
+        payload = {
+          type: form.type,
+          dateTime,
+          location: form.location.trim(),
+        }
       }
       break
 
@@ -322,6 +339,12 @@ const today = computed(() => {
         <input v-model.trim="form.location" type="text" placeholder="Adresse / lieu" />
       </div>
 
+      <!-- Heure de l'événement (fundraisings, AG, IE) -->
+      <div v-if="visible.showEventTime" class="field">
+        <label>Heure</label>
+        <input v-model="form.eventTime" type="time" />
+      </div>
+
       <!-- TRAINING fields -->
       <template v-if="visible.showTraining">
         <div class="field">
@@ -348,8 +371,17 @@ const today = computed(() => {
         </div>
 
         <div class="field">
-          <label>Point d’arrivée</label>
+          <label>Point d'arrivée</label>
           <input v-model.trim="form.endPoint" type="text" placeholder="Arrivée" />
+        </div>
+
+        <div class="field">
+          <label>Description du parcours</label>
+          <textarea
+            v-model.trim="form.routeDescription"
+            rows="3"
+            placeholder="Parcours le long du lac..."
+          ></textarea>
         </div>
       </template>
 
@@ -503,6 +535,7 @@ label {
 }
 
 input,
+textarea,
 .select {
   width: 100%;
   box-sizing: border-box;
@@ -514,6 +547,11 @@ input,
   background: var(--c-bg);
   color: var(--c-text);
   outline: none;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 60px;
 }
 
 input[type='date'] {

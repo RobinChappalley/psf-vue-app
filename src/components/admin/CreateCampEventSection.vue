@@ -34,7 +34,8 @@ const POSSIBLE_KEYS = [
 ]
 
 const options = computed(() => {
-  return POSSIBLE_KEYS.filter((k) => k in (props.camp ?? {})).map((k) => ({
+  // Afficher toutes les clés permises, pas seulement celles présentes dans le camp
+  return POSSIBLE_KEYS.map((k) => ({
     key: k,
     label: LABELS[k] ?? k,
     enabled: props.allowedKeys.includes(k),

@@ -143,7 +143,7 @@ const rows = computed(() => {
 
   // --- STAGE ---
   if (type === 'stages') {
-    return base.concat([
+    const rows = [
       { label: 'Numéro', value: fmt(d.number) },
       { label: 'Date', value: fmtDate(d.date) },
       { label: 'Départ', value: fmt(d.startPoint) },
@@ -151,7 +151,11 @@ const rows = computed(() => {
       { label: 'Distance', value: d.distance !== undefined ? `${d.distance} km` : '—' },
       { label: 'D+ (m)', value: fmt(d.elevationGain) },
       { label: 'D- (m)', value: fmt(d.elevationLoss) },
-    ])
+    ]
+    if (d.routeDescription) {
+      rows.push({ label: 'Parcours', value: d.routeDescription })
+    }
+    return base.concat(rows)
   }
 
   // fallback
