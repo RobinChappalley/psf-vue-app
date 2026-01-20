@@ -129,6 +129,21 @@ const events = computed(() => {
         subscribable: false,
       })
     }
+
+    // 2b) stages : visibles SEULEMENT si inscrit au camp
+    for (const s of camp.stages || []) {
+      baseEvents.push({
+        id: s.id ?? s._id,
+        type: 'stages',
+        name: `Étape ${s.number ?? ''}`.trim(),
+        'start-date': s.date,
+        'end-date': s.date,
+        'subscription-deadline-date-time': null,
+        location: s.startPoint && s.endPoint ? `${s.startPoint} → ${s.endPoint}` : '',
+        userStatus: 'registered',
+        subscribable: false,
+      })
+    }
   }
 
   // 3) fundraisings
@@ -157,6 +172,21 @@ const events = computed(() => {
       'subscription-deadline-date-time': camp.subEndDatetime,
       location: camp.generalMeeting.location || '',
       participants: camp.generalMeeting.participants || [],
+      subscribable: true,
+    })
+  }
+
+  // 5) infoEvening
+  if (camp.infoEvening?.dateTime) {
+    baseEvents.push({
+      id: `ie-${camp.id ?? camp._id}`,
+      type: 'infoEvening',
+      name: "Soirée d'information",
+      'start-date': camp.infoEvening.dateTime,
+      'end-date': camp.infoEvening.dateTime,
+      'subscription-deadline-date-time': camp.subEndDatetime,
+      location: camp.infoEvening.location || '',
+      participants: camp.infoEvening.participants || [],
       subscribable: true,
     })
   }
