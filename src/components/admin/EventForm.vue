@@ -262,8 +262,8 @@ function onSubmit() {
         responsiblePerson: form.responsiblePerson || null,
       }
 
-      // GPX uniquement à la création
-      if (props.mode === 'create' && gpxFile.value) {
+      // GPX (create + edit)
+      if (gpxFile.value) {
         payload.gpsTrack = { file: gpxFile.value }
       }
       break
@@ -279,8 +279,8 @@ function onSubmit() {
         routeDescription: form.routeDescription.trim() || null,
       }
 
-      // GPX uniquement à la création
-      if (props.mode === 'create' && gpxFile.value) {
+      // GPX (create + edit)
+      if (gpxFile.value) {
         payload.gpsTrack = { file: gpxFile.value }
       }
       break
@@ -440,43 +440,35 @@ const today = computed(() => {
       <div v-if="visible.showTraining || visible.showStage" class="field">
         <label>GPX du tracé</label>
 
-        <!-- EDIT: lecture seule -->
-        <div v-if="mode === 'edit'" class="gpx-existing">
+        <!-- EDIT: afficher le GPX existant -->
+        <div v-if="mode === 'edit' && existingGpx?.coordinates?.length && !gpxFile" class="gpx-existing">
           <p class="file-name">
-            GPX :
-            <strong>
-              {{
-                existingGpx?.coordinates?.length
-                  ? `présent (${existingGpx.coordinates.length} points)`
-                  : 'aucun'
-              }}
-            </strong>
+            GPX actuel :
+            <strong>{{ existingGpx.coordinates.length }} points</strong>
           </p>
-          <p class="hint">Le GPX ne peut être ajouté qu’à la création.</p>
         </div>
 
-        <!-- CREATE: upload -->
-        <template v-else>
-          <label class="upload">
-            <input
-              :key="fileInputKey"
-              class="upload-input"
-              type="file"
-              accept=".gpx"
-              @change="onPickGpx"
-            />
-          </label>
+        <!-- Upload (create + edit) -->
+        <label class="upload">
+          <input
+            :key="fileInputKey"
+            class="upload-input"
+            type="file"
+            accept=".gpx"
+            @change="onPickGpx"
+          />
+        </label>
 
-          <!-- Nouveau GPX sélectionné -->
-          <div v-if="gpxFile" class="gpx-picked">
-            <p class="file-name">
-              Fichier sélectionné : <strong>{{ gpxFile.name }}</strong>
-            </p>
-            <BaseButton type="button" variant="secondary" size="sm" @click="clearPickedGpx">
-              Retirer le fichier
-            </BaseButton>
-          </div>
-        </template>
+        <!-- Nouveau GPX sélectionné -->
+        <div v-if="gpxFile" class="gpx-picked">
+          <p class="file-name">
+            {{ mode === 'edit' ? 'Nouveau fichier :' : 'Fichier sélectionné :' }}
+            <strong>{{ gpxFile.name }}</strong>
+          </p>
+          <BaseButton type="button" variant="secondary" size="sm" @click="clearPickedGpx">
+            Retirer le fichier
+          </BaseButton>
+        </div>
       </div>
 
       <div class="actions">

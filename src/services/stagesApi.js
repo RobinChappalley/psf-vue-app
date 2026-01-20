@@ -34,6 +34,30 @@ export function createStage(campId, payload) {
 }
 
 export function updateStage(campId, stageId, payload) {
+  const file = payload?.gpsTrack?.file
+
+  // Si un fichier GPX est fourni, utiliser FormData
+  if (file instanceof File) {
+    const fd = new FormData()
+
+    appendIfDefined(fd, 'date', payload?.date)
+    appendIfDefined(fd, 'startPoint', payload?.startPoint)
+    appendIfDefined(fd, 'endPoint', payload?.endPoint)
+    appendIfDefined(fd, 'routeDescription', payload?.routeDescription)
+
+    if (payload?.distance != null) fd.append('distance', String(payload.distance))
+    if (payload?.elevationGain != null) fd.append('elevationGain', String(payload.elevationGain))
+    if (payload?.elevationLoss != null) fd.append('elevationLoss', String(payload.elevationLoss))
+
+    fd.append('gpxFile', file)
+
+    return apiFetch(`/camps/${campId}/stages/${stageId}`, {
+      method: 'PUT',
+      body: fd,
+    })
+  }
+
+  // Sinon, envoyer en JSON classique
   return apiFetch(`/camps/${campId}/stages/${stageId}`, { method: 'PUT', body: payload })
 }
 

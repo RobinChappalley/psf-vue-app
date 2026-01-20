@@ -101,15 +101,36 @@ export async function createCampTraining(campId, payload) {
 }
 
 /**
- * Update training (NO FILE supported by backend PUT route)
- * payload should use backend field names:
- * - date, meetingPoint, meetingTime, returnTime, distance, elevationGain, elevationLoss, responsiblePerson, remark, ...
- *
- * If your UI uses arrivalTime/responsiblePerson, map before calling:
- * - arrivalTime -> returnTime
- * - responsiblePerson -> responsiblePerson (PUT expects responsiblePerson, not responsiblePersonId)
+ * Update training with optional GPX file upload
  */
 export async function updateCampTraining(campId, trainingId, payload) {
+  const file = payload?.gpsTrack?.file
+
+  // Si un fichier GPX est fourni, utiliser FormData
+  if (file instanceof File) {
+    const fd = new FormData()
+
+    appendIfDefined(fd, 'date', payload?.date)
+    appendIfDefined(fd, 'meetingPoint', payload?.meetingPoint)
+    appendIfDefined(fd, 'meetingTime', payload?.meetingTime)
+    appendIfDefined(fd, 'returnTime', payload?.returnTime ?? payload?.arrivalTime)
+    appendIfDefined(fd, 'responsiblePerson', payload?.responsiblePerson)
+    appendIfDefined(fd, 'remark', payload?.remark)
+
+    if (payload?.distance != null) fd.append('distance', String(payload.distance))
+    if (payload?.elevationGain != null) fd.append('elevationGain', String(payload.elevationGain))
+    if (payload?.elevationLoss != null) fd.append('elevationLoss', String(payload.elevationLoss))
+
+    fd.append('gpxFile', file)
+
+    const data = await apiFetch(`/camps/${campId}/trainings/${trainingId}`, {
+      method: 'PUT',
+      body: fd,
+    })
+    return normalizeTraining(data)
+  }
+
+  // Sinon, envoyer en JSON classique
   const data = await apiFetch(`/camps/${campId}/trainings/${trainingId}`, {
     method: 'PUT',
     body: payload,
