@@ -16,12 +16,12 @@ const NAV_ITEMS = [
     icon: 'clipboard',
     publicOnly: true,
   },
-  //{
-  //  label: 'Historique',
-  //  name: 'public.history',
-  //  icon: 'history',
-  //  publicOnly: true,
-  //},
+  {
+    label: 'Historique',
+    name: 'public.history',
+    icon: 'history',
+    publicOnly: true,
+  },
   //{
   // label: 'Contact',
   //  name: 'public.contact',
