@@ -42,12 +42,12 @@ const NAV_ITEMS = [
     icon: 'camp',
     authOnly: true,
   },
-  //{
-  //  label: 'Historique',
-  //  name: 'app.history',
-  //  icon: 'history',
-  //  authOnly: true,
-  // },
+  {
+    label: 'Historique',
+    name: 'app.history',
+    icon: 'history',
+    authOnly: true,
+  },
   {
     label: 'Profil',
     name: 'app.profile',
