@@ -278,6 +278,11 @@ function onSubmit() {
         elevationLoss: toNumberOrNull(form.elevationLoss),
         routeDescription: form.routeDescription.trim() || null,
       }
+
+      // GPX uniquement à la création
+      if (props.mode === 'create' && gpxFile.value) {
+        payload.gpsTrack = { file: gpxFile.value }
+      }
       break
 
     case 'information-evening':
@@ -431,8 +436,8 @@ const today = computed(() => {
         />
       </div>
 
-      <!-- GPX (training only) -->
-      <div v-if="visible.showTraining" class="field">
+      <!-- GPX (training + stage) -->
+      <div v-if="visible.showTraining || visible.showStage" class="field">
         <label>GPX du tracé</label>
 
         <!-- EDIT: lecture seule -->
