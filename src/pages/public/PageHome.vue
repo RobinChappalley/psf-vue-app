@@ -5,9 +5,15 @@ import BaseButton from '@/components/ui/BaseButton.vue'
 import PeopleBubble from '@/components/home/PeopleBubble.vue'
 import BaseCard from '@/components/home/BaseCard.vue'
 import CampHighlight from '@/components/events/CampHighlight.vue'
+import InstallTutorial from '@/components/InstallTutorial.vue'
 import { apiFetch } from '@/services/apiFetch'
+import { useDeviceDetection } from '@/composables/useDeviceDetection'
 
 const people = ['Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin', 'Robin']
+
+// --- Installation PWA ---
+const { canInstall, isStandalone } = useDeviceDetection()
+const showInstallTutorial = ref(false)
 
 // --- Camp public (API) ---
 const loadingCamp = ref(false)
@@ -63,6 +69,13 @@ onMounted(async () => {
 </script>
 
 <template>
+  <!-- Banner installation PWA -->
+  <div v-if="canInstall" class="install-banner" @click="showInstallTutorial = true">
+    <span class="install-icon">+</span>
+    <span>Installer l'application sur votre appareil</span>
+    <span class="install-arrow">&rarr;</span>
+  </div>
+
   <section class="page">
     <HomeHero />
   </section>
@@ -129,6 +142,9 @@ onMounted(async () => {
       Créer un compte parent
     </BaseButton>
   </section>
+
+  <!-- Modal tutoriel installation -->
+  <InstallTutorial v-model="showInstallTutorial" />
 </template>
 
 <style scoped>
@@ -144,5 +160,39 @@ li {
   gap: var(--sp-2);
   justify-items: center;
   margin-top: 2rem;
+}
+
+.install-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--c-primary, #007bff);
+  color: white;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background 0.2s;
+}
+
+.install-banner:hover {
+  background: color-mix(in srgb, var(--c-primary, #007bff) 85%, black);
+}
+
+.install-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 2px solid white;
+  border-radius: 6px;
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+.install-arrow {
+  margin-left: auto;
+  font-size: 1.1rem;
 }
 </style>
