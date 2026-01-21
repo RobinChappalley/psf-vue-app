@@ -272,6 +272,7 @@ async function openTrainingDetailsFromCard(ev) {
     type: 'training',
     data: trainingFull,
     __campTitle: camp.title,
+    __campId: camp.id ?? camp._id,
   }
 
   step.value = 'training-details'

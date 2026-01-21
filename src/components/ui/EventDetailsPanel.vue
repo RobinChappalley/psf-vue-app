@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
 import { getTypeEvent } from '@/composables/getTypeEvent'
 
@@ -10,6 +10,52 @@ const props = defineProps({
   //fonction passée depuis AdminPage
   displayUserName: { type: Function, required: false },
 })
+
+/* ======================================================
+   GPX DOWNLOAD
+====================================================== */
+const downloading = ref(false)
+
+const hasGpsTrack = computed(() => {
+  const d = props.event?.data
+  return d?.gpsTrack?.coordinates?.length >= 2
+})
+
+const canDownloadGpx = computed(() => {
+  return props.event?.type === 'training' && hasGpsTrack.value && props.event?.__campId
+})
+
+async function downloadGpx() {
+  if (downloading.value || !canDownloadGpx.value) return
+
+  const campId = props.event.__campId
+  const trainingId = props.event.data?.id ?? props.event.data?._id
+  if (!campId || !trainingId) return
+
+  downloading.value = true
+  try {
+    const BASE_URL = import.meta.env.VITE_API_URL
+    const url = `${BASE_URL}/camps/${campId}/trainings/${trainingId}/gpx`
+
+    const res = await fetch(url, { credentials: 'include' })
+    if (!res.ok) throw new Error('Erreur téléchargement GPX')
+
+    const blob = await res.blob()
+    const filename = res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] || 'trace.gpx'
+
+    // Déclenche le téléchargement
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(blob)
+    a.download = filename
+    a.click()
+    URL.revokeObjectURL(a.href)
+  } catch (e) {
+    console.error('Erreur téléchargement GPX:', e)
+    alert('Erreur lors du téléchargement du fichier GPX')
+  } finally {
+    downloading.value = false
+  }
+}
 
 function fmt(value) {
   if (value === null || value === undefined || value === '') return '—'
@@ -173,6 +219,11 @@ const rows = computed(() => {
         </div>
       </div>
     </div>
+
+    <!-- Bouton téléchargement GPX pour les trainings -->
+    <button v-if="canDownloadGpx" class="gpx-download-btn" :disabled="downloading" @click="downloadGpx">
+      {{ downloading ? 'Téléchargement...' : 'Télécharger le tracé GPX' }}
+    </button>
   </AdminPanel>
 </template>
 
@@ -196,5 +247,27 @@ const rows = computed(() => {
 
 .value.pre {
   white-space: pre-line;
+}
+
+.gpx-download-btn {
+  margin-top: 1.5rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--c-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.gpx-download-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.gpx-download-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 </style>
