@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import AdminPanel from '@/components/admin/AdminPanel.vue'
+import TrackMiniMap from '@/components/map/TrackMiniMap.vue'
 import { getTypeEvent } from '@/composables/getTypeEvent'
 
 const props = defineProps({
@@ -23,6 +24,11 @@ const hasGpsTrack = computed(() => {
 
 const canDownloadGpx = computed(() => {
   return props.event?.type === 'training' && hasGpsTrack.value && props.event?.__campId
+})
+
+const gpsCoordinates = computed(() => {
+  if (!hasGpsTrack.value) return null
+  return props.event?.data?.gpsTrack?.coordinates
 })
 
 async function downloadGpx() {
@@ -148,6 +154,8 @@ const rows = computed(() => {
       { label: 'Date', value: fmtDate(d.date) },
       { label: 'Heure rdv', value: fmt(d.meetingTime) },
       { label: 'Lieu rdv', value: fmt(d.meetingPoint) },
+      { label: 'Train aller', value: fmt(d.trainGoingTime) },
+      { label: 'Train retour', value: fmt(d.trainReturnTime) },
       { label: 'Heure retour', value: fmt(d.returnTime) },
       { label: 'Distance', value: d.distance !== undefined ? `${d.distance} km` : '—' },
       { label: 'D+ (m)', value: fmt(d.elevationGain) },
@@ -220,6 +228,9 @@ const rows = computed(() => {
       </div>
     </div>
 
+    <!-- Mini-carte avec tracé GPX -->
+    <TrackMiniMap v-if="gpsCoordinates" :coordinates="gpsCoordinates" class="mini-map" />
+
     <!-- Bouton téléchargement GPX pour les trainings -->
     <button v-if="canDownloadGpx" class="gpx-download-btn" :disabled="downloading" @click="downloadGpx">
       {{ downloading ? 'Téléchargement...' : 'Télécharger le tracé GPX' }}
@@ -249,8 +260,12 @@ const rows = computed(() => {
   white-space: pre-line;
 }
 
-.gpx-download-btn {
+.mini-map {
   margin-top: 1.5rem;
+}
+
+.gpx-download-btn {
+  margin-top: 1rem;
   width: 100%;
   padding: 0.75rem 1rem;
   background: var(--c-primary);
