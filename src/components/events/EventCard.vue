@@ -77,6 +77,27 @@ const trainingMeta = computed(() => {
   if (props.event.elevationGain) parts.push(`D+ ${props.event.elevationGain}m`)
   return parts.join(' • ')
 })
+
+// Countdown en jours
+const daysUntil = computed(() => {
+  const startDate = props.event['start-date']
+  if (!startDate) return null
+
+  const eventDate = new Date(startDate)
+  const today = new Date()
+  // Normaliser à minuit pour comparer les jours
+  eventDate.setHours(0, 0, 0, 0)
+  today.setHours(0, 0, 0, 0)
+
+  const diffMs = eventDate - today
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) return null // Passé
+  if (diffDays === 0) return "Aujourd'hui"
+  if (diffDays === 1) return 'Demain'
+  if (diffDays <= 7) return `Dans ${diffDays} jours`
+  return null // Plus de 7 jours, pas de badge
+})
 </script>
 
 <template>
@@ -87,11 +108,14 @@ const trainingMeta = computed(() => {
     @click="onCardClick"
     @keydown="onKeydown"
   >
-    <div class="date">
-      <div class="day">{{ new Date(event['start-date']).getDate() }}</div>
-      <div class="month">
-        {{ new Date(event['start-date']).toLocaleString('fr-FR', { month: 'short' }) }}
+    <div class="date-wrapper">
+      <div class="date">
+        <div class="day">{{ new Date(event['start-date']).getDate() }}</div>
+        <div class="month">
+          {{ new Date(event['start-date']).toLocaleString('fr-FR', { month: 'short' }) }}
+        </div>
       </div>
+      <span v-if="daysUntil" class="countdown-badge">{{ daysUntil }}</span>
     </div>
 
     <div class="main">
@@ -120,12 +144,31 @@ const trainingMeta = computed(() => {
   padding: var(--sp-2);
 
   display: grid;
-  grid-template-columns: 62px 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: var(--sp-2);
   align-items: center;
 
   box-shadow: var(--shadow-sm);
   margin-bottom: 1rem;
+}
+
+.date-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 62px;
+}
+
+.countdown-badge {
+  background: var(--c-primary);
+  color: white;
+  font-size: 0.65rem;
+  font-weight: var(--fw-semibold, 600);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  white-space: nowrap;
+  text-transform: uppercase;
 }
 
 .date {

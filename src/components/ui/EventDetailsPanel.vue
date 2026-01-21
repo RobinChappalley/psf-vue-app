@@ -44,6 +44,108 @@ const itemsList = computed(() => {
     }))
 })
 
+/* ======================================================
+   iCAL EXPORT
+====================================================== */
+const canExportIcal = computed(() => {
+  const type = props.event?.type
+  const d = props.event?.data
+  // On peut exporter si on a une date
+  if (type === 'training' && d?.date) return true
+  if ((type === 'infoEvening' || type === 'generalMeeting') && d?.dateTime) return true
+  return false
+})
+
+function formatIcsDate(date) {
+  // Format: YYYYMMDDTHHMMSS
+  const d = new Date(date)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`
+}
+
+function exportToIcal() {
+  const ev = props.event
+  const d = ev?.data
+  const type = ev?.type
+
+  let title = ''
+  let startDate = null
+  let endDate = null
+  let location = ''
+  let description = ''
+
+  if (type === 'training') {
+    title = `Entraînement PSF`
+    startDate = d.date
+    // Durée par défaut: 4h si pas de returnTime
+    const start = new Date(d.date)
+    if (d.meetingTime) {
+      const [h, m] = d.meetingTime.split(':').map(Number)
+      start.setHours(h || 8, m || 0, 0, 0)
+    } else {
+      start.setHours(8, 0, 0, 0)
+    }
+    startDate = start
+
+    const end = new Date(start)
+    if (d.returnTime) {
+      const [h, m] = d.returnTime.split(':').map(Number)
+      end.setHours(h || 17, m || 0, 0, 0)
+    } else {
+      end.setHours(start.getHours() + 4, 0, 0, 0)
+    }
+    endDate = end
+
+    location = d.meetingPoint || ''
+    const parts = []
+    if (d.distance) parts.push(`Distance: ${d.distance} km`)
+    if (d.elevationGain) parts.push(`D+: ${d.elevationGain}m`)
+    description = parts.join('\\n')
+  } else if (type === 'infoEvening') {
+    title = "Soirée d'information PSF"
+    startDate = new Date(d.dateTime)
+    endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // +2h
+    location = d.location || ''
+  } else if (type === 'generalMeeting') {
+    title = 'Assemblée générale PSF'
+    startDate = new Date(d.dateTime)
+    endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000) // +2h
+    location = d.location || ''
+  }
+
+  if (!startDate || !endDate) return
+
+  const campTitle = ev.__campTitle || ''
+  if (campTitle) {
+    title = `${title} - ${campTitle}`
+  }
+
+  const uid = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@psf`
+
+  const icsContent = `BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//PSF App//FR
+BEGIN:VEVENT
+UID:${uid}
+DTSTAMP:${formatIcsDate(new Date())}
+DTSTART:${formatIcsDate(startDate)}
+DTEND:${formatIcsDate(endDate)}
+SUMMARY:${title}
+LOCATION:${location}
+DESCRIPTION:${description}
+END:VEVENT
+END:VCALENDAR`
+
+  // Téléchargement
+  const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' })
+  const filename = `${title.replace(/[^a-zA-Z0-9]/g, '_')}.ics`
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(blob)
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(a.href)
+}
+
 async function downloadGpx() {
   if (downloading.value || !canDownloadGpx.value) return
 
@@ -254,10 +356,15 @@ const rows = computed(() => {
     <!-- Mini-carte avec tracé GPX -->
     <TrackMiniMap v-if="gpsCoordinates" :coordinates="gpsCoordinates" class="mini-map" />
 
-    <!-- Bouton téléchargement GPX pour les trainings -->
-    <button v-if="canDownloadGpx" class="gpx-download-btn" :disabled="downloading" @click="downloadGpx">
-      {{ downloading ? 'Téléchargement...' : 'Télécharger le tracé GPX' }}
-    </button>
+    <!-- Boutons d'action -->
+    <div class="action-buttons">
+      <button v-if="canDownloadGpx" class="action-btn" :disabled="downloading" @click="downloadGpx">
+        {{ downloading ? 'Téléchargement...' : 'Télécharger GPX' }}
+      </button>
+      <button v-if="canExportIcal" class="action-btn action-btn--secondary" @click="exportToIcal">
+        Ajouter au calendrier
+      </button>
+    </div>
   </AdminPanel>
 </template>
 
@@ -317,8 +424,14 @@ const rows = computed(() => {
   margin-top: 1.5rem;
 }
 
-.gpx-download-btn {
-  margin-top: 1rem;
+.action-buttons {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.action-btn {
   width: 100%;
   padding: 0.75rem 1rem;
   background: var(--c-primary);
@@ -330,12 +443,22 @@ const rows = computed(() => {
   transition: opacity 0.2s;
 }
 
-.gpx-download-btn:hover:not(:disabled) {
+.action-btn:hover:not(:disabled) {
   opacity: 0.9;
 }
 
-.gpx-download-btn:disabled {
+.action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.action-btn--secondary {
+  background: transparent;
+  color: var(--c-primary);
+  border: 1px solid var(--c-primary);
+}
+
+.action-btn--secondary:hover {
+  background: color-mix(in srgb, var(--c-primary) 10%, transparent);
 }
 </style>
