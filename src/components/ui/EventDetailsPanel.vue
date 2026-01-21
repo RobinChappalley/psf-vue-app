@@ -31,6 +31,19 @@ const gpsCoordinates = computed(() => {
   return props.event?.data?.gpsTrack?.coordinates
 })
 
+// Liste du matériel pour les trainings
+const itemsList = computed(() => {
+  if (props.event?.type !== 'training') return []
+  const items = props.event?.data?.itemsList
+  if (!Array.isArray(items) || items.length === 0) return []
+  return items
+    .filter((item) => item.itemId) // filtre les entrées sans itemId
+    .map((item) => ({
+      name: item.itemId?.name || item.itemId?.title || 'Item inconnu',
+      quantity: item.quantity ?? 1,
+    }))
+})
+
 async function downloadGpx() {
   if (downloading.value || !canDownloadGpx.value) return
 
@@ -228,6 +241,16 @@ const rows = computed(() => {
       </div>
     </div>
 
+    <!-- Liste du matériel -->
+    <div v-if="itemsList.length > 0" class="items-section">
+      <h5 class="items-title">Matériel à emporter</h5>
+      <ul class="items-list">
+        <li v-for="(item, index) in itemsList" :key="index" class="item">
+          {{ item.name }}<span v-if="item.quantity > 1" class="quantity"> (x{{ item.quantity }})</span>
+        </li>
+      </ul>
+    </div>
+
     <!-- Mini-carte avec tracé GPX -->
     <TrackMiniMap v-if="gpsCoordinates" :coordinates="gpsCoordinates" class="mini-map" />
 
@@ -258,6 +281,36 @@ const rows = computed(() => {
 
 .value.pre {
   white-space: pre-line;
+}
+
+.items-section {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--c-surface, #f5f5f5);
+  border-radius: 8px;
+}
+
+.items-title {
+  margin: 0 0 0.75rem 0;
+  font-size: var(--fs-body, 1rem);
+  font-weight: var(--fw-semibold, 600);
+  color: var(--c-primary);
+}
+
+.items-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style-type: disc;
+}
+
+.item {
+  padding: 0.25rem 0;
+  font-size: var(--fs-body, 1rem);
+}
+
+.quantity {
+  opacity: 0.7;
+  font-size: var(--fs-caption, 0.875rem);
 }
 
 .mini-map {

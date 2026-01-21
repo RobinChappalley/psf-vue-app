@@ -127,6 +127,10 @@ const events = computed(() => {
         location: t.meetingPoint || '',
         userStatus: 'registered',
         subscribable: false,
+        // Données enrichies pour la card
+        meetingTime: t.meetingTime,
+        distance: t.distance,
+        elevationGain: t.elevationGain,
       })
     }
 

@@ -63,7 +63,19 @@ const cardClickable = computed(() => {
   // on met cliquable si :
   // - camp inscrit (details)
   // - ou camp non inscrit (inscription page)
-  return props.event.type === 'camp'
+  // - training inscrit (details)
+  return props.event.type === 'camp' || (props.event.type === 'training' && isRegistered.value)
+})
+
+// Infos enrichies pour les trainings
+const isTraining = computed(() => props.event.type === 'training')
+const trainingMeta = computed(() => {
+  if (!isTraining.value) return null
+  const parts = []
+  if (props.event.meetingTime) parts.push(props.event.meetingTime)
+  if (props.event.distance) parts.push(`${props.event.distance} km`)
+  if (props.event.elevationGain) parts.push(`D+ ${props.event.elevationGain}m`)
+  return parts.join(' • ')
 })
 </script>
 
@@ -85,6 +97,7 @@ const cardClickable = computed(() => {
     <div class="main">
       <h4 class="title">{{ event.name }}</h4>
       <p class="meta">{{ event.location ?? '' }}</p>
+      <p v-if="trainingMeta" class="training-meta">{{ trainingMeta }}</p>
     </div>
 
     <div class="action">
@@ -160,6 +173,13 @@ const cardClickable = computed(() => {
   font-size: var(--fs-body);
   color: var(--c-text);
   opacity: 0.85;
+}
+
+.training-meta {
+  margin-top: 0.25rem;
+  font-size: var(--fs-caption);
+  color: var(--c-primary);
+  font-weight: var(--fw-medium, 500);
 }
 
 /* bouton */
